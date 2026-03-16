@@ -1,0 +1,247 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Page backgrounds ── */
+    --background: 245 100% 98%;
+    --foreground: 222 47% 11%;
+
+    /* ── Cards / surfaces ── */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* ── Primary — violet-600 ── */
+    --primary: 250 75% 64%;
+    --primary-foreground: 0 0% 100%;
+
+    /* ── Secondary / muted ── */
+    --secondary: 240 33% 96%;
+    --secondary-foreground: 222 47% 25%;
+    --muted: 240 33% 96%;
+    --muted-foreground: 215 20% 45%;
+
+    /* ── Accent ── */
+    --accent: 240 33% 96%;
+    --accent-foreground: 222 47% 20%;
+
+    /* ── Semantic ── */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 25% 88%;
+    --input: 240 25% 88%;
+    --ring: 250 75% 64%;
+    --radius: 0.875rem;
+
+    /* ── Charts ── */
+    --chart-1: 250 75% 64%;
+    --chart-2: 115 80% 40%;
+    --chart-3: 30 85% 55%;
+    --chart-4: 280 60% 62%;
+    --chart-5: 340 70% 58%;
+
+    /* ── Sidebar tokens kept light for compatibility ── */
+    --sidebar-background: 245 80% 95%;
+    --sidebar-foreground: 222 47% 18%;
+    --sidebar-primary: 250 75% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 245 60% 92%;
+    --sidebar-accent-foreground: 222 47% 18%;
+    --sidebar-border: 240 25% 88%;
+    --sidebar-ring: 250 75% 64%;
+  }
+
+  .dark {
+    /* Keep dark mode readable if user toggles manually */
+    --background: 222 28% 5%;
+    --foreground: 210 30% 92%;
+    --card: 224 26% 10%;
+    --card-foreground: 210 30% 92%;
+    --popover: 222 26% 8%;
+    --popover-foreground: 210 30% 92%;
+    --primary: 263 70% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 18% 14%;
+    --secondary-foreground: 210 25% 82%;
+    --muted: 220 18% 12%;
+    --muted-foreground: 215 18% 57%;
+    --accent: 220 18% 12%;
+    --accent-foreground: 210 25% 82%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 20% 18%;
+    --input: 217 20% 15%;
+    --ring: 263 70% 57%;
+    --sidebar-background: 258 42% 6%;
+    --sidebar-foreground: 240 20% 88%;
+    --sidebar-primary: 263 70% 57%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 258 30% 11%;
+    --sidebar-accent-foreground: 240 20% 88%;
+    --sidebar-border: 260 30% 13%;
+    --sidebar-ring: 263 70% 57%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* ─── Custom utilities (in CSS — no Tailwind config restart needed) ──────── */
+@layer utilities {
+  /* Spring easing for buttons, inputs, selects */
+  .ease-smooth-out {
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(215deg 18% 57% / 0.4); }
+
+/* ─── Card depth ─────────────────────────────────────────────────────────── */
+/* Visible ring + drop shadow so cards clearly float above the background */
+.card-raised {
+  box-shadow:
+    0 0 0 1px rgba(108, 92, 231, 0.08),
+    0 18px 45px rgba(15, 23, 42, 0.12);
+}
+
+/* ─── Primary button glow ────────────────────────────────────────────────── */
+.btn-primary-glow {
+  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.2);
+  transition: box-shadow 0.2s ease-out, transform 0.15s ease-out;
+}
+.btn-primary-glow:hover {
+  box-shadow: 0 0 0 1px rgba(33, 191, 6, 0.35), 0 12px 28px rgba(33, 191, 6, 0.2);
+}
+.btn-primary-glow:active {
+  box-shadow: 0 4px 10px rgba(108, 92, 231, 0.16);
+}
+
+/* ─── Sidebar nav item states ────────────────────────────────────────────── */
+.nav-item {
+  color: hsl(var(--sidebar-foreground) / 0.72);
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nav-item:hover {
+  color: hsl(var(--sidebar-foreground));
+  background-color: rgba(108, 92, 231, 0.08);
+}
+/* Active: soft violet fill + left indicator */
+.nav-item.active {
+  background-color: rgba(108, 92, 231, 0.18);
+  color: #4b3ec4;
+  box-shadow: inset 3px 0 0 #8b5cf6;
+}
+.nav-icon {
+  color: hsl(var(--sidebar-foreground) / 0.6);
+  transition: color 0.15s ease;
+}
+.nav-item:hover .nav-icon {
+  color: hsl(var(--sidebar-foreground) / 0.9);
+}
+.nav-item.active .nav-icon {
+  color: #6c5ce7;
+}
+
+.dark .nav-item {
+  color: hsl(240deg 20% 88% / 0.55);
+}
+.dark .nav-item:hover {
+  color: hsl(var(--sidebar-foreground));
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.dark .nav-item.active {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #ffffff;
+}
+.dark .nav-icon {
+  color: hsl(240deg 20% 88% / 0.45);
+}
+.dark .nav-item:hover .nav-icon {
+  color: hsl(240deg 20% 88% / 0.8);
+}
+.dark .nav-item.active .nav-icon {
+  color: #a78bfa;
+}
+
+/* ─── Interactive card lift ──────────────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  cursor: pointer;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.card-hover:active {
+  transform: translateY(0);
+}
+
+/* ─── Skeleton shimmer ───────────────────────────────────────────────────── */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--secondary)) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/*
+ * Markdown / Prose styles — self-contained.
+ */
+.md-content {
+  @apply text-sm leading-relaxed text-foreground;
+  word-break: break-word;
+}
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 { @apply font-semibold text-foreground mt-4 mb-2; }
+.md-content h1 { @apply text-xl; }
+.md-content h2 { @apply text-lg; }
+.md-content h3 { @apply text-base; }
+.md-content p  { @apply mb-3; }
+.md-content ul,
+.md-content ol { @apply pl-5 mb-3 space-y-1; }
+.md-content ul { @apply list-disc; }
+.md-content ol { @apply list-decimal; }
+.md-content li { @apply text-sm; }
+.md-content strong { @apply font-semibold; }
+.md-content em    { @apply italic; }
+.md-content blockquote {
+  @apply border-l-2 border-violet-500/40 pl-4 text-muted-foreground italic my-3;
+}
+.md-content a {
+  @apply text-violet-400 underline underline-offset-2 hover:text-violet-300 transition-colors;
+}
+.md-content hr { @apply my-4 border-border; }
+.md-content table { @apply w-full text-sm border-collapse my-3; }
+.md-content th,
+.md-content td { @apply border border-border px-3 py-2 text-left; }
+.md-content th { @apply bg-muted font-semibold; }
+.md-content code:not(pre code) {
+  @apply font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-violet-300;
+}
+.md-content pre {
+  @apply bg-muted/80 rounded-lg p-4 overflow-x-auto my-3 border border-border/50;
+}
+.md-content pre code {
+  @apply font-mono text-xs bg-transparent p-0 text-foreground;
+}
+.md-content input[type="checkbox"] { @apply mr-2 rounded; }
