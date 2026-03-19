@@ -28,10 +28,16 @@ type CanvasFile = {
   updated_at: string;
 };
 
-type NoteListItem = {
-  id: string;
+type ModuleItem = {
+  moduleId: number;
+  moduleName: string;
+  itemId: number;
   title: string;
-  updated_at: string;
+  type: string;
+  page_url: string | null;
+  external_url: string | null;
+  content_id: number | null;
+  content_details: { "content-type"?: string; url?: string } | null;
 };
 
 export default function NotesPage() {
@@ -44,14 +50,15 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
-  const [notes, setNotes] = useState<NoteListItem[]>([]);
-  const [selectedNotes, setSelectedNotes] = useState<Record<string, boolean>>({});
   const [syncingPowerpoints, setSyncingPowerpoints] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [studyGuideStyle, setStudyGuideStyle] = useState("bullet_points");
   const [studyGuideLoading, setStudyGuideLoading] = useState(false);
   const [studyGuideSummary, setStudyGuideSummary] = useState<string | null>(null);
   const [studyGuideError, setStudyGuideError] = useState<string | null>(null);
+  const [studyGuideWarning, setStudyGuideWarning] = useState<string | null>(null);
+  const [moduleItems, setModuleItems] = useState<ModuleItem[]>([]);
+  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,20 +82,17 @@ export default function NotesPage() {
       if (!courseId) {
         setCanvasFiles([]);
         setCanvasFileId(null);
-        setNotes([]);
-        setSelectedNotes({});
         setSyncMessage(null);
+        setModuleItems([]);
+        setSelectedModuleItems({});
         return;
       }
       try {
-        const [filesRes, notesRes] = await Promise.all([
+        const [filesRes] = await Promise.all([
           fetch(`/api/canvas/files?courseId=${courseId}`),
-          fetch(`/api/notes/list?courseId=${courseId}`),
         ]);
         const filesData = await filesRes.json();
-        const notesData = await notesRes.json();
         if (!filesRes.ok) throw new Error(filesData?.error || "Failed to load Canvas files");
-        if (!notesRes.ok) throw new Error(notesData?.error || "Failed to load notes");
         if (mounted) {
           const sorted = [...(filesData ?? [])].sort((a, b) => {
             const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
@@ -97,20 +101,44 @@ export default function NotesPage() {
           });
           setCanvasFiles(sorted);
           setCanvasFileId(null);
-          setNotes(notesData ?? []);
-          setSelectedNotes({});
+          setSelectedModuleItems({});
         }
       } catch {
         if (mounted) {
           setCanvasFiles([]);
           setCanvasFileId(null);
-          setNotes([]);
-          setSelectedNotes({});
           setSyncMessage(null);
+          setModuleItems([]);
+          setSelectedModuleItems({});
         }
       }
     }
     loadCanvasFiles();
+    return () => {
+      mounted = false;
+    };
+  }, [courseId]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadModuleItems() {
+      if (!courseId) return;
+      try {
+        const res = await fetch(`/api/canvas/module-items?courseId=${courseId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Failed to load Canvas module items");
+        if (mounted) {
+          setModuleItems(data ?? []);
+          setSelectedModuleItems({});
+        }
+      } catch {
+        if (mounted) {
+          setModuleItems([]);
+          setSelectedModuleItems({});
+        }
+      }
+    }
+    loadModuleItems();
     return () => {
       mounted = false;
     };
@@ -135,12 +163,6 @@ export default function NotesPage() {
           setSyncMessage(`Imported ${data.imported} PowerPoint${data.imported === 1 ? "" : "s"} from Canvas.`);
         } else {
           setSyncMessage("PowerPoint notes are already up to date.");
-        }
-        const notesRes = await fetch(`/api/notes/list?courseId=${courseId}`);
-        const notesData = await notesRes.json();
-        if (notesRes.ok && mounted) {
-          setNotes(notesData ?? []);
-          setSelectedNotes({});
         }
       } catch (err) {
         if (mounted) setSyncMessage((err as Error).message);
@@ -255,18 +277,20 @@ export default function NotesPage() {
     e.preventDefault();
     setStudyGuideError(null);
     setStudyGuideSummary(null);
+    setStudyGuideWarning(null);
 
-    const noteIds = Object.entries(selectedNotes)
+    const selectedItems = Object.entries(selectedModuleItems)
       .filter(([, selected]) => selected)
-      .map(([id]) => id);
+      .map(([id]) => Number(id))
+      .filter((id) => !Number.isNaN(id));
 
     if (!courseId) {
       setStudyGuideError("Select a course for the study guide.");
       return;
     }
 
-    if (noteIds.length === 0) {
-      setStudyGuideError("Select at least one note to build a study guide.");
+    if (selectedItems.length === 0) {
+      setStudyGuideError("Select at least one lesson content to build a study guide.");
       return;
     }
 
@@ -275,7 +299,11 @@ export default function NotesPage() {
       const res = await fetch("/api/notes/study-guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noteIds, summaryStyle: studyGuideStyle }),
+        body: JSON.stringify({
+          lessonItemIds: selectedItems,
+          summaryStyle: studyGuideStyle,
+          courseId,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data?.success === false) {
@@ -283,6 +311,11 @@ export default function NotesPage() {
         return;
       }
       setStudyGuideSummary(data?.summary || "Study guide generated.");
+      if (selectedItems.length > 0 && !data?.lessonContentIncluded) {
+        setStudyGuideWarning(
+          "Lesson slides could not be accessed. If the Google Slides link is private, publish or share it, or attach the PPTX file in Canvas."
+        );
+      }
     } catch (err) {
       setStudyGuideError((err as Error).message);
     } finally {
@@ -459,13 +492,13 @@ export default function NotesPage() {
               </select>
             </div>
             <div className="form-field">
-              <label>Notes to include</label>
-              {courseId && notes.length === 0 ? (
+              <label>Lesson content to include (Canvas modules)</label>
+              {courseId && moduleItems.length === 0 ? (
                 <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
-                  No notes found for this course yet. Upload or import notes first.
+                  No module items found yet. Sync Canvas to load modules.
                 </p>
               ) : null}
-              {notes.length > 0 ? (
+              {moduleItems.length > 0 ? (
                 <div
                   style={{
                     border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -476,9 +509,9 @@ export default function NotesPage() {
                     background: "rgba(9, 14, 24, 0.6)",
                   }}
                 >
-                  {notes.map((note) => (
+                  {moduleItems.map((item) => (
                     <label
-                      key={note.id}
+                      key={item.itemId}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -489,28 +522,28 @@ export default function NotesPage() {
                     >
                       <input
                         type="checkbox"
-                        checked={Boolean(selectedNotes[note.id])}
+                        checked={Boolean(selectedModuleItems[item.itemId])}
                         onChange={(e) =>
-                          setSelectedNotes((prev) => ({ ...prev, [note.id]: e.target.checked }))
+                          setSelectedModuleItems((prev) => ({ ...prev, [item.itemId]: e.target.checked }))
                         }
                       />
-                      <span>{note.title}</span>
+                      <span>{item.moduleName} — {item.title}</span>
                     </label>
                   ))}
                 </div>
               ) : null}
-              {notes.length > 0 ? (
+              {moduleItems.length > 0 ? (
                 <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.8rem" }}>
                   <button
                     type="button"
                     className="contact-submit-btn"
                     style={{ width: "auto", padding: "0.55rem 1.4rem" }}
                     onClick={() => {
-                      const next: Record<string, boolean> = {};
-                      notes.forEach((note) => {
-                        next[note.id] = true;
+                      const next: Record<number, boolean> = {};
+                      moduleItems.forEach((item) => {
+                        next[item.itemId] = true;
                       });
-                      setSelectedNotes(next);
+                      setSelectedModuleItems(next);
                     }}
                   >
                     Select all
@@ -524,11 +557,16 @@ export default function NotesPage() {
                       background: "rgba(255, 255, 255, 0.12)",
                       color: "var(--light)",
                     }}
-                    onClick={() => setSelectedNotes({})}
+                    onClick={() => setSelectedModuleItems({})}
                   >
                     Clear
                   </button>
                 </div>
+              ) : null}
+              {Object.values(selectedModuleItems).some(Boolean) ? (
+                <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
+                  We will pull Google Slides or PowerPoint content linked to these lessons (if accessible).
+                </p>
               ) : null}
             </div>
             <div className="form-field">
@@ -558,6 +596,11 @@ export default function NotesPage() {
             {studyGuideError ? (
               <div className="form-message error" style={{ display: "block" }}>
                 {studyGuideError}
+              </div>
+            ) : null}
+            {studyGuideWarning ? (
+              <div className="form-message" style={{ display: "block", color: "#ffd166" }}>
+                {studyGuideWarning}
               </div>
             ) : null}
           </form>

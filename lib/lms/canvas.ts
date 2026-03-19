@@ -216,6 +216,8 @@ export interface CanvasModuleItem {
   type: string;
   /** URL slug — only present for type="Page" */
   page_url?: string;
+  /** External URL for type="ExternalUrl" */
+  external_url?: string;
   /** Numeric content ID — present for type="File", "Assignment", "Quiz" */
   content_id?: number;
   html_url?: string;
@@ -258,25 +260,36 @@ export async function fetchCanvasModules(
   return allModules;
 }
 
-/** Fetch all items in a module, requesting content_details for file download info. */
 export async function fetchCanvasModuleItems(
   domain: string,
   accessToken: string,
   courseId: number,
   moduleId: number
 ): Promise<CanvasModuleItem[]> {
-  const url =
-    `https://${domain}/api/v1/courses/${courseId}/modules/${moduleId}/items` +
-    `?per_page=50&include[]=content_details`;
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
+  let allItems: CanvasModuleItem[] = [];
+  let page = 1;
+
+  while (true) {
+    const url =
+      `https://${domain}/api/v1/courses/${courseId}/modules/${moduleId}/items` +
+      `?per_page=100&page=${page}&include[]=content_details`;
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) break;
+      const data: CanvasModuleItem[] = await res.json();
+      if (data.length === 0) break;
+      allItems = allItems.concat(data);
+      page++;
+      const linkHeader = res.headers.get("Link");
+      if (!linkHeader?.includes('rel="next"')) break;
+    } catch {
+      break;
+    }
   }
+
+  return allItems;
 }
 
 // Canvas File — returned by GET /api/v1/courses/:id/files
