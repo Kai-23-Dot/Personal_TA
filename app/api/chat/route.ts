@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { runTAChatAgent, type AgentContext } from "@/lib/ai/agent";
+import { retrieveRelevantContext, formatContextForPrompt } from "@/lib/utils/rag";
 import { type CoreMessage } from "ai";
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
@@ -16,9 +17,11 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { messages, sessionId } = body as {
+    const { messages, sessionId, noteId, assignmentId } = body as {
       messages: CoreMessage[];
       sessionId: string;
+      noteId?: string;
+      assignmentId?: string;
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -131,7 +134,44 @@ export async function POST(req: Request) {
         : { has_plan: false },
     };
 
-    const result = await runTAChatAgent(user.id, messages, context);
+    const lastUserText = lastUserMessage && typeof lastUserMessage.content === "string"
+      ? lastUserMessage.content
+      : "";
+    let ragResults = lastUserText ? await retrieveRelevantContext(user.id, lastUserText, 6) : [];
+
+    if (noteId) {
+      const { data: note } = await supabase
+        .from("notes")
+        .select("title, content, course_id")
+        .eq("id", noteId)
+        .eq("user_id", user.id)
+        .single();
+      if (note?.content) {
+        ragResults = [
+          { id: noteId, title: note.title, content: note.content.slice(0, 2000), course_id: note.course_id, similarity: 1, source: "note" as const },
+          ...ragResults,
+        ];
+      }
+    }
+
+    if (assignmentId) {
+      const { data: assignment } = await supabase
+        .from("assignments")
+        .select("title, description")
+        .eq("id", assignmentId)
+        .eq("user_id", user.id)
+        .single();
+      if (assignment?.description) {
+        ragResults = [
+          { id: assignmentId, title: assignment.title, content: assignment.description.slice(0, 2000), course_id: null, similarity: 1, source: "summary" as const },
+          ...ragResults,
+        ];
+      }
+    }
+
+    const ragContext = formatContextForPrompt(ragResults);
+
+    const result = await runTAChatAgent(user.id, messages, context, ragContext);
 
     return result.toDataStreamResponse({
       getErrorMessage: (err: unknown) => {

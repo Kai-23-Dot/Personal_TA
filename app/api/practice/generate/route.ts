@@ -32,13 +32,14 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { topic, courseId, difficulty = "adaptive", questionCount = 5, noteIds, pdfContext } = body as {
+    const { topic, courseId, difficulty = "adaptive", questionCount = 5, noteIds, pdfContext, assignmentId } = body as {
       topic: string;
       courseId: string | null;
       difficulty: Difficulty;
       questionCount?: number;
       noteIds?: string[];
       pdfContext?: string;
+      assignmentId?: string | null;
     };
 
     if (!topic) {
@@ -117,9 +118,9 @@ export async function POST(req: Request) {
           .join("\n\n---\n\n");
       }
 
-      // Append assignment context (titles + descriptions — the problem statements tell the AI
-      // what concepts this teacher actually covers and tests on)
-      if (assignments && assignments.length > 0) {
+    // Append assignment context (titles + descriptions — the problem statements tell the AI
+    // what concepts this teacher actually covers and tests on)
+    if (assignments && assignments.length > 0) {
         const assignmentBlock = assignments
           .filter((a) => a.description)
           .map((a) => `**${a.title}**\n${(a.description as string).slice(0, 800)}`)
@@ -128,6 +129,19 @@ export async function POST(req: Request) {
           const section = `### Course Assignments & Topics\n${assignmentBlock}`;
           courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${section}` : section;
         }
+      }
+    }
+
+    if (assignmentId) {
+      const { data: assignment } = await supabase
+        .from("assignments")
+        .select("title, description")
+        .eq("user_id", user.id)
+        .eq("id", assignmentId)
+        .single();
+      if (assignment?.description) {
+        const assignmentBlock = `### Selected Assignment\n**${assignment.title}**\n${assignment.description.slice(0, 1200)}`;
+        courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${assignmentBlock}` : assignmentBlock;
       }
     }
 
@@ -148,6 +162,27 @@ export async function POST(req: Request) {
 
     const recentMistakes = (metrics ?? []).map((m) => m.subtopic ?? m.topic);
 
+    // Adaptive difficulty tuning based on recent performance
+    let effectiveDifficulty: Difficulty = difficulty;
+    if (difficulty === "adaptive") {
+      const { data: attempts } = await supabase
+        .from("quiz_attempts")
+        .select("is_correct")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .eq("topic", topic)
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      if (attempts && attempts.length > 0) {
+        const correct = attempts.filter((a) => a.is_correct).length;
+        const accuracy = correct / attempts.length;
+        if (accuracy < 0.6) effectiveDifficulty = "easy";
+        else if (accuracy < 0.85) effectiveDifficulty = "medium";
+        else effectiveDifficulty = "hard";
+      }
+    }
+
     // If we still have no course context, block generation to avoid off-topic content
     if (!courseNotes) {
       return NextResponse.json(
@@ -162,7 +197,7 @@ export async function POST(req: Request) {
     // Generate questions
     const questions = await generateQuiz({
       topic,
-      difficulty,
+      difficulty: effectiveDifficulty,
       questionCount: Math.min(Math.max(questionCount, 1), 50),
       courseNotes,
       isAP,
@@ -182,7 +217,7 @@ export async function POST(req: Request) {
       user_id: user.id,
       course_id: courseId ?? null,
       topic,
-      difficulty,
+      difficulty: effectiveDifficulty,
       question_count: questions.length,
       questions,
       status: "in_progress",
@@ -206,7 +241,7 @@ export async function PATCH(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const { sessionId, correct, total, topic, courseId } = await req.json();
+    const { sessionId, correct, total, topic, courseId, durationSeconds, attempts } = await req.json();
 
     const { error } = await supabase
       .from("practice_sessions")
@@ -214,12 +249,27 @@ export async function PATCH(req: Request) {
         correct_count: correct,
         status: "completed",
         completed_at: new Date().toISOString(),
+        duration_seconds: durationSeconds ?? null,
       })
       .eq("id", sessionId)
       .eq("user_id", user.id);
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    // Record per-question attempts (best effort)
+    if (Array.isArray(attempts) && attempts.length > 0) {
+      await supabase.from("quiz_attempts").insert(
+        attempts.map((a: { question_index: number; user_answer: string; is_correct: boolean; time_taken_seconds: number }) => ({
+          user_id: user.id,
+          session_id: sessionId,
+          question_index: a.question_index,
+          user_answer: a.user_answer,
+          is_correct: a.is_correct,
+          time_taken_seconds: a.time_taken_seconds ?? 0,
+        }))
+      );
     }
 
     // Upsert performance metrics

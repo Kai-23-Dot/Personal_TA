@@ -297,7 +297,8 @@ export interface CanvasFile {
   id: number;
   display_name: string;
   filename: string;
-  "content-type": string;
+  "content-type"?: string;
+  content_type?: string;
   size: number;         // bytes
   url: string;         // pre-signed download URL (may require auth header)
   created_at: string;

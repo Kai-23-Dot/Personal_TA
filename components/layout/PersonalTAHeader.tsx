@@ -11,11 +11,19 @@ type PersonalTAHeaderProps = {
   links: NavLink[];
   showSignIn?: boolean;
   signInHref?: string;
+  showSignOut?: boolean;
+  signOutHref?: string;
 };
 
 import { usePathname } from "next/navigation";
 
-export function PersonalTAHeader({ links, showSignIn = true, signInHref = "/login" }: PersonalTAHeaderProps) {
+export function PersonalTAHeader({
+  links,
+  showSignIn = true,
+  signInHref = "/login",
+  showSignOut = false,
+  signOutHref = "/logout",
+}: PersonalTAHeaderProps) {
   const pathname = usePathname();
   return (
     <header>
@@ -71,6 +79,13 @@ export function PersonalTAHeader({ links, showSignIn = true, signInHref = "/logi
             </Link>
           </div>
         ) : null}
+        {showSignOut ? (
+          <div className="nav-cta">
+            <Link href={signOutHref} className="btn btn-secondary">
+              Sign Out
+            </Link>
+          </div>
+        ) : null}
 
         <button className="mobile-menu" type="button" aria-label="Toggle navigation">
           <span></span>
@@ -86,6 +101,7 @@ export function PersonalTAHeader({ links, showSignIn = true, signInHref = "/logi
           </Link>
         ))}
         {showSignIn ? <Link href={signInHref}>Sign In</Link> : null}
+        {showSignOut ? <Link href={signOutHref}>Sign Out</Link> : null}
       </div>
     </header>
   );

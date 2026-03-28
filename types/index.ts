@@ -71,7 +71,7 @@ export interface GroupMessage {
 export type SRSGrade = 0 | 1 | 2 | 3 | 4 | 5;
 export type AssignmentType = "homework" | "quiz" | "test" | "exam" | "project" | "lab" | "essay" | "other";
 export type NoteSourceType = "upload" | "google_drive" | "onedrive" | "manual";
-export type FileType = "pdf" | "docx" | "txt" | "md" | "image" | "other";
+export type FileType = "pdf" | "docx" | "pptx" | "txt" | "md" | "image" | "audio" | "other";
 export type SummaryType = "bullet_points" | "outline" | "detailed" | "unit_aggregate";
 export type MasteryLevel = "unknown" | "learning" | "practicing" | "mastered";
 export type Difficulty = "easy" | "medium" | "hard" | "adaptive";
@@ -86,6 +86,8 @@ export interface Profile {
   grade_level: number | null;
   school_name: string | null;
   timezone: string;
+  preferred_subjects: string[];
+  role: "student" | "teacher";
   preferences: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -191,6 +193,8 @@ export interface Note {
   file_size_bytes: number | null;
   storage_path: string | null;
   topic_tags: string[];
+  unit_name: string | null;
+  exam_name: string | null;
   is_processed: boolean;
   word_count: number | null;
   created_at: string;
@@ -245,6 +249,63 @@ export interface StudyPlan {
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface StudyAvailability {
+  id: string;
+  user_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  preferred_block_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudyBlock {
+  id: string;
+  user_id: string;
+  plan_date: string;
+  title: string;
+  task_type: string;
+  start_time: string;
+  end_time: string;
+  assignment_id: string | null;
+  course_id: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FocusSession {
+  id: string;
+  user_id: string;
+  study_block_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_minutes: number | null;
+  status: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string | null;
+  type: string;
+  scheduled_at: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface Rubric {
+  id: string;
+  user_id: string;
+  course_id: string | null;
+  title: string;
+  criteria: Array<{ criterion: string; description: string; points: number }>;
+  created_at: string;
 }
 
 // ---- Practice / Quiz ----

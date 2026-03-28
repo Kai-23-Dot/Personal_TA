@@ -85,8 +85,9 @@ export async function POST(req: Request) {
   const noteFileType: string =
     fileType === "pdf" ? "pdf"
     : fileType === "docx" ? "docx"
+    : fileType === "pptx" ? "pptx"
     : fileType === "txt" ? "txt"
-    : "other"; // pptx -> other
+    : "other";
 
   const { data: note, error } = await supabase
     .from("notes")

@@ -10,6 +10,12 @@ const difficultyOptions = [
   { value: "hard", label: "Hard" },
 ];
 
+const modeOptions = [
+  { value: "quiz", label: "Quiz" },
+  { value: "flashcards", label: "Flashcards" },
+  { value: "mixed", label: "Mixed" },
+];
+
 type Course = {
   id: string;
   name: string;
@@ -21,15 +27,24 @@ type NoteListItem = {
   updated_at: string;
 };
 
+type Assignment = {
+  id: string;
+  title: string;
+  course_id: string;
+};
+
 export default function PracticePage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState<string>("");
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [selectedNotes, setSelectedNotes] = useState<Record<string, boolean>>({});
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentId, setAssignmentId] = useState("");
   const [topic, setTopic] = useState("");
   const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState("adaptive");
+  const [mode, setMode] = useState("quiz");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,36 +92,77 @@ export default function PracticePage() {
     };
   }, [courseId]);
 
+  useEffect(() => {
+    let mounted = true;
+    async function loadAssignments() {
+      if (!courseId) {
+        setAssignments([]);
+        setAssignmentId("");
+        return;
+      }
+      const res = await fetch(`/api/assignments?course_id=${courseId}`);
+      const data = await res.json();
+      if (mounted) setAssignments(data ?? []);
+    }
+    loadAssignments();
+    return () => {
+      mounted = false;
+    };
+  }, [courseId]);
+
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
+      const assignmentTitle = assignments.find((a) => a.id === assignmentId)?.title ?? "";
+      const effectiveTopic = topic || assignmentTitle || "Course practice";
       const noteIds = Object.entries(selectedNotes)
         .filter(([, selected]) => selected)
         .map(([id]) => id);
 
-      const res = await fetch("/api/practice/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic,
-          courseId: courseId || null,
-          difficulty,
-          questionCount,
-          noteIds: noteIds.length > 0 ? noteIds : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.success === false) {
-        setError(data?.error || "Failed to generate practice test.");
-        return;
-      }
-      if (data.sessionId) {
-        router.push(`/practice/session?sessionId=${data.sessionId}`);
+      if (mode === "flashcards") {
+        const res = await fetch("/api/flashcards/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            noteId: noteIds[0] ?? null,
+            courseId: courseId || null,
+            topic: effectiveTopic,
+            count: Math.min(Math.max(questionCount, 5), 40),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data?.success === false) {
+          setError(data?.error || "Failed to generate flashcards.");
+          return;
+        }
+        router.push("/flashcards");
       } else {
-        setError("Missing session id from practice generator.");
+        const res = await fetch("/api/practice/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topic: effectiveTopic,
+            courseId: courseId || null,
+            difficulty,
+            questionCount,
+            noteIds: noteIds.length > 0 ? noteIds : undefined,
+            assignmentId: assignmentId || null,
+            mode,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data?.success === false) {
+          setError(data?.error || "Failed to generate practice test.");
+          return;
+        }
+        if (data.sessionId) {
+          router.push(`/practice/session?sessionId=${data.sessionId}`);
+        } else {
+          setError("Missing session id from practice generator.");
+        }
       }
     } catch (err) {
       setError((err as Error).message);
@@ -158,8 +214,29 @@ export default function PracticePage() {
                 placeholder="e.g. Quadratic equations"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                required
               />
+            </div>
+            <div className="form-field">
+              <label htmlFor="assignment">Assignment (optional)</label>
+              <select
+                id="assignment"
+                value={assignmentId}
+                onChange={(e) => setAssignmentId(e.target.value)}
+                style={{
+                  padding: "0.8rem 1rem",
+                  background: "rgba(255, 255, 255, 0.12)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "10px",
+                  color: "var(--light)",
+                }}
+              >
+                <option value="">No assignment selected</option>
+                {assignments.map((assignment) => (
+                  <option key={assignment.id} value={assignment.id}>
+                    {assignment.title}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-field">
               <label>Practice from selected notes (optional)</label>
@@ -260,6 +337,27 @@ export default function PracticePage() {
                 }}
               >
                 {difficultyOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="mode">Mode</label>
+              <select
+                id="mode"
+                value={mode}
+                onChange={(e) => setMode(e.target.value)}
+                style={{
+                  padding: "0.8rem 1rem",
+                  background: "rgba(255, 255, 255, 0.12)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "10px",
+                  color: "var(--light)",
+                }}
+              >
+                {modeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

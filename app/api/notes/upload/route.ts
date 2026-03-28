@@ -32,10 +32,22 @@ async function extractTextFromFile(file: File): Promise<string> {
     return result.text;
   }
 
+  if (fileName.endsWith(".pptx")) {
+    const { extractFileText } = await import("@/lib/utils/extractFileText");
+    const text = await extractFileText(buffer, "pptx");
+    if (text) return text;
+  }
+
   if (fileName.endsWith(".docx")) {
     const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
+  }
+
+  if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a")) {
+    const { transcribeAudio } = await import("@/lib/ai/transcribeAudio");
+    const { structuredNotes } = await transcribeAudio(buffer, file.name);
+    return structuredNotes;
   }
 
   // Handwritten or typed image notes — use Gemini Vision
@@ -84,7 +96,8 @@ function getFileType(file: File): string {
     return "image";
   }
 
-  const map: Record<string, string> = { pdf: "pdf", docx: "docx", txt: "txt", md: "md" };
+  const map: Record<string, string> = { pdf: "pdf", docx: "docx", pptx: "pptx", txt: "txt", md: "md" };
+  if (/(mp3|wav|m4a)$/.test(ext)) return "audio";
   return map[ext] ?? "other";
 }
 
@@ -97,6 +110,9 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const courseId = formData.get("courseId") as string | null;
+    const unitName = formData.get("unitName") as string | null;
+    const examName = formData.get("examName") as string | null;
+    const topicTagsRaw = (formData.get("topicTags") as string | null) ?? "";
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
@@ -148,6 +164,12 @@ export async function POST(req: Request) {
         file_size_bytes: file.size,
         storage_path: storagePath,
         word_count: wordCount,
+        unit_name: unitName?.trim() || null,
+        exam_name: examName?.trim() || null,
+        topic_tags: topicTagsRaw
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
         is_processed: true,
         embedding: embedding ? `[${embedding.join(",")}]` : null,
       })

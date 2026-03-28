@@ -110,7 +110,7 @@ export async function POST(req: Request) {
           source_file_id: sourceFileId,
           source_url: downloadUrl,
           file_name: file.filename ?? null,
-          file_type: "other",
+          file_type: "pptx",
           file_size_bytes: file.size ?? null,
           is_processed: true,
         });

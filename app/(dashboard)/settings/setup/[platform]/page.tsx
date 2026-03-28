@@ -1,9 +1,10 @@
 type SetupPageProps = {
-  params: { platform: string };
+  params: Promise<{ platform: string }>;
 };
 
-export default function SetupPlatformPage({ params }: SetupPageProps) {
-  const platformLabel = params.platform
+export default async function SetupPlatformPage({ params }: SetupPageProps) {
+  const { platform } = await params;
+  const platformLabel = platform
     .replace(/-/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 

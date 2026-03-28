@@ -11,6 +11,16 @@ import { PersonalTAHeader } from "@/components/layout/PersonalTAHeader";
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
+  // Optional OAuth providers (comma-separated) for Supabase auth, e.g. "google,azure".
+  const oauthProviders = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean);
+  const oauthLabels: Record<string, string> = {
+    google: "Google",
+    azure: "Microsoft",
+    github: "GitHub",
+  };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +42,18 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleOAuth(provider: string) {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provider as "google" | "github" | "azure",
+      options: { redirectTo: `${window.location.origin}/callback` },
+    });
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+    }
+  }
+
   return (
     <PersonalTABackdrop>
       <PersonalTAHeader
@@ -49,6 +71,21 @@ export default function LoginPage() {
         <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "640px", margin: "0 auto" }}>
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
             <h3 className="contact-form-title">Sign in to PersonalTA</h3>
+            {oauthProviders.length > 0 ? (
+              <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
+                {oauthProviders.map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    className="contact-submit-btn"
+                    onClick={() => handleOAuth(provider)}
+                    disabled={loading}
+                  >
+                    Continue with {oauthLabels[provider] ?? provider}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <form className="contact-form" onSubmit={handleEmailLogin}>
               <div className="form-field">
                 <label htmlFor="email">Email</label>

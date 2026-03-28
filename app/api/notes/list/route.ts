@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("notes")
-    .select("id, title, updated_at")
+    .select("id, title, updated_at, created_at, course_id, unit_name, exam_name, topic_tags, file_name, file_type")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(200);

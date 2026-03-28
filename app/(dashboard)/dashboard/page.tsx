@@ -13,7 +13,7 @@ import {
   parseISO,
 } from "date-fns";
 
-type CourseRef = { name: string; color: string | null } | null;
+type CourseRef = { id: string; name: string; color: string | null } | null;
 
 type AssignmentRow = {
   id: string;
@@ -41,16 +41,25 @@ type Profile = {
   full_name: string | null;
 };
 
+type FocusSession = {
+  duration_minutes: number | null;
+  started_at: string;
+};
+
 export default function DashboardPage() {
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [connections, setConnections] = useState<LmsConnection[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [focusSessions, setFocusSessions] = useState<FocusSession[]>([]);
+  const [metrics, setMetrics] = useState<Array<{ topic: string; accuracy_pct: number }>>([]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; body: string | null; read_at: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [autoSyncTried, setAutoSyncTried] = useState(false);
+  const [range, setRange] = useState<"today" | "7" | "14">("7");
 
   useEffect(() => {
     let mounted = true;
@@ -78,6 +87,18 @@ export default function DashboardPage() {
           if (coursesData && coursesData.length > 0) {
             setSelectedCourseIds(new Set(coursesData.map((c: Course) => c.id)));
           }
+        }
+
+        const focusRes = await fetch("/api/focus/history");
+        const metricsRes = await fetch("/api/performance/weak");
+        const notificationsRes = await fetch("/api/notifications");
+        const focusData = focusRes.ok ? await focusRes.json() : [];
+        const metricsData = metricsRes.ok ? await metricsRes.json() : [];
+        const notificationsData = notificationsRes.ok ? await notificationsRes.json() : [];
+        if (mounted) {
+          setFocusSessions(focusData ?? []);
+          setMetrics(metricsData ?? []);
+          setNotifications(notificationsData ?? []);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -113,18 +134,17 @@ export default function DashboardPage() {
   }
 
   async function handleSync({ silent = false }: { silent?: boolean } = {}) {
-    if (!canvasConnection) {
-      if (!silent) setSyncMessage("No Canvas connection found. Connect Canvas in Settings.");
+    if (connections.length === 0) {
+      if (!silent) setSyncMessage("No LMS connections found. Connect Canvas, Google Classroom, or Microsoft Teams in Settings.");
       return;
     }
     if (!silent) setSyncMessage(null);
     setSyncing(true);
 
     try {
-      const res = await fetch("/api/sync", {
+      const res = await fetch("/api/sync/all", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId: canvasConnection.id }),
       });
       const data = await res.json();
       if (!res.ok || data?.success === false) {
@@ -151,10 +171,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (!canvasConnection || autoSyncTried) return;
+    if (connections.length === 0 || autoSyncTried) return;
     setAutoSyncTried(true);
     handleSync({ silent: true });
-  }, [canvasConnection, autoSyncTried]);
+  }, [connections, autoSyncTried]);
 
   const filteredAssignments = useMemo(() => {
     if (selectedCourseIds.size === 0) return [];
@@ -163,13 +183,38 @@ export default function DashboardPage() {
 
   const upcomingAssignments = useMemo(() => {
     const now = new Date();
+    const rangeDays = range === "today" ? 1 : range === "14" ? 14 : 7;
+    const cutoff = new Date(now.getTime() + rangeDays * 86400000);
     return filteredAssignments
       .filter((a) => a.due_date && !a.is_completed)
       .map((a) => ({ ...a, due: parseISO(a.due_date as string) }))
-      .filter((a) => a.due >= now)
+      .filter((a) => a.due >= now && a.due <= cutoff)
       .sort((a, b) => a.due.getTime() - b.due.getTime())
       .slice(0, 8);
-  }, [filteredAssignments]);
+  }, [filteredAssignments, range]);
+
+  const hoursThisWeek = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const minutes = focusSessions
+      .filter((s) => new Date(s.started_at) >= weekStart)
+      .reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
+    return Math.round(minutes / 60);
+  }, [focusSessions]);
+
+  const streakDays = useMemo(() => {
+    const daysWithFocus = new Set(
+      focusSessions.map((s) => format(new Date(s.started_at), "yyyy-MM-dd"))
+    );
+    let streak = 0;
+    for (let i = 0; i < 14; i++) {
+      const day = format(new Date(Date.now() - i * 86400000), "yyyy-MM-dd");
+      if (daysWithFocus.has(day)) streak += 1;
+      else break;
+    }
+    return streak;
+  }, [focusSessions]);
 
   const calendarDays = useMemo(() => {
     const today = new Date();
@@ -207,19 +252,38 @@ export default function DashboardPage() {
         </h2>
         <div className="about-content">
           <div className="about-text animate-on-scroll slide-left">
-            <p>Stay on top of your Canvas workload with a live calendar and upcoming due dates.</p>
-            <p>Sync anytime to pull new courses and assignments from Canvas.</p>
+            <p>Stay on top of your LMS workload with a live calendar and upcoming due dates.</p>
+            <p>Sync anytime to pull new courses and assignments from your LMS connections.</p>
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", color: "var(--light)" }}>
+              <div>
+                <strong>{hoursThisWeek}h</strong>
+                <div style={{ color: "var(--gray)" }}>Studied this week</div>
+              </div>
+              <div>
+                <strong>{metrics.length}</strong>
+                <div style={{ color: "var(--gray)" }}>Weak topics</div>
+              </div>
+              <div>
+                <strong>{streakDays} day{streakDays === 1 ? "" : "s"}</strong>
+                <div style={{ color: "var(--gray)" }}>Study streak</div>
+              </div>
+            </div>
             <div className="cta-buttons" style={{ marginTop: "1.5rem", justifyContent: "flex-start" }}>
-              <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
-                {syncing ? "Syncing..." : "Sync Canvas"}
+              <button className="btn btn-primary" onClick={() => handleSync()} disabled={syncing}>
+                {syncing ? "Syncing..." : "Sync LMS"}
               </button>
               <a className="btn btn-secondary" href="/settings/setup/canvas">
-                Connect Canvas
+                Connect LMS
               </a>
             </div>
             {syncMessage ? (
               <p style={{ marginTop: "1rem", color: "var(--gray)" }}>{syncMessage}</p>
             ) : null}
+            <div className="cta-buttons" style={{ marginTop: "1.5rem", justifyContent: "flex-start" }}>
+              <a className="btn btn-secondary" href="/notes">Notes</a>
+              <a className="btn btn-secondary" href="/practice">Practice</a>
+              <a className="btn btn-secondary" href="/chat">Chat</a>
+            </div>
           </div>
           <div className="about-visual animate-on-scroll slide-right">
             <div className="about-stat" style={{ textAlign: "left" }}>
@@ -227,8 +291,20 @@ export default function DashboardPage() {
               <span className="about-stat-label">Total assignments tracked</span>
             </div>
             <div className="about-stat" style={{ marginTop: "1rem", textAlign: "left" }}>
-              <span className="about-stat-number">{canvasConnection ? "Connected" : "Not connected"}</span>
-              <span className="about-stat-label">Canvas status</span>
+              <span className="about-stat-number">{connections.length > 0 ? "Connected" : "Not connected"}</span>
+              <span className="about-stat-label">LMS status</span>
+            </div>
+            <div style={{ marginTop: "1.5rem" }}>
+              <strong style={{ color: "var(--light)" }}>Notifications</strong>
+              {notifications.length === 0 ? (
+                <p style={{ color: "var(--gray)" }}>No notifications right now.</p>
+              ) : (
+                <ul style={{ color: "var(--light)", marginTop: "0.5rem" }}>
+                  {notifications.slice(0, 3).map((n) => (
+                    <li key={n.id}>{n.title}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
@@ -321,6 +397,11 @@ export default function DashboardPage() {
 
       <section className="section">
         <h2 className="animate-on-scroll">Upcoming Due Dates</h2>
+        <div className="cta-buttons" style={{ justifyContent: "flex-start", marginBottom: "1rem" }}>
+          <button className="btn btn-secondary" onClick={() => setRange("today")}>Today</button>
+          <button className="btn btn-secondary" onClick={() => setRange("7")}>Next 7 days</button>
+          <button className="btn btn-secondary" onClick={() => setRange("14")}>Next 14 days</button>
+        </div>
         {loading ? (
           <p style={{ color: "var(--gray)" }}>Loading assignments...</p>
         ) : upcomingAssignments.length === 0 ? (
@@ -328,7 +409,15 @@ export default function DashboardPage() {
         ) : (
           <div className="timeline">
             {upcomingAssignments.map((assignment) => (
-              <div key={assignment.id} className="timeline-item animate-on-scroll">
+              <div
+                key={assignment.id}
+                className="timeline-item animate-on-scroll"
+                style={{
+                  borderColor: assignment.due && assignment.due.getTime() - Date.now() < 48 * 3600 * 1000
+                    ? "rgba(255, 107, 107, 0.5)"
+                    : "rgba(0, 255, 255, 0.2)",
+                }}
+              >
                 <div className="timeline-header">
                   <div className="timeline-time">
                     {assignment.due_date ? format(parseISO(assignment.due_date), "MMM d") : "TBD"}

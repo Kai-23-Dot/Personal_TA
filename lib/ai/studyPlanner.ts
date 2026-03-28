@@ -7,6 +7,12 @@ export interface PlannerInput {
   date: string; // YYYY-MM-DD
   assignments: Assignment[];
   availableMinutes?: number;
+  availability?: Array<{
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    preferred_block_minutes?: number;
+  }>;
   existingTasks?: StudyTask[];
   notes?: string;
 }
@@ -35,7 +41,15 @@ type RawPlan = {
 };
 
 export async function generateStudyPlan(input: PlannerInput): Promise<PlannerOutput> {
-  const { date, assignments, availableMinutes = 180, notes } = input;
+  const { date, assignments, availableMinutes = 180, notes, availability } = input;
+
+  const dayOfWeek = new Date(date).getDay();
+  const dayAvailability = (availability ?? []).filter((slot) => slot.day_of_week === dayOfWeek);
+  const availabilityContext = dayAvailability.length
+    ? dayAvailability
+        .map((slot) => `- ${slot.start_time}–${slot.end_time} (${slot.preferred_block_minutes ?? 45} min blocks)`)
+        .join("\n")
+    : "No availability provided.";
 
   const assignmentContext = assignments
     .slice(0, 15)
@@ -60,6 +74,7 @@ export async function generateStudyPlan(input: PlannerInput): Promise<PlannerOut
     `Create a realistic, prioritized daily study plan for a high school student.`,
     `Planning date: ${date}`,
     `Available study time: ${availableMinutes} minutes (fit all tasks within this limit).`,
+    `Time windows for the day:\n${availabilityContext}`,
     `Prioritize by urgency (due date) and importance (points). Mix homework, study, review, practice.`,
     notes ? `Student note: ${notes}` : null,
     "",

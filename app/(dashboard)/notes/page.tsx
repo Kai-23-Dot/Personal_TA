@@ -28,6 +28,19 @@ type CanvasFile = {
   updated_at: string;
 };
 
+type NoteListItem = {
+  id: string;
+  title: string;
+  updated_at: string;
+  created_at: string;
+  course_id: string | null;
+  unit_name: string | null;
+  exam_name: string | null;
+  topic_tags: string[];
+  file_name: string | null;
+  file_type: string | null;
+};
+
 type ModuleItem = {
   moduleId: number;
   moduleName: string;
@@ -44,12 +57,25 @@ export default function NotesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [unitName, setUnitName] = useState("");
+  const [examName, setExamName] = useState("");
+  const [topicTags, setTopicTags] = useState("");
+  const [autoProcess, setAutoProcess] = useState(true);
   const [canvasFiles, setCanvasFiles] = useState<CanvasFile[]>([]);
   const [canvasFileId, setCanvasFileId] = useState<number | null>(null);
   const [summaryType, setSummaryType] = useState("bullet_points");
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+  const [outlineSummary, setOutlineSummary] = useState<string | null>(null);
+  const [cheatSheetSummary, setCheatSheetSummary] = useState<string | null>(null);
+  const [extractions, setExtractions] = useState<{
+    key_concepts: string[];
+    formulas: string[];
+    definitions: Array<{ term: string; definition: string }>;
+    examples: string[];
+  } | null>(null);
+  const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [syncingPowerpoints, setSyncingPowerpoints] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [studyGuideStyle, setStudyGuideStyle] = useState("bullet_points");
@@ -60,6 +86,7 @@ export default function NotesPage() {
   const [moduleItems, setModuleItems] = useState<ModuleItem[]>([]);
   const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -85,14 +112,18 @@ export default function NotesPage() {
         setSyncMessage(null);
         setModuleItems([]);
         setSelectedModuleItems({});
+        setNotes([]);
         return;
       }
       try {
-        const [filesRes] = await Promise.all([
+        const [filesRes, notesRes] = await Promise.all([
           fetch(`/api/canvas/files?courseId=${courseId}`),
+          fetch(`/api/notes/list?courseId=${courseId}`),
         ]);
         const filesData = await filesRes.json();
+        const notesData = await notesRes.json();
         if (!filesRes.ok) throw new Error(filesData?.error || "Failed to load Canvas files");
+        if (!notesRes.ok) throw new Error(notesData?.error || "Failed to load notes");
         if (mounted) {
           const sorted = [...(filesData ?? [])].sort((a, b) => {
             const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
@@ -102,6 +133,7 @@ export default function NotesPage() {
           setCanvasFiles(sorted);
           setCanvasFileId(null);
           setSelectedModuleItems({});
+          setNotes(notesData ?? []);
         }
       } catch {
         if (mounted) {
@@ -110,6 +142,7 @@ export default function NotesPage() {
           setSyncMessage(null);
           setModuleItems([]);
           setSelectedModuleItems({});
+          setNotes([]);
         }
       }
     }
@@ -164,6 +197,11 @@ export default function NotesPage() {
         } else {
           setSyncMessage("PowerPoint notes are already up to date.");
         }
+        const notesRes = await fetch(`/api/notes/list?courseId=${courseId}`);
+        const notesData = await notesRes.json();
+        if (notesRes.ok && mounted) {
+          setNotes(notesData ?? []);
+        }
       } catch (err) {
         if (mounted) setSyncMessage((err as Error).message);
       } finally {
@@ -180,6 +218,9 @@ export default function NotesPage() {
     e.preventDefault();
     setError(null);
     setSummary(null);
+    setOutlineSummary(null);
+    setExtractions(null);
+    setCheatSheetSummary(null);
 
     if (!file) {
       setError("Please choose a file to upload.");
@@ -191,6 +232,9 @@ export default function NotesPage() {
       const formData = new FormData();
       formData.append("file", file);
       if (courseId) formData.append("courseId", courseId);
+      if (unitName) formData.append("unitName", unitName);
+      if (examName) formData.append("examName", examName);
+      if (topicTags) formData.append("topicTags", topicTags);
 
       const uploadRes = await fetch("/api/notes/upload", {
         method: "POST",
@@ -203,22 +247,86 @@ export default function NotesPage() {
         return;
       }
 
-      const summaryRes = await fetch("/api/notes/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          noteId: uploadData.data.noteId,
-          summaryType,
-        }),
-      });
+      if (autoProcess) {
+        const [bulletRes, outlineRes, cheatRes, extractRes] = await Promise.all([
+          fetch("/api/notes/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              noteId: uploadData.data.noteId,
+              summaryType: "bullet_points",
+            }),
+          }),
+          fetch("/api/notes/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              noteId: uploadData.data.noteId,
+              summaryType: "outline",
+            }),
+          }),
+          fetch("/api/notes/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              noteId: uploadData.data.noteId,
+              summaryType: "detailed",
+              customInstruction: "Create a concise cheat sheet with formulas, key facts, and quick recall points.",
+            }),
+          }),
+          fetch("/api/notes/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ noteId: uploadData.data.noteId }),
+          }),
+        ]);
 
-      const summaryData = await summaryRes.json();
-      if (!summaryRes.ok || summaryData?.success === false) {
-        setError(summaryData?.error || "Summary failed.");
-        return;
+        const bulletData = await bulletRes.json();
+        const outlineData = await outlineRes.json();
+        const cheatData = await cheatRes.json();
+        const extractData = await extractRes.json();
+        if (!bulletRes.ok || bulletData?.success === false) {
+          setError(bulletData?.error || "Summary failed.");
+          return;
+        }
+        if (!outlineRes.ok || outlineData?.success === false) {
+          setError(outlineData?.error || "Outline failed.");
+          return;
+        }
+        if (!cheatRes.ok || cheatData?.success === false) {
+          setError(cheatData?.error || "Cheat sheet failed.");
+          return;
+        }
+        if (extractRes.ok && extractData?.success !== false) {
+          setExtractions(extractData?.extraction ?? null);
+        }
+        setSummary(bulletData?.summary?.content || "Summary generated.");
+        setOutlineSummary(outlineData?.summary?.content || "Outline generated.");
+        setCheatSheetSummary(cheatData?.summary?.content || "Cheat sheet generated.");
+      } else {
+        const summaryRes = await fetch("/api/notes/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            noteId: uploadData.data.noteId,
+            summaryType,
+          }),
+        });
+
+        const summaryData = await summaryRes.json();
+        if (!summaryRes.ok || summaryData?.success === false) {
+          setError(summaryData?.error || "Summary failed.");
+          return;
+        }
+
+        setSummary(summaryData?.summary?.content || "Summary generated.");
       }
 
-      setSummary(summaryData?.summary?.content || "Summary generated.");
+      if (courseId) {
+        const notesRes = await fetch(`/api/notes/list?courseId=${courseId}`);
+        const notesData = await notesRes.json();
+        if (notesRes.ok) setNotes(notesData ?? []);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -230,6 +338,8 @@ export default function NotesPage() {
     e.preventDefault();
     setError(null);
     setSummary(null);
+    setOutlineSummary(null);
+    setExtractions(null);
 
     if (!courseId || !canvasFileId) {
       setError("Select a course and a PowerPoint file.");
@@ -266,6 +376,12 @@ export default function NotesPage() {
       }
 
       setSummary(summaryData?.summary?.content || "Summary generated.");
+
+      if (courseId) {
+        const notesRes = await fetch(`/api/notes/list?courseId=${courseId}`);
+        const notesData = await notesRes.json();
+        if (notesRes.ok) setNotes(notesData ?? []);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -353,10 +469,41 @@ export default function NotesPage() {
               </select>
             </div>
             <div className="form-field">
+              <label htmlFor="unitName">Unit</label>
+              <input
+                id="unitName"
+                type="text"
+                placeholder="e.g. Unit 3: Industrial Revolution"
+                value={unitName}
+                onChange={(e) => setUnitName(e.target.value)}
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="examName">Exam</label>
+              <input
+                id="examName"
+                type="text"
+                placeholder="e.g. Midterm, Unit 3 Quiz"
+                value={examName}
+                onChange={(e) => setExamName(e.target.value)}
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="topicTags">Topics (comma separated)</label>
+              <input
+                id="topicTags"
+                type="text"
+                placeholder="e.g. imperialism, railroads, urbanization"
+                value={topicTags}
+                onChange={(e) => setTopicTags(e.target.value)}
+              />
+            </div>
+            <div className="form-field">
               <label htmlFor="file">Upload file</label>
               <input
                 id="file"
                 type="file"
+                accept=".pdf,.docx,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mp3,.wav,.m4a"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 required
               />
@@ -381,6 +528,17 @@ export default function NotesPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="form-field" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <input
+                id="autoProcess"
+                type="checkbox"
+                checked={autoProcess}
+                onChange={(e) => setAutoProcess(e.target.checked)}
+              />
+              <label htmlFor="autoProcess" style={{ margin: 0 }}>
+                Auto-generate bullet summary, outline, and key concepts
+              </label>
             </div>
             <button type="submit" className="contact-submit-btn" disabled={loading}>
               {loading ? "Processing..." : "Upload & Summarize"}
@@ -460,8 +618,72 @@ export default function NotesPage() {
 
       {summary ? (
         <div className="contact-info-section animate-on-scroll" style={{ marginTop: "2rem" }}>
-          <h3 className="contact-info-title">Summary</h3>
+          <h3 className="contact-info-title">Bullet Summary</h3>
           <p style={{ color: "var(--light)", whiteSpace: "pre-wrap" }}>{summary}</p>
+        </div>
+      ) : null}
+
+      {outlineSummary ? (
+        <div className="contact-info-section animate-on-scroll" style={{ marginTop: "1.5rem" }}>
+          <h3 className="contact-info-title">Outline</h3>
+          <p style={{ color: "var(--light)", whiteSpace: "pre-wrap" }}>{outlineSummary}</p>
+        </div>
+      ) : null}
+
+      {cheatSheetSummary ? (
+        <div className="contact-info-section animate-on-scroll" style={{ marginTop: "1.5rem" }}>
+          <h3 className="contact-info-title">Cheat Sheet</h3>
+          <p style={{ color: "var(--light)", whiteSpace: "pre-wrap" }}>{cheatSheetSummary}</p>
+        </div>
+      ) : null}
+
+      {extractions ? (
+        <div className="contact-info-section animate-on-scroll" style={{ marginTop: "1.5rem" }}>
+          <h3 className="contact-info-title">Key Concepts & Examples</h3>
+          <div style={{ color: "var(--light)" }}>
+            {extractions.key_concepts.length > 0 ? (
+              <>
+                <strong>Key concepts</strong>
+                <ul>
+                  {extractions.key_concepts.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {extractions.formulas.length > 0 ? (
+              <>
+                <strong>Formulas</strong>
+                <ul>
+                  {extractions.formulas.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {extractions.definitions.length > 0 ? (
+              <>
+                <strong>Definitions</strong>
+                <ul>
+                  {extractions.definitions.map((item) => (
+                    <li key={item.term}>
+                      <strong>{item.term}:</strong> {item.definition}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {extractions.examples.length > 0 ? (
+              <>
+                <strong>Examples</strong>
+                <ul>
+                  {extractions.examples.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -613,6 +835,63 @@ export default function NotesPage() {
           <p style={{ color: "var(--light)", whiteSpace: "pre-wrap" }}>{studyGuideSummary}</p>
         </div>
       ) : null}
+
+      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
+        <div className="contact-form-column">
+          <h3 className="contact-form-title">My Notes</h3>
+          <div className="form-field">
+            <label htmlFor="filterNotes">Filter by unit/exam/topic</label>
+            <input
+              id="filterNotes"
+              type="text"
+              placeholder="Type to filter..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+            />
+          </div>
+          {notes.length === 0 ? (
+            <p style={{ color: "var(--gray)" }}>No notes yet. Upload or import to get started.</p>
+          ) : (
+            <div style={{ display: "grid", gap: "0.8rem" }}>
+              {notes
+                .filter((note) => {
+                  const query = filterText.toLowerCase();
+                  if (!query) return true;
+                  return (
+                    note.title.toLowerCase().includes(query) ||
+                    (note.unit_name ?? "").toLowerCase().includes(query) ||
+                    (note.exam_name ?? "").toLowerCase().includes(query) ||
+                    (note.topic_tags ?? []).join(" ").toLowerCase().includes(query)
+                  );
+                })
+                .map((note) => (
+                <div
+                  key={note.id}
+                  style={{
+                    padding: "0.9rem 1rem",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "rgba(9, 14, 24, 0.5)",
+                  }}
+                >
+                  <strong style={{ color: "var(--light)" }}>{note.title}</strong>
+                  <div style={{ color: "var(--gray)", marginTop: "0.35rem", fontSize: "0.9rem" }}>
+                    {note.unit_name ? `Unit: ${note.unit_name} · ` : ""}
+                    {note.exam_name ? `Exam: ${note.exam_name} · ` : ""}
+                    {note.file_type ? `Type: ${note.file_type} · ` : ""}
+                    {new Date(note.updated_at).toLocaleDateString()}
+                  </div>
+                  {note.topic_tags?.length ? (
+                    <div style={{ color: "var(--gray)", marginTop: "0.4rem", fontSize: "0.85rem" }}>
+                      Topics: {note.topic_tags.join(", ")}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

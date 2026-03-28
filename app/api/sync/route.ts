@@ -13,6 +13,7 @@ import {
   fetchGCCourseWork,
   parseDueDate,
   mapWorkType,
+  refreshGoogleAccessToken,
 } from "@/lib/lms/google-classroom";
 import {
   fetchCanvasCourses,
@@ -29,6 +30,7 @@ import {
 import {
   fetchMSClasses,
   fetchMSAssignments,
+  refreshMicrosoftAccessToken,
 } from "@/lib/lms/microsoft-teams";
 import {
   fetchICProfile,
@@ -111,14 +113,50 @@ async function syncConnection(
     user_id: string;
     platform: string;
     access_token: string;
+    refresh_token: string | null;
+    token_expires_at: string | null;
     canvas_domain: string | null;
   }
 ): Promise<SyncResult> {
-  const { user_id, platform, access_token, canvas_domain } = connection;
+  let { access_token } = connection;
+  const { user_id, platform, canvas_domain, refresh_token, token_expires_at } = connection;
   let coursesSynced = 0;
   let assignmentsSynced = 0;
   let notesSynced = 0;
   const errors: string[] = [];
+
+  // Refresh OAuth tokens if expired
+  if (refresh_token && token_expires_at) {
+    const expired = new Date(token_expires_at).getTime() <= Date.now();
+    if (expired && (platform === "google_classroom" || platform === "microsoft_teams")) {
+      try {
+        if (platform === "google_classroom") {
+          const refreshed = await refreshGoogleAccessToken(refresh_token);
+          access_token = refreshed.access_token;
+          const expiresAt = refreshed.expires_in
+            ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+            : null;
+          await supabase
+            .from("lms_connections")
+            .update({ access_token, token_expires_at: expiresAt })
+            .eq("id", connection.id);
+        }
+        if (platform === "microsoft_teams") {
+          const refreshed = await refreshMicrosoftAccessToken(refresh_token);
+          access_token = refreshed.access_token;
+          const expiresAt = refreshed.expires_in
+            ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+            : null;
+          await supabase
+            .from("lms_connections")
+            .update({ access_token, token_expires_at: expiresAt })
+            .eq("id", connection.id);
+        }
+      } catch (err) {
+        errors.push(`${platform}: token refresh failed — ${(err as Error).message}`);
+      }
+    }
+  }
 
   // ── Google Classroom ─────────────────────────────────────────────────────
   if (platform === "google_classroom") {
@@ -399,7 +437,7 @@ async function syncConnection(
         const FILES_SIZE_CAP = 5 * 1024 * 1024; // 5 MB
         const files = await fetchCanvasFiles(canvas_domain, access_token, cc.id, 20);
         for (const file of files) {
-          const fileType = mimeToFileType(file["content-type"]);
+          const fileType = mimeToFileType(file["content-type"] ?? file.content_type ?? "");
           if (!fileType) continue;
           if (file.size > FILES_SIZE_CAP) continue;
 

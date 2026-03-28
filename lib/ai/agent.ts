@@ -126,10 +126,11 @@ Today's date: ${format(new Date(), "EEEE, MMMM d, yyyy")}`;
 export async function runTAChatAgent(
   userId: string,
   messages: CoreMessage[],
-  context?: AgentContext
+  context?: AgentContext,
+  ragContext?: string
 ): Promise<any> {
   void userId; // kept in signature for API compatibility
-  const systemPrompt = BASE_SYSTEM_PROMPT + buildContextBlock(context);
+  const systemPrompt = BASE_SYSTEM_PROMPT + buildContextBlock(context) + (ragContext ?? "");
 
   return streamText({
     model: chatModel,

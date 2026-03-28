@@ -7,10 +7,13 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { title, content, courseId } = body as {
+  const { title, content, courseId, unitName, examName, topicTags } = body as {
     title: string;
     content: string;
     courseId?: string | null;
+    unitName?: string | null;
+    examName?: string | null;
+    topicTags?: string[] | null;
   };
 
   if (!title?.trim() || !content?.trim()) {
@@ -25,6 +28,9 @@ export async function POST(req: Request) {
       title: title.trim(),
       content: content.trim(),
       source_type: "manual",
+      unit_name: unitName?.trim() || null,
+      exam_name: examName?.trim() || null,
+      topic_tags: topicTags ?? [],
       is_processed: true,
     })
     .select()

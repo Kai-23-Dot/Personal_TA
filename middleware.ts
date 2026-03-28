@@ -35,6 +35,14 @@ export async function middleware(request: NextRequest) {
     "/",
     "/login",
     "/signup",
+    "/callback",
+    "/about",
+    "/contact",
+    "/website",
+    "/privacy",
+    "/terms",
+    "/manifest.webmanifest",
+    "/icon.svg",
   ]);
 
   const isPublicRoute = publicRoutes.has(pathname);

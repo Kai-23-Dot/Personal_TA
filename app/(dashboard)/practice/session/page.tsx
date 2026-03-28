@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -49,40 +49,51 @@ export default function PracticeSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [times, setTimes] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [relatedNotes, setRelatedNotes] = useState<Array<{ id: string; title?: string; content: string }>>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const sessionStartRef = useRef<number | null>(null);
+  const questionStartRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      if (!sessionId) {
-        setError("Missing sessionId");
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch(`/api/practice/session?sessionId=${sessionId}`);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Failed to load session");
-        }
-        if (mounted) setSession(data);
-      } catch (err) {
-        if (mounted) setError((err as Error).message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
+  const loadSession = useCallback(async () => {
+    if (!sessionId) {
+      setError("Missing sessionId");
+      setLoading(false);
+      return;
     }
-    load();
-    return () => {
-      mounted = false;
-    };
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/practice/session?sessionId=${sessionId}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load session");
+      }
+      setSession(data);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }, [sessionId]);
 
   useEffect(() => {
+    let mounted = true;
+    if (!mounted) return;
+    loadSession();
+    return () => {
+      mounted = false;
+    };
+  }, [loadSession]);
+
+  useEffect(() => {
     setShowHint(false);
+    questionStartRef.current = Date.now();
+    setRelatedNotes([]);
   }, [index]);
 
   const questions = session?.questions ?? [];
@@ -126,8 +137,16 @@ export default function PracticeSessionPage() {
     },
   });
 
+  useEffect(() => {
+    if (!sessionStartRef.current) sessionStartRef.current = Date.now();
+  }, []);
+
   function setAnswer(value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
+    if (questionStartRef.current) {
+      const elapsed = Math.max(1, Math.round((Date.now() - questionStartRef.current) / 1000));
+      setTimes((prev) => ({ ...prev, [index]: prev[index] ?? elapsed }));
+    }
   }
 
   async function handleSubmitTest() {
@@ -152,6 +171,13 @@ export default function PracticeSessionPage() {
           total,
           topic: session.topic,
           courseId: session.course_id,
+          durationSeconds: sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 1000) : null,
+          attempts: questions.map((q, idx) => ({
+            question_index: idx,
+            user_answer: answers[idx] ?? "",
+            is_correct: q.correct_answer.trim().toLowerCase() === (answers[idx] ?? "").trim().toLowerCase(),
+            time_taken_seconds: times[idx] ?? 0,
+          })),
         }),
       });
 
@@ -183,6 +209,25 @@ export default function PracticeSessionPage() {
     toast.success("Saved to Notes");
   }
 
+  async function loadRelatedNotes() {
+    if (!current || !session) return;
+    setLoadingNotes(true);
+    try {
+      const res = await fetch("/api/notes/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: current.question,
+          courseId: session.course_id,
+        }),
+      });
+      const data = await res.json();
+      setRelatedNotes(data?.results ?? []);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }
+
   if (loading) {
     return <section className="section"><p style={{ color: "var(--gray)" }}>Loading practice test...</p></section>;
   }
@@ -191,9 +236,14 @@ export default function PracticeSessionPage() {
     return (
       <section className="section">
         <p style={{ color: "var(--gray)" }}>{error ?? "Session not found"}</p>
-        <button className="btn btn-secondary" type="button" onClick={() => router.push("/practice")}>
-          Back to Practice
-        </button>
+        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
+          <button className="btn btn-secondary" type="button" onClick={loadSession}>
+            Retry
+          </button>
+          <button className="btn btn-secondary" type="button" onClick={() => router.push("/practice")}>
+            Back to Practice
+          </button>
+        </div>
       </section>
     );
   }
@@ -262,6 +312,38 @@ export default function PracticeSessionPage() {
             />
           ) : null}
 
+          {showFeedback ? (
+            <div className="practice-actions" style={{ marginTop: "0.75rem" }}>
+              <button className="btn btn-secondary" type="button" onClick={loadRelatedNotes} disabled={loadingNotes}>
+                {loadingNotes ? "Finding notes..." : "See related notes"}
+              </button>
+            </div>
+          ) : null}
+
+          {relatedNotes.length > 0 ? (
+            <div className="contact-info-section" style={{ marginTop: "1rem" }}>
+              <h4 className="contact-info-title">Related Notes</h4>
+              <div style={{ display: "grid", gap: "0.75rem" }}>
+                {relatedNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: "12px",
+                      padding: "0.8rem 1rem",
+                      background: "rgba(9,14,24,0.5)",
+                    }}
+                  >
+                    <strong style={{ color: "var(--light)" }}>{note.title ?? "Related note"}</strong>
+                    <p style={{ color: "var(--gray)", marginTop: "0.4rem" }}>
+                      {note.content.slice(0, 180)}...
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <NavigationControls
             onPrev={() => setIndex((i) => Math.max(i - 1, 0))}
             onNext={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}
@@ -271,6 +353,30 @@ export default function PracticeSessionPage() {
             submitting={submitting}
           />
         </article>
+      ) : null}
+
+      {submitted ? (
+        <section className="contact-info-section" style={{ marginTop: "2rem" }}>
+          <h3 className="contact-info-title">Session Summary</h3>
+          <p style={{ color: "var(--light)" }}>
+            Score: {questions.reduce((count, q, idx) => (
+              q.correct_answer.trim().toLowerCase() === (answers[idx] ?? "").trim().toLowerCase()
+                ? count + 1
+                : count
+            ), 0)} / {questions.length}
+          </p>
+          <p style={{ color: "var(--gray)" }}>
+            Total time: {sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 60_000) : 0} min
+          </p>
+          <div style={{ marginTop: "0.75rem", color: "var(--light)" }}>
+            Recommended next steps:
+            <ul>
+              <li>Review the questions you missed and save them as notes.</li>
+              <li>Generate a new practice set for your weakest topics.</li>
+              <li>Use Flashcards for quick recall practice.</li>
+            </ul>
+          </div>
+        </section>
       ) : null}
 
       {chatOpen ? (

@@ -48,6 +48,48 @@ export interface MSCalendarEvent {
   body?: { content?: string };
 }
 
+export async function refreshMicrosoftAccessToken(refreshToken: string) {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const tenant = process.env.MICROSOFT_TENANT_ID ?? "common";
+  if (!clientId || !clientSecret) {
+    throw new Error("Microsoft OAuth not configured");
+  }
+
+  const res = await fetch(
+    `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: [
+          "openid",
+          "profile",
+          "email",
+          "offline_access",
+          "EduAssignments.ReadBasic",
+          "EduRoster.ReadBasic",
+          "Calendars.Read",
+        ].join(" "),
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Microsoft token refresh failed: ${await res.text()}`);
+  }
+
+  return res.json() as Promise<{
+    access_token: string;
+    expires_in?: number;
+    token_type?: string;
+  }>;
+}
+
 export async function fetchMSClasses(accessToken: string): Promise<MSClass[]> {
   const res = await fetch(
     "https://graph.microsoft.com/v1.0/education/me/classes?$select=id,displayName,description,mailNickname",

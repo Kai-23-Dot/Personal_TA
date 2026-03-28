@@ -30,7 +30,7 @@ export async function transcribeAudio(
 
   // Step 1: Raw transcription via Sarvam Saaras v3 ASR
   const formData = new FormData();
-  const blob = new Blob([audioBuffer], { type: mimeType });
+  const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
   formData.append("file", blob, fileName);
   formData.append("model", "saaras:v3");
 
