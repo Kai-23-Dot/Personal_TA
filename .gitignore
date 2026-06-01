@@ -4,6 +4,8 @@ node_modules
 
 # Next.js
 .next
+.next-build
+.next-dev
 out
 
 # Environment
