@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     .from("assignments")
     .select("*, course:courses(name, color)")
     .eq("user_id", user.id)
+    .or(`due_date.is.null,due_date.gte.${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()}`)
     .order("due_date", { ascending: true });
 
   if (courseId) query = query.eq("course_id", courseId);

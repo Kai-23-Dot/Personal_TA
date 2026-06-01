@@ -32,7 +32,7 @@ export default function FlashcardsPage() {
     async function load() {
       const coursesRes = await fetch("/api/courses");
       const coursesData = coursesRes.ok ? await coursesRes.json() : [];
-      if (mounted) setCourses(coursesData ?? []);
+      if (mounted) setCourses(Array.isArray(coursesData) ? coursesData : []);
     }
     load();
     return () => {
@@ -50,7 +50,7 @@ export default function FlashcardsPage() {
       }
       const res = await fetch(`/api/notes/list?courseId=${courseId}`);
       const data = await res.json();
-      if (mounted) setNotes(data ?? []);
+      if (mounted) setNotes(Array.isArray(data) ? data : []);
     }
     loadNotes();
     return () => {
@@ -61,7 +61,7 @@ export default function FlashcardsPage() {
   async function loadDueCards() {
     const res = await fetch(`/api/flashcards/list?courseId=${courseId}`);
     const data = await res.json();
-    setReviewCards(data ?? []);
+    setReviewCards(Array.isArray(data) ? data : []);
     setCurrentIndex(0);
     setShowBack(false);
   }

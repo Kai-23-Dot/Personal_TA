@@ -31,7 +31,6 @@ export default async function DashboardLayout({
     { label: "Review", href: "/review" },
     { label: "Focus", href: "/focus" },
     { label: "Chat", href: "/chat" },
-    { label: "Teacher", href: "/teacher" },
     { label: "Settings", href: "/settings" },
   ];
 

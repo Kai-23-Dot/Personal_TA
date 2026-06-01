@@ -245,3 +245,33 @@
   @apply font-mono text-xs bg-transparent p-0 text-foreground;
 }
 .md-content input[type="checkbox"] { @apply mr-2 rounded; }
+
+/* Chat readability guard: never render black text in AI chat surfaces. */
+.chat-readable,
+.chat-readable * {
+  color: #e6edf8;
+}
+.chat-readable p,
+.chat-readable li,
+.chat-readable span {
+  color: #dbe6f7;
+}
+.chat-readable h1,
+.chat-readable h2,
+.chat-readable h3,
+.chat-readable h4,
+.chat-readable strong {
+  color: #f5f9ff;
+}
+.chat-readable a {
+  color: #7dd3fc;
+}
+.chat-readable code:not(pre code) {
+  color: #c4b5fd;
+  background: rgba(255, 255, 255, 0.08);
+}
+.chat-readable pre,
+.chat-readable pre code {
+  color: #e6edf8;
+  background: rgba(10, 16, 28, 0.92);
+}

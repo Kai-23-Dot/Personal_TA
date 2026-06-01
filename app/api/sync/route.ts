@@ -23,9 +23,11 @@ import {
   fetchCanvasPageBody,
   fetchCanvasPageDetail,
   fetchCanvasFiles,
+  fetchCanvasFileById,
   fetchCanvasModules,
   fetchCanvasModuleItems,
   mapCanvasAssignmentType,
+  htmlToPlainText,
 } from "@/lib/lms/canvas";
 import {
   fetchMSClasses,
@@ -39,6 +41,9 @@ import {
   mapICAssignmentType,
 } from "@/lib/lms/infinite-campus";
 import { extractFileText, mimeToFileType } from "@/lib/utils/extractFileText";
+import { crawlCanvasCourseContent } from "@/lib/canvas-intelligence/canvasCrawler";
+import { extractFromGoogleLink, extractFromHtml } from "@/lib/canvas-intelligence/contentExtractor";
+import { classifyContent } from "@/lib/canvas-intelligence/contentClassifier";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -105,6 +110,15 @@ export async function POST(req: Request) {
 }
 
 type SyncResult = { courses: number; assignments: number; notes: number; errors: string[] };
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+function getAssignmentCutoffIso(now = new Date()): string {
+  return new Date(now.getTime() - ONE_YEAR_MS).toISOString();
+}
+
+function isOlderThanOneYear(dateIso: string | null | undefined, cutoffIso: string): boolean {
+  return Boolean(dateIso && dateIso < cutoffIso);
+}
 
 async function syncConnection(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -120,10 +134,12 @@ async function syncConnection(
 ): Promise<SyncResult> {
   let { access_token } = connection;
   const { user_id, platform, canvas_domain, refresh_token, token_expires_at } = connection;
+  const googleApiKey = process.env.GOOGLE_DRIVE_API_KEY;
   let coursesSynced = 0;
   let assignmentsSynced = 0;
   let notesSynced = 0;
   const errors: string[] = [];
+  const assignmentCutoffIso = getAssignmentCutoffIso();
 
   // Refresh OAuth tokens if expired
   if (refresh_token && token_expires_at) {
@@ -194,6 +210,9 @@ async function syncConnection(
       try {
         const courseWork = await fetchGCCourseWork(access_token, gc.id);
         for (const cw of courseWork) {
+          const dueAt = parseDueDate(cw.dueDate, cw.dueTime);
+          if (isOlderThanOneYear(dueAt, assignmentCutoffIso)) continue;
+
           const { error: aErr } = await supabase.from("assignments").upsert(
             {
               user_id,
@@ -202,7 +221,7 @@ async function syncConnection(
               title: cw.title,
               description: cw.description ?? null,
               assignment_type: mapWorkType(cw.workType),
-              due_date: parseDueDate(cw.dueDate, cw.dueTime),
+              due_date: dueAt,
               url: cw.alternateLink,
               points_possible: cw.maxPoints ?? null,
             },
@@ -262,17 +281,10 @@ async function syncConnection(
       const assignmentPointsMap: Record<string, number | null> = {};
       let assignmentConstraintMissing = false;
 
-      // Only sync assignments from the current academic year onwards (skip stale historical data)
-      const academicYearStart = new Date();
-      academicYearStart.setFullYear(academicYearStart.getFullYear() - 1);
-      academicYearStart.setMonth(6); // July of prior year as start of academic window
-      const syncCutoff = academicYearStart.toISOString();
-
       try {
         const assignments = await fetchCanvasAssignments(canvas_domain, access_token, cc.id);
         for (const a of assignments) {
-          // Skip assignments with due dates far in the past (older than academic year start)
-          if (a.due_at && a.due_at < syncCutoff) continue;
+          if (isOlderThanOneYear(a.due_at, assignmentCutoffIso)) continue;
 
           const { data: aRow, error: aErr } = await supabase
             .from("assignments")
@@ -283,7 +295,7 @@ async function syncConnection(
                 platform_id: String(a.id),
                 title: a.name,
                 description: a.description ?? null,
-                assignment_type: mapCanvasAssignmentType(a.submission_types),
+                assignment_type: mapCanvasAssignmentType(a.submission_types, a.name),
                 due_date: a.due_at ?? null,
                 url: a.html_url,
                 points_possible: a.points_possible ?? null,
@@ -513,7 +525,7 @@ async function syncConnection(
             if (item.type === "Page" && item.page_url) {
               const detail = await fetchCanvasPageDetail(canvas_domain, access_token, cc.id, item.page_url);
               if (!detail?.body) continue;
-              const pageText = detail.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+              const pageText = htmlToPlainText(detail.body);
               if (!pageText) continue;
 
               // Use the same source_file_id as the flat pages sync so upsert
@@ -554,9 +566,13 @@ async function syncConnection(
                 .not("content", "is", null);
               if ((existing ?? 0) > 0) continue;
 
-              const dlUrl = item.content_details?.url;
-              const contentType = item.content_details?.["content-type"];
-              const fileSize = item.content_details?.size ?? 0;
+              const fileMeta = await fetchCanvasFileById(canvas_domain, access_token, cc.id, item.content_id);
+              const dlUrl = item.content_details?.url ?? fileMeta?.url;
+              const contentType =
+                item.content_details?.["content-type"] ??
+                fileMeta?.["content-type"] ??
+                fileMeta?.content_type;
+              const fileSize = item.content_details?.size ?? fileMeta?.size ?? 0;
               if (!dlUrl || !contentType) continue;
 
               const fileType = mimeToFileType(contentType);
@@ -586,11 +602,11 @@ async function syncConnection(
                 {
                   user_id,
                   course_id: course.id,
-                  title: item.title,
+                  title: fileMeta?.display_name ?? item.title,
                   content: content ?? null,
                   source_type: "canvas",
                   source_file_id: sourceFileId,
-                  source_url: item.html_url ?? null,
+                  source_url: item.html_url ?? fileMeta?.url ?? null,
                   file_type: noteFileType,
                   is_processed: false,
                   updated_at: new Date().toISOString(),
@@ -607,6 +623,65 @@ async function syncConnection(
         }
       } catch (err) {
         errors.push(`Canvas modules sync failed (${cc.name}): ${(err as Error).message}`);
+      }
+
+      // Canvas Content Intelligence crawl (syllabus/discussions/quizzes/external/module graph)
+      try {
+        const { data: googleConn } = await supabase
+          .from("lms_connections")
+          .select("access_token")
+          .eq("user_id", user_id)
+          .eq("platform", "google_classroom")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        const crawled = await crawlCanvasCourseContent({
+          domain: canvas_domain,
+          accessToken: access_token,
+          canvasCourseId: cc.id,
+          localCourseId: course.id,
+        });
+
+        for (const item of crawled) {
+          if (!item.title) continue;
+          const sourceFileId = `canvas_intel_${cc.id}_${item.type}_${item.id}`;
+          const raw = item.bodyHtml ?? item.textContent ?? "";
+          let extracted = item.bodyHtml ? await extractFromHtml(item.bodyHtml) : raw.trim();
+          if (!extracted && item.externalUrl && /docs\.google\.com|drive\.google\.com/.test(item.externalUrl)) {
+            const googleText = await extractFromGoogleLink({
+              url: item.externalUrl,
+              googleApiKey,
+              oauthAccessToken: googleConn?.access_token ?? null,
+            });
+            if (googleText) extracted = googleText;
+          }
+          if (!extracted) continue;
+
+          const classified = classifyContent(item, extracted);
+          const tagText = classified.tags.length ? `\n\nTags: ${classified.tags.join(", ")}` : "";
+          const metaText = item.moduleName ? `\nModule: ${item.moduleName}` : "";
+
+          const { error: noteErr } = await supabase.from("notes").upsert(
+            {
+              user_id,
+              course_id: course.id,
+              title: item.title,
+              content: `${extracted}${metaText}${tagText}`.slice(0, 30000),
+              source_type: "canvas",
+              source_file_id: sourceFileId,
+              source_url: item.sourceUrl ?? item.externalUrl ?? null,
+              file_type: "other",
+              topic_tags: classified.tags,
+              is_processed: false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,source_file_id" }
+          );
+
+          if (!noteErr) notesSynced++;
+        }
+      } catch (err) {
+        errors.push(`Canvas intelligence crawl failed (${cc.name}): ${(err as Error).message}`);
       }
     }
 
@@ -661,6 +736,7 @@ async function syncConnection(
       try {
         const assignments = await fetchICAssignments(icDomain, access_token, studentId, section.sectionID);
         for (const a of assignments) {
+          if (isOlderThanOneYear(a.dueDate, assignmentCutoffIso)) continue;
           const { error: aErr } = await supabase
             .from("assignments")
             .upsert(
@@ -727,6 +803,7 @@ async function syncConnection(
       try {
         const assignments = await fetchMSAssignments(access_token, cls.id);
         for (const a of assignments) {
+          if (isOlderThanOneYear(a.dueDateTime, assignmentCutoffIso)) continue;
           const { error: aErr } = await supabase.from("assignments").upsert(
             {
               user_id,

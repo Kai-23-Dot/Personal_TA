@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 type NavLink = {
   label: string;
@@ -25,6 +26,7 @@ export function PersonalTAHeader({
   signOutHref = "/logout",
 }: PersonalTAHeaderProps) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <header>
       <nav>
@@ -64,6 +66,7 @@ export function PersonalTAHeader({
             <li key={link.href}>
               <Link
                 href={link.href}
+                onClick={() => setMobileOpen(false)}
                 className={pathname === link.href ? "active" : undefined}
               >
                 {link.label}
@@ -74,34 +77,46 @@ export function PersonalTAHeader({
 
         {showSignIn ? (
           <div className="nav-cta">
-            <Link href={signInHref} className="btn btn-primary">
+            <Link href={signInHref} className="btn btn-primary" onClick={() => setMobileOpen(false)}>
               Sign In
             </Link>
           </div>
         ) : null}
         {showSignOut ? (
           <div className="nav-cta">
-            <Link href={signOutHref} className="btn btn-secondary">
+            <Link href={signOutHref} className="btn btn-secondary" onClick={() => setMobileOpen(false)}>
               Sign Out
             </Link>
           </div>
         ) : null}
 
-        <button className="mobile-menu" type="button" aria-label="Toggle navigation">
+        <button
+          className={`mobile-menu ${mobileOpen ? "active" : ""}`}
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded={mobileOpen}
+          aria-controls="mobileNav"
+          onClick={() => setMobileOpen((open) => !open)}
+        >
           <span></span>
           <span></span>
           <span></span>
         </button>
       </nav>
 
-      <div className="mobile-nav" id="mobileNav">
+      <div className={`mobile-nav ${mobileOpen ? "active" : ""}`} id="mobileNav">
         {links.map((link) => (
-          <Link key={link.href} href={link.href} className={pathname === link.href ? "active" : undefined}>
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={() => setMobileOpen(false)}
+            className={pathname === link.href ? "active" : undefined}
+          >
             {link.label}
           </Link>
         ))}
-        {showSignIn ? <Link href={signInHref}>Sign In</Link> : null}
-        {showSignOut ? <Link href={signOutHref}>Sign Out</Link> : null}
+        {showSignIn ? <Link href={signInHref} onClick={() => setMobileOpen(false)}>Sign In</Link> : null}
+        {showSignOut ? <Link href={signOutHref} onClick={() => setMobileOpen(false)}>Sign Out</Link> : null}
       </div>
     </header>
   );

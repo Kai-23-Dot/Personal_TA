@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { summarizeNotes } from "@/lib/ai/summarizeNotes";
+import { extractTextFromImage, type ImageMediaType } from "@/lib/ai/ocrImage";
 import { extractFileText, mimeToFileType } from "@/lib/utils/extractFileText";
-import { fetchCanvasModuleItems, fetchCanvasModules } from "@/lib/lms/canvas";
+import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages } from "@/lib/lms/canvas";
 import type { SummaryType } from "@/types";
 
 export const maxDuration = 90;
+const IMAGE_TYPES: Record<string, ImageMediaType> = {
+  "image/jpeg": "image/jpeg",
+  "image/jpg": "image/jpeg",
+  "image/png": "image/png",
+  "image/gif": "image/gif",
+  "image/webp": "image/webp",
+};
 
 function extractGoogleSlidesId(url: string): string | null {
   const match = url.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
@@ -115,10 +123,59 @@ export async function POST(req: Request) {
     ).flat();
 
     const chosenItems = moduleItems.filter((item) => selectedIds.has(item.id));
+    const [allFiles, pages, assignments] = await Promise.all([
+      fetchCanvasFilesWide(
+        connection.canvas_domain,
+        connection.access_token,
+        Number(course.platform_id),
+        100
+      ),
+      fetchCanvasPages(connection.canvas_domain, connection.access_token, Number(course.platform_id)),
+      fetchCanvasAssignments(connection.canvas_domain, connection.access_token, Number(course.platform_id)),
+    ]);
+
+    // Backfill selection for courses where teachers store materials in Files but not modules.
+    const fallbackFileItems = allFiles
+      .filter((file) => selectedIds.has(file.id))
+      .map((file) => ({
+        id: file.id,
+        moduleName: "Course Files",
+        title: file.display_name || file.filename,
+        type: "File",
+        page_url: null as string | null,
+        external_url: null as string | null,
+        content_id: file.id,
+      }));
+
+    const fallbackPageItems = pages
+      .filter((page) => selectedIds.has(page.page_id))
+      .map((page) => ({
+        id: page.page_id,
+        moduleName: "Course Pages",
+        title: page.title,
+        type: "Page",
+        page_url: page.url,
+        external_url: null as string | null,
+        content_id: null as number | null,
+      }));
+
+    const fallbackAssignmentItems = assignments
+      .filter((a) => selectedIds.has(a.id))
+      .map((a) => ({
+        id: a.id,
+        moduleName: "Assignments",
+        title: a.name,
+        type: "Assignment",
+        page_url: null as string | null,
+        external_url: null as string | null,
+        content_id: a.id,
+      }));
+
+    const combinedItems = [...chosenItems, ...fallbackFileItems, ...fallbackPageItems, ...fallbackAssignmentItems];
 
     const lessonBlocks: string[] = [];
 
-    for (const item of chosenItems) {
+    for (const item of combinedItems) {
       let lessonText: string | null = null;
 
       if (item.type === "Page" && item.page_url) {
@@ -165,7 +222,25 @@ export async function POST(req: Request) {
               lessonText = await extractFileText(buffer, fileType);
             }
           }
+          if (downloadUrl && !lessonText) {
+            const imgType = IMAGE_TYPES[(contentType ?? "").toLowerCase()];
+            if (imgType) {
+              const downloadRes = await fetch(downloadUrl, {
+                headers: { Authorization: `Bearer ${connection.access_token}` },
+              });
+              if (downloadRes.ok) {
+                const buffer = Buffer.from(await downloadRes.arrayBuffer());
+                const ocr = await extractTextFromImage(buffer, imgType, `${course.name} class notes`);
+                lessonText = ocr.structuredContent || ocr.extractedText || null;
+              }
+            }
+          }
         }
+      }
+
+      if (!lessonText && item.type === "Assignment" && item.content_id) {
+        const assignment = assignments.find((a) => a.id === item.content_id);
+        lessonText = assignment?.description?.replace(/<[^>]*>/g, " ").trim() || null;
       }
 
       if (lessonText) {

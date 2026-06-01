@@ -28,9 +28,17 @@ export default function FocusPage() {
             placeholder="What are you focusing on?"
             value={task}
             onChange={(e) => setTask(e.target.value)}
-            style={{ textAlign: "center" }}
+            style={{
+              textAlign: "center",
+              color: "#e6edf8",
+              background: "rgba(148, 163, 184, 0.12)",
+              border: "1px solid rgba(148, 163, 184, 0.32)",
+              borderRadius: "10px",
+              padding: "0.7rem 0.85rem",
+              width: "100%",
+            }}
           />
-          <div style={{ fontSize: "3rem", marginTop: "1.5rem", color: "var(--light)" }}>
+          <div style={{ fontSize: "3rem", marginTop: "1.5rem", color: "#e6edf8" }}>
             {minutes}:{secs.toString().padStart(2, "0")}
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem", marginTop: "1.5rem" }}>

@@ -13,27 +13,42 @@ export default function ReviewPage() {
   const [courseId, setCourseId] = useState("");
   const [upcomingExams, setUpcomingExams] = useState<Array<{ id: string; title: string; course_id: string }>>([]);
   const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [weakRes, trendRes] = await Promise.all([
-        fetch("/api/performance/weak"),
-        fetch("/api/performance/trends"),
-      ]);
-      const coursesRes = await fetch("/api/courses");
-      const examsRes = await fetch("/api/assignments");
-      const weakData = weakRes.ok ? await weakRes.json() : [];
-      const trendData = trendRes.ok ? await trendRes.json() : [];
-      const coursesData = coursesRes.ok ? await coursesRes.json() : [];
-      const examsData = examsRes.ok ? await examsRes.json() : [];
-      if (mounted) {
-        setWeakTopics(weakData ?? []);
-        setTrends(trendData ?? []);
-        setCourses(coursesData ?? []);
-        setUpcomingExams((examsData ?? []).filter((a: { assignment_type: string }) =>
-          ["exam", "test", "quiz"].includes(a.assignment_type)
-        ));
+      setLoading(true);
+      setError(null);
+      try {
+        const [weakRes, trendRes, coursesRes, examsRes] = await Promise.all([
+          fetch("/api/performance/weak"),
+          fetch("/api/performance/trends"),
+          fetch("/api/courses"),
+          fetch("/api/assignments"),
+        ]);
+        const weakData = weakRes.ok ? await weakRes.json() : [];
+        const trendData = trendRes.ok ? await trendRes.json() : [];
+        const coursesData = coursesRes.ok ? await coursesRes.json() : [];
+        const examsData = examsRes.ok ? await examsRes.json() : [];
+        if (mounted) {
+          setWeakTopics(weakData ?? []);
+          setTrends(trendData ?? []);
+          setCourses(coursesData ?? []);
+          setUpcomingExams((examsData ?? []).filter((a: { assignment_type: string }) =>
+            ["exam", "test", "quiz"].includes(a.assignment_type)
+          ));
+          if (!courseId && (coursesData?.length ?? 0) > 0) {
+            setCourseId(coursesData[0].id);
+          }
+        }
+      } catch (err) {
+        if (mounted) setError(err instanceof Error ? err.message : "Failed to load review data");
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
     load();
@@ -42,6 +57,32 @@ export default function ReviewPage() {
     };
   }, []);
 
+  async function launchReview(topic: string, selectedCourseId: string, questionCount: number) {
+    setActionMessage(null);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/practice/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, courseId: selectedCourseId, difficulty: "adaptive", questionCount }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.sessionId) {
+        router.push(`/practice/session?sessionId=${data.sessionId}`);
+        return;
+      }
+      if (res.status === 409) {
+        setActionMessage("Low retrieval confidence for this topic. Open Notes, select relevant course materials, then generate practice again.");
+        return;
+      }
+      setActionMessage(data?.error || "Could not generate review session.");
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : "Could not generate review session.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <section className="section">
       <h2 className="animate-on-scroll">Review & Revision</h2>
@@ -49,6 +90,8 @@ export default function ReviewPage() {
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
         <div className="contact-form-column">
           <h3 className="contact-form-title">Weak topics</h3>
+          {loading ? <p style={{ color: "var(--gray)" }}>Loading review data...</p> : null}
+          {error ? <p style={{ color: "#fda4af" }}>{error}</p> : null}
           {weakTopics.length === 0 ? (
             <p style={{ color: "var(--gray)" }}>No weak topics yet. Complete a practice session to see trends.</p>
           ) : (
@@ -79,20 +122,17 @@ export default function ReviewPage() {
             <button
               className="contact-submit-btn"
               type="button"
-              disabled={!courseId || weakTopics.length === 0}
+              disabled={generating || !courseId || weakTopics.length === 0}
               onClick={async () => {
                 const topic = weakTopics[0]?.topic ?? "Review";
-                const res = await fetch("/api/practice/generate", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ topic, courseId, difficulty: "adaptive", questionCount: 6 }),
-                });
-                const data = await res.json();
-                if (data?.sessionId) router.push(`/practice/session?sessionId=${data.sessionId}`);
+                await launchReview(topic, courseId, 6);
               }}
             >
-              Start quick review
+              {generating ? "Generating..." : "Start quick review"}
             </button>
+            {actionMessage ? (
+              <p style={{ color: "var(--gray)", marginTop: "0.75rem" }}>{actionMessage}</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -110,13 +150,7 @@ export default function ReviewPage() {
                   <button
                     className="btn btn-secondary"
                     onClick={async () => {
-                      const res = await fetch("/api/practice/generate", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ topic: exam.title, courseId: exam.course_id, difficulty: "adaptive", questionCount: 10 }),
-                      });
-                      const data = await res.json();
-                      if (data?.sessionId) router.push(`/practice/session?sessionId=${data.sessionId}`);
+                      await launchReview(exam.title, exam.course_id, 10);
                     }}
                   >
                     Review

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generateQuiz } from "@/lib/ai/generateQuiz";
+import { retrieveRankedSources } from "@/lib/canvas-intelligence/hybridRetriever";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
 
@@ -78,58 +79,38 @@ export async function POST(req: Request) {
           .join("\n\n---\n\n");
       }
     } else if (courseId) {
-      // Pull notes and assignments for the course in parallel
-      const topicKeywords = topic.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+      const retrieval = await retrieveRankedSources({
+        userId: user.id,
+        query: topic,
+        courseId,
+        topic,
+        assignmentId: assignmentId ?? null,
+        limit: 12,
+      });
 
-      const [{ data: allNotes }, { data: assignments }] = await Promise.all([
-        supabase
-          .from("notes")
-          .select("title, content, updated_at")
-          .eq("user_id", user.id)
-          .eq("course_id", courseId)
-          .not("content", "is", null)
-          .order("updated_at", { ascending: false })
-          .limit(50), // wide net — ranked below
-        supabase
-          .from("assignments")
-          .select("title, description")
-          .eq("user_id", user.id)
-          .eq("course_id", courseId)
-          .not("description", "is", null)
-          .order("due_date", { ascending: false })
-          .limit(20),
-      ]);
-
-      if (allNotes && allNotes.length > 0) {
-        const scored = allNotes.map((n) => {
-          const titleLower = (n.title ?? "").toLowerCase();
-          const contentLower = ((n.content as string) ?? "").toLowerCase();
-          // Title matches weighted 3x — they signal the note is specifically about this topic
-          const titleHits = topicKeywords.filter((kw) => titleLower.includes(kw)).length * 3;
-          // Content matches catch notes where the topic appears in the body but not the title
-          const contentHits = topicKeywords.filter((kw) => contentLower.includes(kw)).length;
-          return { ...n, score: titleHits + contentHits };
-        });
-        // High-scoring notes first; ties broken by recency (already ordered by updated_at)
-        scored.sort((a, b) => b.score - a.score);
-        const top = scored.slice(0, 20);
-        courseNotes = top
-          .map((n) => `### ${n.title}\n${(n.content as string).slice(0, charsPerNote)}`)
-          .join("\n\n---\n\n");
+      if (retrieval.confidence.shouldAskForClarification || retrieval.ranked.length === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Low retrieval confidence for this topic. Select sources manually or refine topic.",
+            retrieval: {
+              confidence: retrieval.confidence,
+              candidates: retrieval.ranked.slice(0, 5).map((r) => ({
+                title: r.chunk.title,
+                sourceUrl: r.chunk.sourceUrl ?? null,
+                confidence: r.confidence,
+                reason: r.reasons.join("; "),
+              })),
+            },
+          },
+          { status: 409 }
+        );
       }
 
-    // Append assignment context (titles + descriptions — the problem statements tell the AI
-    // what concepts this teacher actually covers and tests on)
-    if (assignments && assignments.length > 0) {
-        const assignmentBlock = assignments
-          .filter((a) => a.description)
-          .map((a) => `**${a.title}**\n${(a.description as string).slice(0, 800)}`)
-          .join("\n\n");
-        if (assignmentBlock) {
-          const section = `### Course Assignments & Topics\n${assignmentBlock}`;
-          courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${section}` : section;
-        }
-      }
+      courseNotes = retrieval.ranked
+        .filter((r) => r.confidence >= 0.55)
+        .map((r) => `### ${r.chunk.title}\n${r.chunk.text.slice(0, charsPerNote)}\n[Source: ${r.chunk.sourceUrl ?? "Canvas"}]\n[Why: ${r.reasons.join(", ")}]`)
+        .join("\n\n---\n\n");
     }
 
     if (assignmentId) {

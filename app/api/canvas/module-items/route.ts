@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCanvasModules, fetchCanvasModuleItems } from "@/lib/lms/canvas";
+import { fetchCanvasModules, fetchCanvasModuleItems, fetchCanvasFilesWide, fetchCanvasPages, fetchCanvasAssignments } from "@/lib/lms/canvas";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -59,6 +59,62 @@ export async function GET(req: Request) {
   );
 
   const flattened = items.flat();
+  const files = await fetchCanvasFilesWide(
+    connection.canvas_domain,
+    connection.access_token,
+    Number(course.platform_id),
+    100
+  );
+  const [pages, assignments] = await Promise.all([
+    fetchCanvasPages(connection.canvas_domain, connection.access_token, Number(course.platform_id)),
+    fetchCanvasAssignments(connection.canvas_domain, connection.access_token, Number(course.platform_id)),
+  ]);
 
-  return NextResponse.json(flattened);
+  const fileBackfill = files.map((file) => ({
+    moduleId: 0,
+    moduleName: "Course Files",
+    itemId: file.id,
+    title: file.display_name || file.filename,
+    type: "File",
+    page_url: null,
+    external_url: null,
+    content_id: file.id,
+    content_details: {
+      "content-type": file["content-type"] ?? file.content_type,
+      url: file.url,
+    },
+  }));
+  const pageBackfill = pages.map((page) => ({
+    moduleId: -1,
+    moduleName: "Course Pages",
+    itemId: page.page_id,
+    title: page.title,
+    type: "Page",
+    page_url: page.url ?? null,
+    external_url: null,
+    content_id: null,
+    content_details: null,
+  }));
+  const assignmentBackfill = assignments.map((a) => ({
+    moduleId: -2,
+    moduleName: "Assignments",
+    itemId: a.id,
+    title: a.name,
+    type: "Assignment",
+    page_url: null,
+    external_url: null,
+    content_id: a.id,
+    content_details: null,
+  }));
+
+  // Merge and de-duplicate File entries by content_id.
+  const seen = new Set<string>();
+  const merged = [...flattened, ...fileBackfill, ...pageBackfill, ...assignmentBackfill].filter((item) => {
+    const key = `${item.type}:${item.content_id ?? item.itemId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return NextResponse.json(merged);
 }

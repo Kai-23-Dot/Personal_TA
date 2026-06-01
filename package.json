@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "clean": "rm -rf .next .next-dev .next-build",
+    "clean:dev": "rm -rf .next-dev",
+    "clean:build": "rm -rf .next-build",
+    "predev": "npm run clean:dev",
+    "dev": "NEXT_DIST_DIR=.next-dev next dev",
+    "prebuild": "npm run clean:build",
+    "build": "NEXT_DIST_DIR=.next-build next build",
+    "start": "NEXT_DIST_DIR=.next-build next start",
     "lint": "next lint",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset"

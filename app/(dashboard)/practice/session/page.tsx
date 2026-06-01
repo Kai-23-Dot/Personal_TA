@@ -392,7 +392,7 @@ export default function PracticeSessionPage() {
               <p style={{ color: "var(--gray)" }}>Ask about this question or concept.</p>
             ) : null}
             {messages.map((msg) => (
-              <div key={msg.id} className={`practice-chat__message practice-chat__message--${msg.role}`}>
+              <div key={msg.id} className={`practice-chat__message practice-chat__message--${msg.role} md-content chat-readable`}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}
                 </ReactMarkdown>
