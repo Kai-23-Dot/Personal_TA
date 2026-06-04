@@ -33,11 +33,11 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           disableTransitionOnChange
         >
           {children}
-          <Script src="/personalta-ui.js" strategy="afterInteractive" />
+          <Script src="/personalta-ui.js" strategy="lazyOnload" />
           <Toaster
             position="bottom-right"
             toastOptions={{

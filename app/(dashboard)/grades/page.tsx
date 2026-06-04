@@ -1,51 +1,119 @@
-export default function GradesPage() {
+import Link from "next/link";
+import { BarChart3, BookOpen, TrendingUp } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { createClient } from "@/lib/supabase/server";
+
+type CourseRow = {
+  id: string;
+  name: string;
+  color: string | null;
+  platform: string;
+};
+
+type GradeEventRow = {
+  id: string;
+  course_id: string;
+  points_earned: number | null;
+  points_possible: number | null;
+  occurred_at: string;
+  notes: string | null;
+  course: { name: string; color: string | null } | { name: string; color: string | null }[] | null;
+};
+
+function percent(earned: number, possible: number) {
+  return Math.round((earned / possible) * 100);
+}
+
+export default async function GradesPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data: courses }, { data: gradeEvents }] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("id, name, color, platform")
+      .eq("user_id", user!.id)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("grade_events")
+      .select("id, course_id, points_earned, points_possible, occurred_at, notes, course:courses(name, color)")
+      .eq("user_id", user!.id)
+      .order("occurred_at", { ascending: false }),
+  ]);
+
+  const totals = new Map<string, { earned: number; possible: number; count: number; latest: GradeEventRow | null }>();
+  for (const event of (gradeEvents ?? []) as unknown as GradeEventRow[]) {
+    const current = totals.get(event.course_id) ?? { earned: 0, possible: 0, count: 0, latest: null };
+    if (typeof event.points_earned === "number" && typeof event.points_possible === "number" && event.points_possible > 0) {
+      current.earned += event.points_earned;
+      current.possible += event.points_possible;
+      current.count += 1;
+    }
+    if (!current.latest || new Date(event.occurred_at) > new Date(current.latest.occurred_at)) {
+      current.latest = event;
+    }
+    totals.set(event.course_id, current);
+  }
+
+  const activeCourses = (courses ?? []) as CourseRow[];
+  const hasGrades = [...totals.values()].some((total) => total.count > 0);
+
   return (
-    <>
-      <section className="section">
-        <h2 className="animate-on-scroll">Grade Insights</h2>
-        <div className="speakers-grid">
-          <div className="speaker-card animate-on-scroll scale-up">
-            <div className="speaker-avatar">A-</div>
-            <h3 className="speaker-name">Algebra II</h3>
-            <div className="speaker-title">Current grade: 88%</div>
-            <p className="speaker-bio">PersonalTA suggests extra practice on factoring.</p>
-          </div>
-          <div className="speaker-card animate-on-scroll scale-up">
-            <div className="speaker-avatar">B+</div>
-            <h3 className="speaker-name">Biology Honors</h3>
-            <div className="speaker-title">Current grade: 91%</div>
-            <p className="speaker-bio">Lab reports are your strongest category.</p>
-          </div>
-          <div className="speaker-card animate-on-scroll scale-up">
-            <div className="speaker-avatar">A</div>
-            <h3 className="speaker-name">English Lit</h3>
-            <div className="speaker-title">Current grade: 94%</div>
-            <p className="speaker-bio">Essay feedback loop is boosting scores.</p>
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
+      <section className="mb-8 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+          <TrendingUp className="h-3.5 w-3.5" /> Synced performance
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">Grade Insights</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+          Grades shown here come from synced LMS submissions. Placeholder class grades have been removed.
+        </p>
       </section>
 
-      <section className="section">
-        <h2 className="animate-on-scroll">Growth Focus</h2>
-        <div className="about-stats animate-on-scroll scale-up">
-          <div className="about-stat">
-            <span className="about-stat-number">+12%</span>
-            <span className="about-stat-label">Quiz average improvement</span>
-          </div>
-          <div className="about-stat">
-            <span className="about-stat-number">3</span>
-            <span className="about-stat-label">Assignments boosted by AI review</span>
-          </div>
-          <div className="about-stat">
-            <span className="about-stat-number">2</span>
-            <span className="about-stat-label">Upcoming teacher check-ins</span>
-          </div>
-          <div className="about-stat">
-            <span className="about-stat-number">4</span>
-            <span className="about-stat-label">Targeted skill gaps</span>
-          </div>
+      {activeCourses.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="No courses synced yet"
+          description="Connect Canvas or run a sync to import real courses before grade insights can be shown."
+          action={<Link href="/settings/setup/canvas" className="btn btn-primary">Connect Canvas</Link>}
+        />
+      ) : !hasGrades ? (
+        <EmptyState
+          icon={BarChart3}
+          title="No synced grades yet"
+          description="Your courses are available, but PersonalTA has not received graded submissions from Canvas yet."
+          action={<Link href="/dashboard" className="btn btn-primary">Sync from dashboard</Link>}
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {activeCourses.map((course) => {
+            const total = totals.get(course.id);
+            if (!total || total.count === 0 || total.possible <= 0) return null;
+            const score = percent(total.earned, total.possible);
+            return (
+              <div key={course.id} className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+                    {course.platform === "canvas" ? "Canvas" : course.platform}
+                  </span>
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: course.color ?? "#3ecf8e" }} />
+                </div>
+                <h2 className="mt-4 text-lg font-semibold text-white">{course.name}</h2>
+                <p className="mt-3 text-3xl font-semibold text-emerald-200">{score}%</p>
+                <p className="mt-1 text-sm text-slate-400">{total.count} graded item{total.count === 1 ? "" : "s"} synced</p>
+                {total.latest ? (
+                  <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+                    Latest: {total.latest.notes ?? "Grade received"} · {new Date(total.latest.occurred_at).toLocaleDateString()}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
-      </section>
-    </>
+      )}
+    </div>
   );
 }

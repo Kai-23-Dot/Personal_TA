@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "ai/react";
 
 type Assignment = {
@@ -14,9 +15,18 @@ type Assignment = {
   course_id: string | null;
 };
 
+type Course = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
 export default function AssignmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -56,16 +66,27 @@ export default function AssignmentsPage() {
     let mounted = true;
     setLoadingAssignments(true);
     setAssignmentsError(null);
-    fetch("/api/assignments")
-      .then(async (res) => {
+    const assignmentUrl = selectedCourseId
+      ? `/api/assignments?course_id=${encodeURIComponent(selectedCourseId)}`
+      : "/api/assignments";
+
+    Promise.all([
+      fetch(assignmentUrl).then(async (res) => {
         const data = await res.json().catch(() => []);
         if (!res.ok) {
           throw new Error((data && typeof data === "object" && "error" in data) ? String((data as { error?: string }).error) : "Failed to load assignments");
         }
-        return data;
-      })
-      .then((data) => {
-        if (mounted) setAssignments(Array.isArray(data) ? data : []);
+        return Array.isArray(data) ? data : [];
+      }),
+      fetch("/api/courses").then(async (res) => {
+        const data = await res.json().catch(() => []);
+        return res.ok && Array.isArray(data) ? data : [];
+      }),
+    ])
+      .then(([assignmentData, courseData]) => {
+        if (!mounted) return;
+        setAssignments(assignmentData);
+        setCourses(courseData);
       })
       .catch((err) => {
         if (mounted) {
@@ -79,7 +100,31 @@ export default function AssignmentsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [selectedCourseId]);
+
+  useEffect(() => {
+    if (!selectedCourseId) return;
+    setSummary(null);
+    setHelperOpen(false);
+    setActiveAssignment(null);
+  }, [selectedCourseId]);
+
+  /*
+   * Keep a second, client-side guard even though the API does the real filtering.
+   * This prevents stale responses from a previous course request from flashing
+   * under the wrong subject if the user switches quickly.
+   */
+  const visibleAssignments = useMemo(() => {
+    if (!selectedCourseId) return assignments;
+    return assignments.filter((assignment) => assignment.course_id === selectedCourseId);
+  }, [assignments, selectedCourseId]);
+
+  const selectedCourse = useMemo(() => {
+    if (!selectedCourseId) return null;
+    return courses.find((course) => course.id === selectedCourseId) ?? null;
+  }, [courses, selectedCourseId]);
+
+  const filterLabel = selectedCourse?.name ?? (selectedCourseId ? "Selected course" : "All courses");
 
   async function handleSummary(assignmentId: string) {
     setLoading(true);
@@ -123,16 +168,53 @@ export default function AssignmentsPage() {
 
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">Assignments</h2>
+      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="mb-2 inline-flex items-center rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+            {selectedCourseId ? "Filtered by course" : "All synced coursework"}
+          </p>
+          <h2 className="animate-on-scroll">Assignments</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Showing {selectedCourseId ? `assignments for ${filterLabel}` : "assignments from every synced course"}.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/assignments" className="btn btn-secondary">All assignments</Link>
+          {selectedCourseId ? <Link href="/courses" className="btn btn-primary">Back to courses</Link> : null}
+        </div>
+      </div>
+
+      {courses.length > 0 ? (
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          <Link
+            href="/assignments"
+            className={`rounded-full border px-3 py-1.5 text-sm transition ${!selectedCourseId ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+          >
+            All
+          </Link>
+          {courses.map((course) => (
+            <Link
+              key={course.id}
+              href={`/assignments?course_id=${course.id}`}
+              className={`rounded-full border px-3 py-1.5 text-sm transition ${selectedCourseId === course.id ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+            >
+              {course.name}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
       {loadingAssignments ? (
         <p style={{ color: "var(--gray)" }}>Loading assignments...</p>
       ) : assignmentsError ? (
         <p style={{ color: "#fda4af" }}>{assignmentsError}</p>
-      ) : assignments.length === 0 ? (
-        <p style={{ color: "var(--gray)" }}>No assignments synced yet.</p>
+      ) : visibleAssignments.length === 0 ? (
+        <p style={{ color: "var(--gray)" }}>
+          {selectedCourseId ? `No assignments found for ${filterLabel}.` : "No assignments synced yet."}
+        </p>
       ) : (
         <div className="timeline">
-          {assignments.map((assignment) => (
+          {visibleAssignments.map((assignment) => (
             <div key={assignment.id} className="timeline-item animate-on-scroll">
               <div className="timeline-header">
                 <div className="timeline-time">

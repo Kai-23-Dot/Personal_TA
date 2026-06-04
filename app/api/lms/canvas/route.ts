@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { fetchCanvasUserProfile } from "@/lib/lms/canvas";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -101,4 +102,57 @@ export async function GET(req: Request) {
   // Omitting "scope" requests all permissions granted to the developer key
 
   return NextResponse.redirect(authUrl.toString());
+}
+
+/**
+ * Token-based Canvas connection
+ * POST /api/lms/canvas
+ * body: { domain: string, access_token: string }
+ */
+export async function POST(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json() as { domain?: string; access_token?: string };
+    const domain = (body.domain ?? "").trim().toLowerCase();
+    const accessToken = (body.access_token ?? "").trim();
+
+    if (!domain || !domain.includes(".")) {
+      return NextResponse.json({ error: "Valid Canvas domain is required (e.g. school.instructure.com)." }, { status: 400 });
+    }
+    if (!accessToken) {
+      return NextResponse.json({ error: "Canvas access token is required." }, { status: 400 });
+    }
+
+    // Validate token by fetching user profile from Canvas.
+    const profile = await fetchCanvasUserProfile(domain, accessToken);
+    if (!profile) {
+      return NextResponse.json({ error: "Canvas token validation failed. Check domain/token and try again." }, { status: 400 });
+    }
+
+    const { data: conn, error: dbError } = await supabase.from("lms_connections").upsert(
+      {
+        user_id: user.id,
+        platform: "canvas",
+        access_token: accessToken,
+        refresh_token: null,
+        canvas_domain: domain,
+        platform_user_id: profile.id ? String(profile.id) : null,
+        platform_email: profile.login_id ?? profile.primary_email ?? null,
+        scopes: ["personal_access_token"],
+        is_active: true,
+      },
+      { onConflict: "user_id,platform" }
+    ).select("id").single();
+
+    if (dbError) {
+      return NextResponse.json({ error: `Failed to save Canvas connection: ${dbError.message}` }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, connectionId: conn?.id ?? null });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to connect Canvas" }, { status: 500 });
+  }
 }

@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
 
 export const maxDuration = 60;
+const lowTokenMode = process.env.LOW_TOKEN_TEST_MODE === "true";
 
 /**
  * Infers the required programming language from a course name.
@@ -63,7 +64,13 @@ export async function POST(req: Request) {
     }
 
     // CS courses need more chars per note to preserve full code examples
-    const charsPerNote = courseLanguage ? 4000 : isAP ? 2500 : 3500;
+    const charsPerNote = lowTokenMode
+      ? 900
+      : courseLanguage
+      ? 4000
+      : isAP
+      ? 2500
+      : 3500;
 
     if (noteIds && noteIds.length > 0) {
       // Use client-selected specific notes (overrides auto-fetch)
@@ -88,27 +95,13 @@ export async function POST(req: Request) {
         limit: 12,
       });
 
-      if (retrieval.confidence.shouldAskForClarification || retrieval.ranked.length === 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Low retrieval confidence for this topic. Select sources manually or refine topic.",
-            retrieval: {
-              confidence: retrieval.confidence,
-              candidates: retrieval.ranked.slice(0, 5).map((r) => ({
-                title: r.chunk.title,
-                sourceUrl: r.chunk.sourceUrl ?? null,
-                confidence: r.confidence,
-                reason: r.reasons.join("; "),
-              })),
-            },
-          },
-          { status: 409 }
-        );
-      }
+      const rankedForGeneration = retrieval.ranked.length > 0
+        ? retrieval.ranked
+        : [];
 
-      courseNotes = retrieval.ranked
-        .filter((r) => r.confidence >= 0.55)
+      courseNotes = rankedForGeneration
+        .filter((r) => r.confidence >= 0.35)
+        .slice(0, lowTokenMode ? 5 : 12)
         .map((r) => `### ${r.chunk.title}\n${r.chunk.text.slice(0, charsPerNote)}\n[Source: ${r.chunk.sourceUrl ?? "Canvas"}]\n[Why: ${r.reasons.join(", ")}]`)
         .join("\n\n---\n\n");
     }
@@ -121,14 +114,14 @@ export async function POST(req: Request) {
         .eq("id", assignmentId)
         .single();
       if (assignment?.description) {
-        const assignmentBlock = `### Selected Assignment\n**${assignment.title}**\n${assignment.description.slice(0, 1200)}`;
-        courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${assignmentBlock}` : assignmentBlock;
-      }
+      const assignmentBlock = `### Selected Assignment\n**${assignment.title}**\n${assignment.description.slice(0, lowTokenMode ? 500 : 1200)}`;
+      courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${assignmentBlock}` : assignmentBlock;
+    }
     }
 
     // Append or use uploaded PDF/DOCX context
     if (pdfContext) {
-      const pdfSection = `### Uploaded Material\n${pdfContext.slice(0, 6000)}`;
+      const pdfSection = `### Uploaded Material\n${pdfContext.slice(0, lowTokenMode ? 1800 : 6000)}`;
       courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${pdfSection}` : pdfSection;
     }
 
@@ -179,12 +172,13 @@ export async function POST(req: Request) {
     const questions = await generateQuiz({
       topic,
       difficulty: effectiveDifficulty,
-      questionCount: Math.min(Math.max(questionCount, 1), 50),
+      questionCount: Math.min(Math.max(questionCount, 1), lowTokenMode ? 12 : 50),
       courseNotes,
       isAP,
       recentMistakes,
       courseName,
       courseLanguage,
+      lowTokenMode,
     });
 
     if (questions.length === 0) {

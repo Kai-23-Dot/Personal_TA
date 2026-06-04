@@ -21,7 +21,7 @@ const sarvam = createOpenAI({
 });
 
 /** Primary model — used for chat, quiz generation, summarization, flashcards, and vision */
-export const chatModel = sarvam("sarvam-m");
+export const chatModel = sarvam("sarvam-30b");
 
 /** Lightweight model — used for quick structured extraction tasks */
-export const fastModel = sarvam("sarvam-m");
+export const fastModel = sarvam("sarvam-30b");

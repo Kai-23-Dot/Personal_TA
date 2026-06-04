@@ -17,7 +17,24 @@ export function mimeToFileType(contentType: string): SupportedFileType | null {
   if (ct === "application/pdf") return "pdf";
   if (ct === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "docx";
   if (ct === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return "pptx";
+  if (ct === "application/vnd.ms-powerpoint") return "pptx"; // best-effort for legacy PowerPoint
   if (ct === "text/plain") return "txt";
+  return null;
+}
+
+/**
+ * Detect file type from MIME first, then filename extension fallback.
+ */
+export function detectFileType(contentType: string, fileName?: string | null): SupportedFileType | null {
+  const fromMime = mimeToFileType(contentType || "");
+  if (fromMime) return fromMime;
+
+  const lower = (fileName ?? "").toLowerCase().trim();
+  if (!lower) return null;
+  if (lower.endsWith(".pdf")) return "pdf";
+  if (lower.endsWith(".docx")) return "docx";
+  if (lower.endsWith(".pptx") || lower.endsWith(".ppt")) return "pptx";
+  if (lower.endsWith(".txt") || lower.endsWith(".md")) return "txt";
   return null;
 }
 

@@ -9,7 +9,20 @@ export type CanvasItemType =
   | "discussion"
   | "quiz"
   | "calendar_event"
-  | "external_link";
+  | "external_link"
+  | "canvas_page"
+  | "canvas_file"
+  | "google_drive_file"
+  | "google_slide"
+  | "google_doc"
+  | "google_sheet"
+  | "external_video"
+  | "embedded_video"
+  | "pdf"
+  | "pptx"
+  | "docx"
+  | "image"
+  | "html";
 
 export type ContentCategory =
   | "notes"
@@ -56,6 +69,69 @@ export interface CanvasContentItem {
   fileSize?: number | null;
   contentId?: number | null;
   metadata: Record<string, unknown>;
+  discoveredFrom?: string | null;
+  depth?: number | null;
+  confidenceScore?: number | null;
+  contentQualityScore?: number | null;
+  extractionStatus?: "pending" | "extracted" | "metadata_only" | "failed" | "unsupported" | "inaccessible" | null;
+  errorMessage?: string | null;
+  checksum?: string | null;
+}
+
+export type ContentNodeSourceType =
+  | "canvas_page"
+  | "canvas_file"
+  | "module_item"
+  | "assignment"
+  | "syllabus"
+  | "announcement"
+  | "discussion"
+  | "quiz"
+  | "google_drive_file"
+  | "google_slide"
+  | "google_doc"
+  | "google_sheet"
+  | "external_video"
+  | "embedded_video"
+  | "pdf"
+  | "pptx"
+  | "docx"
+  | "image"
+  | "html"
+  | "external_link";
+
+export interface ContentNode {
+  id: string;
+  courseId: string;
+  canvasCourseId: number;
+  sourceType: ContentNodeSourceType;
+  sourceUrl?: string | null;
+  canvasObjectId?: number | string | null;
+  title: string;
+  description?: string | null;
+  bodyHtml?: string | null;
+  extractedText?: string | null;
+  fileMimeType?: string | null;
+  fileName?: string | null;
+  moduleName?: string | null;
+  modulePosition?: number | null;
+  assignmentDueDate?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  discoveredFrom?: string | null;
+  depth: number;
+  confidenceScore: number;
+  contentQualityScore: number;
+  extractionStatus: "pending" | "extracted" | "metadata_only" | "failed" | "unsupported" | "inaccessible";
+  errorMessage?: string | null;
+  checksum?: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ContentEdge {
+  fromNodeId: string;
+  toNodeId: string;
+  relationType: "links_to" | "embeds" | "belongs_to_module" | "attached_file" | "external_resource" | "derived_from";
 }
 
 export interface ExtractedDocument {

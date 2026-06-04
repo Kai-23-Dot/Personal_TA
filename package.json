@@ -4,10 +4,9 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf .next .next-dev .next-build",
-    "clean:dev": "rm -rf .next-dev",
+    "clean:dev": "rm -rf .next .next-dev",
     "clean:build": "rm -rf .next-build",
-    "predev": "npm run clean:dev",
-    "dev": "NEXT_DIST_DIR=.next-dev next dev",
+    "dev": "node scripts/dev-server.mjs",
     "prebuild": "npm run clean:build",
     "build": "NEXT_DIST_DIR=.next-build next build",
     "start": "NEXT_DIST_DIR=.next-build next start",

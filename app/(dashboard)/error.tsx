@@ -1,5 +1,8 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+
 export default function DashboardError({
   error,
   reset,
@@ -9,13 +12,12 @@ export default function DashboardError({
 }) {
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">We hit a snag</h2>
-      <p style={{ color: "var(--gray)" }}>
-        {error?.message || "Something went wrong while loading this page."}
-      </p>
-      <button className="btn btn-secondary" type="button" onClick={reset}>
-        Retry
-      </button>
+      <EmptyState
+        icon={AlertTriangle}
+        title="We hit a snag"
+        description={error?.message || "Something went wrong while loading this page."}
+        action={<button className="btn btn-primary" type="button" onClick={reset}>Retry</button>}
+      />
     </section>
   );
 }

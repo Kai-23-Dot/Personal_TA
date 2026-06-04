@@ -1,7 +1,7 @@
 /**
  * PersonalTA.ai — TA Chat Agent
  *
- * Uses Vercel AI SDK streamText with Sarvam AI (sarvam-m).
+ * Uses Vercel AI SDK streamText with Sarvam AI (sarvam-30b).
  * Note: Sarvam does not support function/tool calling, so student data is
  * pre-fetched in the API route and injected into the system prompt as context.
  *

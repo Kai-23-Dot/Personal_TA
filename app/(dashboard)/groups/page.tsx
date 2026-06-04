@@ -1,27 +1,93 @@
-export default function GroupsPage() {
+import Link from "next/link";
+import { Users } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { createClient } from "@/lib/supabase/server";
+
+type StudyGroupRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  invite_code: string;
+  created_at: string;
+  course: { name: string } | { name: string }[] | null;
+};
+
+function courseName(course: StudyGroupRow["course"]) {
+  if (Array.isArray(course)) return course[0]?.name ?? null;
+  return course?.name ?? null;
+}
+
+export default async function GroupsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: memberships } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .eq("user_id", user!.id);
+
+  const groupIds = (memberships ?? []).map((membership) => membership.group_id);
+
+  const { data: groups } = groupIds.length
+    ? await supabase
+        .from("study_groups")
+        .select("id, name, description, invite_code, created_at, course:courses(name)")
+        .in("id", groupIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
+  const { data: memberRows } = groupIds.length
+    ? await supabase.from("group_members").select("group_id").in("group_id", groupIds)
+    : { data: [] };
+
+  const memberCounts = new Map<string, number>();
+  for (const row of memberRows ?? []) {
+    memberCounts.set(row.group_id, (memberCounts.get(row.group_id) ?? 0) + 1);
+  }
+
   return (
-    <section className="section">
-      <h2 className="animate-on-scroll">Study Groups</h2>
-      <div className="speakers-grid">
-        <div className="speaker-card animate-on-scroll scale-up">
-          <div className="speaker-avatar">Bio</div>
-          <h3 className="speaker-name">Biology Lab Team</h3>
-          <div className="speaker-title">4 members · Meets Wed</div>
-          <p className="speaker-bio">Shared notes, lab checklist, and practice quiz.</p>
+    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
+      <section className="mb-8 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+          <Users className="h-3.5 w-3.5" /> Collaboration
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">Study Groups</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+          Groups shown here are real groups you belong to. Demo groups have been removed.
+        </p>
+      </section>
+
+      {(groups ?? []).length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No study groups yet"
+          description="Create or join a group to collaborate around your real synced courses."
+          action={<Link href="/courses" className="btn btn-primary">View courses</Link>}
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {((groups ?? []) as unknown as StudyGroupRow[]).map((group) => (
+            <div key={group.id} className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/25 bg-emerald-400/10 text-sm font-semibold text-emerald-100">
+                  {group.name.slice(0, 2).toUpperCase()}
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
+                  {memberCounts.get(group.id) ?? 0} member{memberCounts.get(group.id) === 1 ? "" : "s"}
+                </span>
+              </div>
+              <h2 className="mt-5 text-lg font-semibold text-white">{group.name}</h2>
+              <p className="mt-1 text-sm text-slate-400">{courseName(group.course) ?? "No course linked"}</p>
+              {group.description ? <p className="mt-4 text-sm text-slate-300">{group.description}</p> : null}
+              <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-400">
+                Invite code: <span className="font-mono text-slate-200">{group.invite_code}</span>
+              </p>
+            </div>
+          ))}
         </div>
-        <div className="speaker-card animate-on-scroll scale-up">
-          <div className="speaker-avatar">AP</div>
-          <h3 className="speaker-name">APUSH Study Pod</h3>
-          <div className="speaker-title">6 members · Meets Sun</div>
-          <p className="speaker-bio">Debate prompts and timeline flashcards.</p>
-        </div>
-        <div className="speaker-card animate-on-scroll scale-up">
-          <div className="speaker-avatar">Alg</div>
-          <h3 className="speaker-name">Algebra II Boost</h3>
-          <div className="speaker-title">3 members · Meets Fri</div>
-          <p className="speaker-bio">Practice sets created from teacher homework.</p>
-        </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }

@@ -15,6 +15,8 @@ export interface GenerateQuizOptions {
   isAP?: boolean;
   /** Programming language enforced for all code in this course (e.g. "Java", "Python"). */
   courseLanguage?: string;
+  /** Reduce prompt/output token usage for local testing. */
+  lowTokenMode?: boolean;
 }
 
 type RawQuestion = {
@@ -124,6 +126,7 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
     courseName,
     isAP = false,
     courseLanguage,
+    lowTokenMode = false,
   } = options;
 
   const hasNotes = !!courseNotes;
@@ -159,7 +162,7 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
       ? `The student has struggled with: ${recentMistakes.slice(0, 5).join(", ")} — include questions targeting these weak areas if they relate to "${topic}".`
       : null,
     courseNotes
-      ? `\n=== CLASS NOTES & MATERIALS ===\n${courseNotes.slice(0, 14000)}\n=== END NOTES ===\n${
+      ? `\n=== CLASS NOTES & MATERIALS ===\n${courseNotes.slice(0, lowTokenMode ? 5000 : 14000)}\n=== END NOTES ===\n${
           isAP && difficulty === "medium"
             ? `Generate questions that mirror the style, terminology, and depth of what THIS teacher covers — as if this were an actual test from this class.`
             : !isAP
@@ -205,7 +208,7 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
   const { text } = await generateText({
     model: chatModel,
     prompt,
-    maxTokens: 16000,
+    maxTokens: lowTokenMode ? 3200 : 16000,
   });
 
   // Strip markdown code fences if present, then find outermost JSON object

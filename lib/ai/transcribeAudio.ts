@@ -3,7 +3,7 @@
  *
  * Step 1: raw transcription via Sarvam's dedicated speech-to-text endpoint
  *         (POST https://api.sarvam.ai/speech-to-text, multipart/form-data)
- * Step 2: structuring pass via sarvam-m chat model (generateText)
+ * Step 2: structuring pass via sarvam-30b chat model (generateText)
  *
  * Supported formats: mp3, mp4, m4a, wav, webm, ogg
  * Max file size: 25 MB per request.

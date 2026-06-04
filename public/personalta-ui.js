@@ -219,10 +219,12 @@ const observer = new IntersectionObserver((entries) => {
 
 function initScrollAnimations() {
   document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+    if (el.closest('[data-dashboard-shell]')) return;
     observer.observe(el);
   });
 
   document.querySelectorAll('.timeline-item').forEach((item, index) => {
+    if (item.closest('[data-dashboard-shell]')) return;
     item.style.setProperty('--stagger', String(index + 1));
     item.classList.add('stagger-animation');
   });
@@ -231,6 +233,7 @@ function initScrollAnimations() {
 function addHexDecorations() {
   const sections = document.querySelectorAll('.section');
   sections.forEach((section, index) => {
+    if (section.closest('[data-dashboard-shell]')) return;
     if (index === 0) return;
 
     const hexCount = 2 + Math.floor(Math.random() * 3);
@@ -275,7 +278,10 @@ function setupFormHandlers() {
   });
 }
 
-window.addEventListener('load', () => {
+function initPersonalTAUi() {
+  if (window.__personalTAUiInitialized) return;
+  window.__personalTAUiInitialized = true;
+
   animateCounters();
   createNeuralNetwork();
   createParticles();
@@ -293,4 +299,23 @@ window.addEventListener('load', () => {
   if (document.getElementById('countdown')) {
     setInterval(updateCountdown, 1000);
   }
-});
+}
+
+function schedulePersonalTAUi() {
+  const run = () => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(initPersonalTAUi, { timeout: 1500 });
+        } else {
+          window.setTimeout(initPersonalTAUi, 250);
+        }
+      });
+    });
+  };
+
+  if (document.readyState === 'complete') run();
+  else window.addEventListener('load', run, { once: true });
+}
+
+schedulePersonalTAUi();

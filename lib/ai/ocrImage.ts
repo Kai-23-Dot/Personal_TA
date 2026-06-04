@@ -1,5 +1,5 @@
 /**
- * OCR for handwritten notes and images using Sarvam Vision (sarvam-m multimodal).
+ * OCR for handwritten notes and images using Sarvam Vision (sarvam-30b).
  *
  * Sarvam-m reads images via the OpenAI-compatible chat completions API.
  * Accepts JPEG, PNG, GIF, WebP. Max file size ~5 MB per image.

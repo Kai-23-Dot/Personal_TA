@@ -1,146 +1,146 @@
-# Canvas LMS Integration - Enhancement Summary
+# Universal Canvas Content Ingestion Strategy
 
-## Overview
-This document summarizes the significant improvements made to the Canvas LMS integration to strengthen data fetching algorithms, improve accuracy, and enhance reliability.
+## Goal
 
-## Key Improvements
+PersonalTA now treats each Canvas course as a content graph instead of a flat list of assignments, pages, and files. The crawler starts from high-value course entry points, follows links the way a student would, extracts readable study material from supported formats, ranks each resource by usefulness, and stores enough metadata for source-grounded practice tests, study guides, summaries, flashcards, and explanations.
 
-### 1. Rate Limiting & Request Management
-**File:** `lib/lms/canvas.ts`
+## Current Strategy
 
-- **Request Queue System**: Implemented a queue-based request system that spaces out API calls (100ms between requests) to respect Canvas's ~700 requests/minute limit
-- **Prevents Throttling**: Avoids 429 (Too Many Requests) errors by maintaining consistent request spacing
-- **Concurrent Safety**: Handles multiple simultaneous requests safely through promise-based queue management
+### 1. Multi-source discovery
 
-### 2. Robust Error Handling & Retry Logic
-**File:** `lib/lms/canvas.ts`
+The ingestion engine inspects every major Canvas surface available through the current API layer:
 
-- **Exponential Backoff**: Automatic retry with exponential backoff (up to 3 retries) for failed requests
-- **Smart Retry Detection**: 
-  - Handles 429 rate limit responses by reading `Retry-After` header
-  - Retries on network errors like `ECONNRESET`
-  - Maximum retry delay capped at 10 seconds
-- **Graceful Degradation**: API functions return empty arrays or null instead of throwing on non-critical errors
+- Course pages, including front-page metadata when Canvas marks it
+- Modules and ordered module items
+- Canvas files and folders
+- Assignments and assignment descriptions
+- Announcements
+- Discussions
+- Syllabus content
+- Quizzes as metadata only, with an answer-leakage guard
+- Calendar events
+- External links, embeds, Canvas internal links, Google Drive links, and common video providers
 
-### 3. Enhanced Pagination
-**File:** `lib/lms/canvas.ts`
+This replaces the older strategy that primarily improved fetch reliability and text cleanup. Reliability still matters, but discovery is now graph-first.
 
-- **Proper Link Header Parsing**: Robust parsing of Canvas's Link headers for `next`, `prev`, `first`, `last` relations
-- **Safety Limits**: Maximum of 5000 items (100 pages × 50 items) to prevent infinite loops
-- **Complete Data Fetching**: `fetchAllPages<T>()` generic function ensures all paginated data is retrieved
+### 2. Course content graph
 
-### 4. Superior HTML-to-Text Conversion
-**File:** `lib/lms/canvas.ts` - `htmlToPlainText()` function
+Each discovered object is normalized into a `CanvasContentItem` with graph metadata:
 
-**Before:** Basic regex `/<[^>]*>/g` that lost important content
-**After:** Intelligent conversion that:
-- Removes script and style tags completely (including content)
-- Converts block elements to proper newlines (div, p, h1-h6, section, etc.)
-- Preserves links with URLs: `link text (https://example.com)`
-- Preserves image alt text: `[Image: description]`
-- Decodes all HTML entities (&, <, &nbsp;, &#123;, &#x1A;, etc.)
-- Maintains list structure with bullet points
-- Cleans up whitespace intelligently
+- `sourceType` and `type`
+- `sourceUrl`, `externalUrl`, and Canvas object IDs when available
+- `bodyHtml`, `textContent`, and `fileText`
+- module name, module position, item position, and due dates
+- `discoveredFrom`, `depth`, `checksum`, and graph edges
+- `confidenceScore`, `contentQualityScore`, `extractionStatus`, and `errorMessage`
 
-**Impact:** Much better content extraction from Canvas pages, leading to more accurate study materials and AI context.
+Edges are stored in item metadata as `graphEdges` with relation types:
 
-### 5. Intelligent Assignment Type Classification
-**File:** `lib/lms/canvas.ts` - `mapCanvasAssignmentType()` function
+- `links_to`
+- `embeds`
+- `belongs_to_module`
+- `attached_file`
+- `external_resource`
+- `derived_from`
 
-**Before:** Only used submission types (4 categories)
-**After:** Analyzes both submission types AND assignment names with keyword matching:
+This lets PersonalTA preserve chains like:
 
-| Type | Keywords Detected |
-|------|------------------|
-| **Exam** | exam, final, midterm, proctored, cumulative |
-| **Quiz** | quiz, test, assessment, check, knowledge check |
-| **Lab** | lab, experiment, practical, workshop, studio |
-| **Project** | project, capstone, portfolio, presentation, thesis |
-| **Reading** | reading, chapter, article, review, summary |
-| **Homework** | homework, assignment, problem set, exercise, practice |
-| **Discussion** | discussion_topic submission type |
+`Home page -> Unit 3 button -> Canvas page -> Google Slides -> PDF`
 
-**Impact:** More accurate assignment categorization leads to better study planning and prioritization.
+### 3. Graph traversal
 
-### 6. Extended Data Models
-**File:** `lib/lms/canvas.ts`
+The crawler starts from:
 
-Added comprehensive interfaces with more fields:
-- `CanvasCourse`: Added `start_at`, `end_at`, `syllabus_body`
-- `CanvasAssignment`: Added 15+ new fields including `lock_at`, `published`, `allowed_extensions`, `all_dates`, etc.
-- `CanvasSubmission`: Added `workflow_state`, `attempt`, `late_policy_status`, `seconds_late`
-- `CanvasQuiz`: New interface for quiz data
-- `CanvasDiscussionTopic`: New interface for discussion data
+- All Canvas pages
+- Assignments
+- Files and folders
+- Modules and module items
+- Syllabus
+- Announcements
+- Discussions
+- Quizzes
+- Calendar events
 
-### 7. New API Functions
-**File:** `lib/lms/canvas.ts`
+For HTML content, it extracts anchors, iframes, embeds, objects, images, `data-url` style Canvas attributes, and plain external URLs. It normalizes relative Canvas URLs, classifies links, creates placeholder nodes for discovered resources, and recursively follows reachable Canvas pages and file references up to a bounded depth.
 
-Added 7 new functions:
-1. `fetchCanvasQuizzes()` - Fetch all quizzes for a course
-2. `fetchCanvasDiscussionTopics()` - Fetch all discussion topics
-3. `fetchCanvasCourseSyllabus()` - Get course syllabus as plain text
-4. `fetchCanvasCourseGrades()` - Get graded submissions with scores
-5. `fetchCanvasCourseEnrollments()` - Get enrollment information
-6. `isCanvasTeacher()` - Check if user is a teacher/TA in a course
-7. `validateCanvasToken()` - Verify if access token is still valid
+Loop protection is handled with visited page slugs, visited external URLs, per-node checksums, and a max traversal depth.
 
-### 8. Middleware Resilience
-**File:** `middleware.ts`
+### 4. Document extraction
 
-- **Network Error Handling**: Detects and gracefully handles network errors during auth
-- **Build-Time Safety**: Prevents build failures when Supabase is temporarily unreachable
-- **API Route Protection**: Allows API routes to continue during network issues
-- **Better Error Messages**: Logs warnings instead of crashing on transient errors
+Canvas files are no longer indexed as metadata only when they are readable. The crawler downloads supported files and extracts text from:
 
-### 9. Improved Sync Accuracy
-**File:** `app/api/sync/route.ts`
+- PDFs
+- DOCX files
+- PPTX and PowerPoint files
+- Plain text and Markdown files
 
-- Uses enhanced `htmlToPlainText()` for module page content extraction
-- Passes assignment names to `mapCanvasAssignmentType()` for better classification
-- Better error aggregation and reporting
-- More accurate content deduplication
+The extraction path uses the existing `extractFileText` helper. PowerPoint extraction preserves slide order with slide-number labels from the helper. Unsupported, inaccessible, oversized, or failed extractions remain in the graph with explicit `extractionStatus` values instead of silently disappearing.
 
-## Performance Impact
+Google Docs, Google Slides, Sheets, and generic Drive links are detected by the crawler and remain compatible with the sync route’s Google extraction fallback.
 
-### Before:
-- ❌ Frequent rate limiting (429 errors)
-- ❌ Incomplete data extraction from HTML
-- ❌ Poor assignment type detection
-- ❌ No retry logic for network failures
-- ❌ Basic pagination handling
+### 5. Video handling
 
-### After:
-- ✅ No rate limiting issues (request queuing)
-- ✅ Rich text extraction with preserved context
-- ✅ Accurate assignment classification (7 types)
-- ✅ Automatic recovery from network failures
-- ✅ Robust pagination with safety limits
+The crawler detects common video providers and stores video nodes with metadata-only status unless a transcript extractor is added later.
 
-## Testing Recommendations
+Detected providers include:
 
-1. **Test with Large Courses**: Verify pagination works with courses having 100+ assignments
-2. **Test HTML-Rich Content**: Verify pages with complex HTML (tables, links, images) extract correctly
-3. **Test Assignment Types**: Create assignments with various names and verify correct classification
-4. **Test Network Resilience**: Simulate network failures and verify retry logic
-5. **Test Rate Limiting**: Monitor Canvas API usage during large syncs
+- YouTube
+- Vimeo
+- Google Drive video
+- Canvas Studio or Canvas media
+- Loom
+- Edpuzzle
+- Panopto
+- Kaltura
+- Direct MP4, MOV, and WebM links
 
-## Migration Notes
+Video nodes record provider metadata and avoid claiming transcript extraction when only a link was found.
 
-- No database migrations required
-- No breaking changes to existing functionality
-- All improvements are backward compatible
-- Existing Canvas connections will automatically benefit from improvements
+### 6. Ranking and quality signals
 
-## Future Enhancements
+Every node receives a quality and confidence score. Positive signals include:
 
-Potential areas for further improvement:
-1. Implement ETag-based caching for unchanged resources
-2. Add delta sync (only fetch changed data)
-3. Implement Canvas token refresh logic
-4. Add webhook support for real-time updates
-5. Implement batch processing for very large courses
-6. Add progress tracking for long-running syncs
+- Appears in modules
+- Has module ordering context
+- Title or folder includes terms like notes, slides, lecture, lesson, unit, chapter, study guide, review, packet, worksheet, reading, handout, or presentation
+- Has substantial extracted educational text
+- Is a Canvas page, module item, PDF, PPTX, DOCX, Google Slide, or Google Doc
+- Is linked from multiple graph locations
 
-## Conclusion
+Negative signals include:
 
-These improvements significantly strengthen the Canvas integration, making it more reliable, accurate, and robust. The system now handles edge cases better, extracts richer content, and provides a smoother user experience even under challenging network conditions.
+- Administrative terms like rubric, policy, calendar, schedule, attendance, office hours, thumbnail, banner, logo, answer key, or solutions
+- Unsupported extraction
+- Failed extraction
+- Tiny or metadata-only content
+
+Quiz nodes are retained as scheduling and topic context only.
+
+### 7. Indexing behavior
+
+The existing sync route remains backward-compatible. It still consumes `crawlCanvasCourseContent()` and upserts extracted content into notes, while the crawler now supplies richer text, graph metadata, source URLs, extraction statuses, and rankings.
+
+Downstream retrieval can use:
+
+- module and item order for unit-aware study requests
+- graph edges for source provenance
+- content quality for filtering
+- extraction status for user-facing transparency
+- checksums for deduplication
+
+## Key Files
+
+- `lib/canvas-intelligence/canvasCrawler.ts`
+- `lib/canvas-intelligence/types.ts`
+- `lib/canvas-intelligence/contentExtractor.ts`
+- `lib/canvas-intelligence/contentClassifier.ts`
+- `lib/canvas-intelligence/rankingModel.ts`
+- `app/api/sync/route.ts`
+
+## Remaining Enhancements
+
+- Add first-class transcript extractors for providers that expose captions through approved APIs.
+- Persist `ContentNode` and `ContentEdge` in dedicated database tables instead of embedding graph edges in note metadata.
+- Add OCR fallback for scanned PDFs and educational images.
+- Use the Google Slides API directly for speaker notes, alt text, and richer slide structure.
+- Add topic and unit resolver tests for requests like “Unit 3,” “Photosynthesis,” “last week’s notes,” and “current module.”

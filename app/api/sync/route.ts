@@ -646,10 +646,11 @@ async function syncConnection(
           if (!item.title) continue;
           const sourceFileId = `canvas_intel_${cc.id}_${item.type}_${item.id}`;
           const raw = item.bodyHtml ?? item.textContent ?? "";
+          const googleUrl = [item.externalUrl, item.sourceUrl, item.url].find((url) => url && /docs\.google\.com|drive\.google\.com/.test(url));
           let extracted = item.bodyHtml ? await extractFromHtml(item.bodyHtml) : raw.trim();
-          if (!extracted && item.externalUrl && /docs\.google\.com|drive\.google\.com/.test(item.externalUrl)) {
+          if (googleUrl && (!extracted || extracted === googleUrl || item.extractionStatus === "pending" || item.extractionStatus === "metadata_only")) {
             const googleText = await extractFromGoogleLink({
-              url: item.externalUrl,
+              url: googleUrl,
               googleApiKey,
               oauthAccessToken: googleConn?.access_token ?? null,
             });

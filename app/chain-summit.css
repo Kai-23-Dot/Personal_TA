@@ -2584,3 +2584,179 @@ option:disabled {
 .section span {
 	color: inherit;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Supabase-inspired SaaS redesign overrides
+   Keeps legacy pages functional while aligning every shared surface.
+────────────────────────────────────────────────────────────────────────── */
+:root {
+	--primary: #3ecf8e;
+	--secondary: #14b8a6;
+	--accent: #3ecf8e;
+	--dark: #050806;
+	--darker: #020403;
+	--light: #f2fbf6;
+	--gray: #8b9b92;
+	--success: #3ecf8e;
+	--surface: rgba(11, 17, 15, 0.88);
+	--surface-strong: rgba(13, 23, 19, 0.96);
+	--border-soft: rgba(255, 255, 255, 0.09);
+	--border-strong: rgba(62, 207, 142, 0.28);
+}
+
+html,
+body {
+	background:
+		radial-gradient(circle at 20% 0%, rgba(62, 207, 142, 0.08), transparent 34rem),
+		radial-gradient(circle at 100% 10%, rgba(20, 184, 166, 0.06), transparent 32rem),
+		#050806 !important;
+	color: var(--light);
+}
+
+.bg-animation,
+.neural-network,
+.node,
+.connection {
+	display: none !important;
+}
+
+.app-container {
+	max-width: 1440px !important;
+	padding-left: clamp(1rem, 2vw, 2rem) !important;
+	padding-right: clamp(1rem, 2vw, 2rem) !important;
+}
+
+.section {
+	padding: clamp(1rem, 2vw, 2rem) 0 !important;
+}
+
+.section h2 {
+	font-size: clamp(1.6rem, 2.5vw, 2.4rem) !important;
+	letter-spacing: -0.03em;
+	color: var(--light);
+}
+
+.section p,
+.section li {
+	color: #a8b5ad;
+}
+
+.contact-info-section,
+.contact-form-column,
+.practice-question {
+	background: rgba(11, 17, 15, 0.78) !important;
+	border: 1px solid rgba(255, 255, 255, 0.09) !important;
+	border-radius: 18px !important;
+	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22) !important;
+	backdrop-filter: blur(18px);
+}
+
+.contact-info-section {
+	padding: clamp(1rem, 2vw, 1.5rem) !important;
+}
+
+.contact-form-column {
+	padding: clamp(1rem, 2vw, 1.4rem) !important;
+}
+
+.contact-form-title,
+.contact-info-title {
+	color: var(--light) !important;
+	font-size: 1rem !important;
+	letter-spacing: -0.01em;
+}
+
+.form-field label {
+	color: #b8c7be !important;
+	font-size: 0.82rem !important;
+	font-weight: 600 !important;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select,
+.contact-form-column input:not([type="checkbox"]):not([type="radio"]),
+.contact-form-column textarea,
+.contact-form-column select {
+	background: rgba(255, 255, 255, 0.045) !important;
+	border: 1px solid rgba(255, 255, 255, 0.11) !important;
+	border-radius: 12px !important;
+	color: var(--light) !important;
+	min-height: 44px;
+	box-shadow: none !important;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus,
+.contact-form-column input:not([type="checkbox"]):not([type="radio"]):focus,
+.contact-form-column textarea:focus,
+.contact-form-column select:focus {
+	border-color: rgba(62, 207, 142, 0.62) !important;
+	box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12) !important;
+	background: rgba(255, 255, 255, 0.06) !important;
+	outline: none !important;
+}
+
+.btn,
+.contact-submit-btn {
+	border-radius: 12px !important;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	font-weight: 650 !important;
+	letter-spacing: -0.01em;
+	transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.btn:hover,
+.contact-submit-btn:hover {
+	transform: translateY(-1px);
+}
+
+.btn-primary,
+.contact-submit-btn {
+	background: #3ecf8e !important;
+	color: #03140d !important;
+	border-color: rgba(62, 207, 142, 0.72) !important;
+	box-shadow: 0 12px 30px rgba(62, 207, 142, 0.16) !important;
+}
+
+.btn-secondary,
+.btn:not(.btn-primary) {
+	background: rgba(255, 255, 255, 0.055) !important;
+	color: #e7f4ec !important;
+	border-color: rgba(255, 255, 255, 0.1) !important;
+	box-shadow: none !important;
+}
+
+.btn-secondary:hover,
+.btn:not(.btn-primary):hover {
+	border-color: rgba(62, 207, 142, 0.35) !important;
+	background: rgba(62, 207, 142, 0.08) !important;
+}
+
+.form-message.error,
+.form-message[style*="display: block"] {
+	border-radius: 12px !important;
+	border: 1px solid rgba(248, 113, 113, 0.24);
+	background: rgba(127, 29, 29, 0.22);
+	padding: 0.8rem 1rem;
+	color: #fecaca !important;
+}
+
+.skeleton-shimmer {
+	background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(62,207,142,0.08), rgba(255,255,255,0.04)) !important;
+	background-size: 200% 100% !important;
+}
+
+@media (max-width: 768px) {
+	.app-container {
+		padding-left: 1rem !important;
+		padding-right: 1rem !important;
+	}
+
+	.contact-info-section,
+	.contact-form-column {
+		border-radius: 16px !important;
+	}
+}

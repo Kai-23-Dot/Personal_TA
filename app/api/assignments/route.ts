@@ -15,16 +15,29 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const courseId = searchParams.get("course_id");
+  const courseId = searchParams.get("course_id") ?? searchParams.get("courseId");
 
   let query = supabase
     .from("assignments")
     .select("*, course:courses(name, color)")
     .eq("user_id", user.id)
     .or(`due_date.is.null,due_date.gte.${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()}`)
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: false, nullsFirst: false });
 
-  if (courseId) query = query.eq("course_id", courseId);
+  if (courseId) {
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", courseId)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (courseError) return NextResponse.json({ error: courseError.message }, { status: 500 });
+    if (!course) return NextResponse.json({ error: "Course not found" }, { status: 404 });
+
+    query = query.eq("course_id", courseId);
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

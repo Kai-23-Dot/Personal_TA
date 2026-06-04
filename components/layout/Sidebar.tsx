@@ -17,6 +17,7 @@ import {
   Users,
   ListChecks,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -28,12 +29,13 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/courses", label: "Courses", icon: ListChecks },
   { href: "/assignments", label: "Assignments", icon: ClipboardList },
-  { href: "/planner", label: "Study Planner", icon: Calendar },
+  { href: "/planner", label: "Planner", icon: Calendar },
   { href: "/notes", label: "Notes", icon: BookOpen },
   { href: "/practice", label: "Practice", icon: Dumbbell },
   { href: "/flashcards", label: "Flashcards", icon: Layers },
-  { href: "/chat", label: "TA Chat", icon: MessageSquare },
-  { href: "/groups", label: "Study Groups", icon: Users },
+  { href: "/review", label: "Review", icon: FileText },
+  { href: "/chat", label: "Assistant", icon: MessageSquare },
+  { href: "/groups", label: "Groups", icon: Users },
 ];
 
 interface SidebarProps {
@@ -57,28 +59,25 @@ export function Sidebar({ profile }: SidebarProps) {
     : profile?.email?.[0]?.toUpperCase() ?? "U";
 
   return (
-    <aside className="w-64 h-screen flex flex-col bg-sidebar border-r border-sidebar-border fixed left-0 top-0 z-20">
-      {/* Logo */}
-      <div className="px-5 py-[18px] border-b border-sidebar-border" style={{ background: "linear-gradient(180deg, rgba(139,92,246,0.08) 0%, transparent 100%)" }}>
+    <aside className="fixed left-0 top-0 z-20 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-xl md:flex">
+      <div className="px-5 py-[18px] border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          {/* Logo icon — glow via CSS since shadow contains rgba */}
           <div
-            className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105"
-            style={{ boxShadow: "0 0 16px rgba(139,92,246,0.5)" }}
+            className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105"
+            style={{ boxShadow: "0 0 24px rgba(62,207,142,0.16)" }}
           >
-            <Sparkles className="w-4 h-4 text-white" />
+            <Sparkles className="w-4 h-4 text-emerald-300" />
           </div>
           <div>
             <div className="text-sidebar-foreground font-semibold text-sm leading-none">PersonalTA.ai</div>
-            <div className="text-sidebar-foreground/60 text-[11px] mt-0.5 tracking-wide">AI Teaching Assistant</div>
+            <div className="text-sidebar-foreground/50 text-[11px] mt-0.5 tracking-wide">Study workspace</div>
           </div>
         </Link>
       </div>
 
-      {/* Nav — using .nav-item / .nav-item.active from globals.css */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        <p className="text-[#6C5CE7]/70 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
-          Menu
+      <div role="navigation" aria-label="Workspace navigation" className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+        <p className="text-emerald-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
+          Workspace
         </p>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -91,15 +90,15 @@ export function Sidebar({ profile }: SidebarProps) {
             >
               <Icon className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
               <span className="flex-1">{item.label}</span>
-          {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] flex-shrink-0" />
+              {isActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 flex-shrink-0" />
               )}
             </Link>
           );
         })}
 
         <div className="pt-3">
-          <p className="text-[#6C5CE7]/70 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
+          <p className="text-emerald-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
             Account
           </p>
           <Link
@@ -110,14 +109,14 @@ export function Sidebar({ profile }: SidebarProps) {
             Settings
           </Link>
         </div>
-      </nav>
+      </div>
 
       {/* User */}
       <div className="px-3 py-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#6C5CE7]/10 transition-colors duration-150 group">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/[0.04] transition-colors duration-150 group">
           <Avatar className="w-7 h-7 flex-shrink-0">
             <AvatarImage src={profile?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-violet-600 text-white text-xs font-semibold">
+            <AvatarFallback className="bg-emerald-500/15 text-emerald-200 text-xs font-semibold border border-emerald-400/20">
               {initials}
             </AvatarFallback>
           </Avatar>

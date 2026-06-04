@@ -12,12 +12,21 @@ export interface SummarizeOptions {
   summaryType: SummaryType;
   customInstruction?: string;
   courseName?: string;
+  maxTokens?: number;
 }
 
 export interface SummarizeResult {
   summary: string;
   keyConcepts: string[];
   tokensUsed: number;
+}
+
+function sanitizeSummaryOutput(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/^\s*```(?:markdown|md)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
 }
 
 const SYSTEM_PROMPTS: Record<SummaryType, string> = {
@@ -80,7 +89,7 @@ Highlight connections, recurring themes, and likely test topics.`,
 };
 
 export async function summarizeNotes(options: SummarizeOptions): Promise<SummarizeResult> {
-  const { content, title, summaryType, customInstruction, courseName } = options;
+  const { content, title, summaryType, customInstruction, courseName, maxTokens = 4096 } = options;
 
   const userMessage = [
     courseName ? `Course: ${courseName}` : null,
@@ -94,12 +103,35 @@ export async function summarizeNotes(options: SummarizeOptions): Promise<Summari
     .join("\n");
 
   // Generate main summary
-  const { text: summaryText, usage: summaryUsage } = await generateText({
+  const { text: summaryText, usage: summaryUsage, finishReason } = await generateText({
     model: chatModel,
-    system: SYSTEM_PROMPTS[summaryType],
+    system: `${SYSTEM_PROMPTS[summaryType]}\n\nDo not output internal reasoning, chain-of-thought, or <think> tags. Output only the final study guide content.`,
     prompt: userMessage,
-    maxTokens: 2048,
+    maxTokens,
   });
+
+  let finalSummaryText = summaryText;
+  let finalSummaryUsage = summaryUsage;
+
+  if (finishReason === "length") {
+    const continuation = await generateText({
+      model: chatModel,
+      system: `${SYSTEM_PROMPTS[summaryType]}\n\nContinue the study guide from exactly where the previous response stopped. Do not restart, summarize, apologize, or include internal reasoning. Finish any incomplete section and include the Study Checklist if it has not appeared yet.`,
+      prompt: [
+        userMessage,
+        "",
+        "=== PARTIAL STUDY GUIDE TO CONTINUE ===",
+        summaryText,
+      ].join("\n"),
+      maxTokens: Math.min(maxTokens, 4096),
+    });
+    finalSummaryText = `${summaryText.trim()}\n${continuation.text.trim()}`;
+    finalSummaryUsage = {
+      promptTokens: summaryUsage.promptTokens + continuation.usage.promptTokens,
+      completionTokens: summaryUsage.completionTokens + continuation.usage.completionTokens,
+      totalTokens: summaryUsage.totalTokens + continuation.usage.totalTokens,
+    };
+  }
 
   // Extract key concepts
   const { text: conceptsText, usage: conceptsUsage } = await generateText({
@@ -122,8 +154,8 @@ export async function summarizeNotes(options: SummarizeOptions): Promise<Summari
   }
 
   const tokensUsed =
-    (summaryUsage.promptTokens + summaryUsage.completionTokens) +
+    (finalSummaryUsage.promptTokens + finalSummaryUsage.completionTokens) +
     (conceptsUsage.promptTokens + conceptsUsage.completionTokens);
 
-  return { summary: summaryText, keyConcepts, tokensUsed };
+  return { summary: sanitizeSummaryOutput(finalSummaryText), keyConcepts, tokensUsed };
 }

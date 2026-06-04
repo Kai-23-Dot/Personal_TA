@@ -27,6 +27,7 @@ type NoteListItem = {
 };
 
 type ModuleItem = {
+  itemKey: string;
   moduleId: number;
   moduleName: string;
   itemId: number;
@@ -36,6 +37,8 @@ type ModuleItem = {
   external_url: string | null;
   content_id: number | null;
   content_details: { "content-type"?: string; url?: string } | null;
+  note_id?: string | null;
+  source_file_id?: string | null;
 };
 
 export default function NotesPage() {
@@ -48,7 +51,7 @@ export default function NotesPage() {
   const [studyGuideError, setStudyGuideError] = useState<string | null>(null);
   const [studyGuideWarning, setStudyGuideWarning] = useState<string | null>(null);
   const [moduleItems, setModuleItems] = useState<ModuleItem[]>([]);
-  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, boolean>>({});
+  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<string, boolean>>({});
   const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
@@ -81,7 +84,7 @@ export default function NotesPage() {
         if (!notesRes.ok) throw new Error(notesData?.error || "Failed to load notes");
         if (mounted) {
           setSelectedModuleItems({});
-          setNotes(notesData ?? []);
+          setNotes(Array.isArray(notesData) ? notesData : []);
         }
       } catch {
         if (mounted) {
@@ -106,7 +109,7 @@ export default function NotesPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Failed to load Canvas module items");
         if (mounted) {
-          setModuleItems(data ?? []);
+          setModuleItems(Array.isArray(data) ? data : []);
           setSelectedModuleItems({});
         }
       } catch {
@@ -130,8 +133,8 @@ export default function NotesPage() {
 
     const selectedItems = Object.entries(selectedModuleItems)
       .filter(([, selected]) => selected)
-      .map(([id]) => Number(id))
-      .filter((id) => !Number.isNaN(id));
+      .map(([itemKey]) => moduleItems.find((item) => item.itemKey === itemKey))
+      .filter((item): item is ModuleItem => Boolean(item));
 
     if (!courseId) {
       setStudyGuideError("Select a course for the study guide.");
@@ -149,7 +152,15 @@ export default function NotesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lessonItemIds: selectedItems,
+          lessonItems: selectedItems.map((item) => ({
+            itemKey: item.itemKey,
+            itemId: item.itemId,
+            type: item.type,
+            pageUrl: item.page_url,
+            externalUrl: item.external_url,
+            contentId: item.content_id,
+            noteId: item.note_id ?? null,
+          })),
           summaryStyle: studyGuideStyle,
           courseId,
         }),
@@ -235,10 +246,10 @@ export default function NotesPage() {
               </select>
             </div>
             <div className="form-field">
-              <label>Lesson content to include (Canvas modules)</label>
+              <label>Lesson content to include (Canvas modules, files, pages, assignments, synced notes)</label>
               {courseId && moduleItems.length === 0 ? (
                 <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
-                  No module items found yet. Sync Canvas to load modules.
+                  No lesson sources found yet. Sync Canvas to load files/pages/assignments and module content.
                 </p>
               ) : null}
               {moduleItems.length > 0 ? (
@@ -254,7 +265,7 @@ export default function NotesPage() {
                 >
                   {moduleItems.map((item) => (
                     <label
-                      key={item.itemId}
+                      key={item.itemKey}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -265,9 +276,9 @@ export default function NotesPage() {
                     >
                       <input
                         type="checkbox"
-                        checked={Boolean(selectedModuleItems[item.itemId])}
+                        checked={Boolean(selectedModuleItems[item.itemKey])}
                         onChange={(e) =>
-                          setSelectedModuleItems((prev) => ({ ...prev, [item.itemId]: e.target.checked }))
+                          setSelectedModuleItems((prev) => ({ ...prev, [item.itemKey]: e.target.checked }))
                         }
                       />
                       <span>{item.moduleName} — {item.title}</span>
@@ -282,9 +293,9 @@ export default function NotesPage() {
                     className="contact-submit-btn"
                     style={{ width: "auto", padding: "0.55rem 1.4rem" }}
                     onClick={() => {
-                      const next: Record<number, boolean> = {};
+                      const next: Record<string, boolean> = {};
                       moduleItems.forEach((item) => {
-                        next[item.itemId] = true;
+                        next[item.itemKey] = true;
                       });
                       setSelectedModuleItems(next);
                     }}

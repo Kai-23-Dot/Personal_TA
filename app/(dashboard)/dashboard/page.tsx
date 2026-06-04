@@ -159,8 +159,8 @@ export default function DashboardPage() {
   const retrievalConfidence = useMemo(() => {
     if (!canvasConnection) return { label: "Not available", tone: "text-slate-300", pct: 0 };
     if (notesCount >= 25) return { label: "High", tone: "text-emerald-300", pct: 87 };
-    if (notesCount >= 8) return { label: "Medium", tone: "text-amber-300", pct: 68 };
-    return { label: "Low", tone: "text-rose-300", pct: 39 };
+    if (notesCount >= 8) return { label: "Medium", tone: "text-lime-300", pct: 68 };
+    return { label: "Low", tone: "text-orange-300", pct: 39 };
   }, [canvasConnection, notesCount]);
 
   async function handleSync() {
@@ -187,10 +187,10 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <div className="mb-6 rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-500/10 via-slate-900/60 to-blue-500/10 p-6 shadow-[0_20px_80px_rgba(2,12,27,0.45)]">
+      <div className="mb-6 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-100">
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
               <Sparkles className="h-3.5 w-3.5" /> AI Study Dashboard
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white">
@@ -242,7 +242,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <SectionCard title="Canvas status" subtitle={canvasConnection?.canvas_domain ?? "No active Canvas connection"}>
               <div className="flex items-center justify-between">
-                <span className={`text-sm ${canvasConnection ? "text-emerald-300" : "text-rose-300"}`}>
+                <span className={`text-sm ${canvasConnection ? "text-emerald-300" : "text-orange-300"}`}>
                   {canvasConnection ? "Connected" : "Disconnected"}
                 </span>
                 <Link2 className="h-4 w-4 text-slate-300" />
@@ -277,7 +277,7 @@ export default function DashboardPage() {
           {(emptyNoConnection || emptyNoCourses) ? (
             <SectionCard title="Get started" subtitle="Finish setup to unlock AI practice generation.">
               {emptyNoConnection ? (
-                <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4">
+                <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/5 p-4">
                   <p className="text-sm text-slate-100">Connect your Canvas account to automatically import modules, pages, assignments, files, and linked resources.</p>
                   <a href="/settings/setup/canvas" className="btn btn-primary mt-3">Connect Canvas</a>
                 </div>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                 {courses.map((course) => {
                   const selected = selectedCourseIds.has(course.id);
                   return (
-                    <label key={course.id} className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${selected ? "border-cyan-300/45 bg-cyan-400/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                    <label key={course.id} className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${selected ? "border-emerald-300/45 bg-emerald-400/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
                       <span className="flex items-center gap-2 text-slate-100">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: course.color ?? "#22d3ee" }} />
                         {course.name}
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                   {upcomingAssignments.map((assignment) => {
                     const urgent = assignment.due.getTime() - Date.now() < 48 * 3600 * 1000;
                     return (
-                      <li key={assignment.id} className={`rounded-xl border p-3 ${urgent ? "border-rose-300/40 bg-rose-500/10" : "border-white/10 bg-white/5"}`}>
+                      <li key={assignment.id} className={`rounded-xl border p-3 ${urgent ? "border-orange-300/40 bg-orange-500/10" : "border-white/10 bg-white/5"}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-sm font-medium text-white">{assignment.title}</p>
@@ -359,8 +359,8 @@ export default function DashboardPage() {
                 <ul className="space-y-2">
                   {metrics.slice(0, 5).map((m) => (
                     <li key={m.topic} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
-                      <span className="inline-flex items-center gap-2 text-sm text-slate-100"><Target className="h-3.5 w-3.5 text-cyan-300" />{m.topic}</span>
-                      <span className="text-xs text-amber-300">{m.accuracy_pct}%</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-slate-100"><Target className="h-3.5 w-3.5 text-emerald-300" />{m.topic}</span>
+                      <span className="text-xs text-lime-300">{m.accuracy_pct}%</span>
                     </li>
                   ))}
                 </ul>
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                   <CheckCircle2 className="h-4 w-4" />
                   Retrieval pipeline active: hybrid ranking + confidence gating enabled.
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
                   <GraduationCap className="h-4 w-4" />
                   Notes + assignments are used with source citations during practice context assembly.
                 </div>
