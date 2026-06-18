@@ -1,43 +1,67 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { AlertCircle, BookOpen, CheckCircle2, Clock3, Flame, GraduationCap, Link2, RefreshCw, Sparkles, Target } from "lucide-react";
+import {
+  AlertCircle, BookOpen, CheckCircle2, Clock3, Flame,
+  GraduationCap, Link2, RefreshCw, Sparkles, Target, Zap,
+} from "lucide-react";
 
 type CourseRef = { id: string; name: string; color: string | null } | null;
-
 type AssignmentRow = {
-  id: string;
-  title: string;
-  due_date: string | null;
-  is_completed: boolean;
-  assignment_type?: string;
-  course?: CourseRef;
+  id: string; title: string; due_date: string | null;
+  is_completed: boolean; assignment_type?: string; course?: CourseRef;
 };
-
 type LmsConnection = {
-  id: string;
-  platform: string;
-  canvas_domain: string | null;
-  last_synced_at: string | null;
-  is_active: boolean;
+  id: string; platform: string; canvas_domain: string | null;
+  last_synced_at: string | null; is_active: boolean;
 };
-
 type Course = { id: string; name: string; color: string | null };
 type Profile = { full_name: string | null };
 type FocusSession = { duration_minutes: number | null; started_at: string };
 type WeakMetric = { topic: string; accuracy_pct: number };
 type Notification = { id: string; title: string; body: string | null; read_at: string | null };
-
 type DashboardLoadState = "loading" | "ready" | "error";
 
-function SectionCard({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode }) {
+// ── Stat card ──
+function StatCard({ icon, label, value, unit, tone, sub }: {
+  icon: React.ReactNode; label: string; value: number;
+  unit?: string; tone: "sky" | "orange" | "violet" | "emerald"; sub?: string;
+}) {
+  const t = {
+    sky:     { ring: "border-sky-400/20",     bg: "bg-sky-400/8",     icon: "text-sky-300" },
+    orange:  { ring: "border-orange-400/20",  bg: "bg-orange-500/8",  icon: "text-orange-300" },
+    violet:  { ring: "border-violet-400/20",  bg: "bg-violet-500/8",  icon: "text-violet-300" },
+    emerald: { ring: "border-emerald-400/20", bg: "bg-emerald-500/8", icon: "text-emerald-300" },
+  }[tone];
+
   return (
-    <section className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.45)] backdrop-blur">
+    <div className={`group rounded-2xl border ${t.ring} ${t.bg} p-5 backdrop-blur transition-all duration-200 hover:scale-[1.025] hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]`}>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
+        <span className={`${t.icon} opacity-70 transition-opacity duration-200 group-hover:opacity-100`}>{icon}</span>
+      </div>
+      <p className="text-3xl font-bold tracking-tight text-white">
+        {value}
+        {unit && <span className="ml-1.5 text-base font-normal text-slate-400">{unit}</span>}
+      </p>
+      {sub && <p className="mt-1.5 text-xs text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+// ── Section card ──
+function SectionCard({ title, subtitle, action, children, className = "" }: {
+  title: string; subtitle?: string; action?: React.ReactNode;
+  children: React.ReactNode; className?: string;
+}) {
+  return (
+    <section className={`rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur ${className}`}>
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
-          {subtitle ? <p className="mt-1 text-sm text-slate-300">{subtitle}</p> : null}
+          <h2 className="text-base font-semibold text-white">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -47,7 +71,26 @@ function SectionCard({ title, subtitle, action, children }: { title: string; sub
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`skeleton-shimmer rounded-xl ${className}`} aria-hidden="true" />;
+  return <div className={`skeleton-shimmer rounded-2xl ${className}`} aria-hidden="true" />;
+}
+
+// ── Quick action link ──
+function QuickAction({ href, icon, label, desc }: { href: string; icon: React.ReactNode; label: string; desc: string }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3.5 transition-all duration-200 hover:border-white/15 hover:bg-white/6 hover:scale-[1.015] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] active:scale-[0.99]"
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium leading-tight text-white">{label}</p>
+        <p className="text-xs text-slate-500">{desc}</p>
+      </div>
+      <span className="ml-auto text-slate-600 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-slate-400">→</span>
+    </Link>
+  );
 }
 
 export default function DashboardPage() {
@@ -67,7 +110,7 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoadState("loading");
     try {
-      const [assignmentsRes, connectionsRes, coursesRes, profileRes, focusRes, metricsRes, notificationsRes, notesRes] = await Promise.all([
+      const [aR, cR, crR, pR, fR, mR, nR, ntsR] = await Promise.all([
         fetch("/api/assignments"),
         fetch("/api/lms/connections"),
         fetch("/api/courses"),
@@ -77,31 +120,24 @@ export default function DashboardPage() {
         fetch("/api/notifications"),
         fetch("/api/notes/list"),
       ]);
-
-      if (!assignmentsRes.ok || !connectionsRes.ok || !coursesRes.ok) {
-        throw new Error("Could not load dashboard data. Try syncing again.");
-      }
-
-      const [assignmentsData, connectionsData, coursesData, profileData, focusData, metricsData, notificationsData, notesData] = await Promise.all([
-        assignmentsRes.json(),
-        connectionsRes.json(),
-        coursesRes.json(),
-        profileRes.ok ? profileRes.json() : Promise.resolve(null),
-        focusRes.ok ? focusRes.json() : Promise.resolve([]),
-        metricsRes.ok ? metricsRes.json() : Promise.resolve([]),
-        notificationsRes.ok ? notificationsRes.json() : Promise.resolve([]),
-        notesRes.ok ? notesRes.json() : Promise.resolve([]),
+      if (!aR.ok || !cR.ok || !crR.ok) throw new Error("Could not load dashboard data.");
+      const [aD, cD, crD, pD, fD, mD, nD, ntsD] = await Promise.all([
+        aR.json(), cR.json(), crR.json(),
+        pR.ok ? pR.json() : null,
+        fR.ok ? fR.json() : [],
+        mR.ok ? mR.json() : [],
+        nR.ok ? nR.json() : [],
+        ntsR.ok ? ntsR.json() : [],
       ]);
-
-      setAssignments(assignmentsData ?? []);
-      setConnections(connectionsData ?? []);
-      setCourses(coursesData ?? []);
-      setProfile(profileData);
-      setFocusSessions(focusData ?? []);
-      setMetrics(metricsData ?? []);
-      setNotifications(notificationsData ?? []);
-      setNotesCount((notesData ?? []).length);
-      setSelectedCourseIds(new Set((coursesData ?? []).map((c: Course) => c.id)));
+      setAssignments(aD ?? []);
+      setConnections(cD ?? []);
+      setCourses(crD ?? []);
+      setProfile(pD);
+      setFocusSessions(fD ?? []);
+      setMetrics(mD ?? []);
+      setNotifications(nD ?? []);
+      setNotesCount((crD ?? []).length + (aD ?? []).length);
+      setSelectedCourseIds(new Set((crD ?? []).map((c: Course) => c.id)));
       setLoadState("ready");
     } catch (err) {
       setSyncMessage(err instanceof Error ? err.message : "Failed to load dashboard.");
@@ -109,9 +145,7 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  useEffect(() => { loadDashboardData(); }, []);
 
   const canvasConnection = connections.find((c) => c.platform === "canvas" && c.is_active);
 
@@ -122,34 +156,27 @@ export default function DashboardPage() {
 
   const upcomingAssignments = useMemo(() => {
     const now = new Date();
-    const cutoff = new Date(now.getTime() + 14 * 86400000);
+    const cutoff = new Date(now.getTime() + 7 * 86_400_000);
     return filteredAssignments
       .filter((a) => a.due_date && !a.is_completed)
       .map((a) => ({ ...a, due: parseISO(a.due_date as string) }))
       .filter((a) => a.due >= now && a.due <= cutoff)
-      .sort((a, b) => a.due.getTime() - b.due.getTime())
-      .slice(0, 8);
+      .sort((a, b) => a.due.getTime() - b.due.getTime());
   }, [filteredAssignments]);
 
-  const recentSessions = useMemo(() => {
-    return [...focusSessions]
-      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
-      .slice(0, 5);
-  }, [focusSessions]);
-
   const hoursThisWeek = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400000;
-    const minutes = focusSessions
+    const weekAgo = Date.now() - 7 * 86_400_000;
+    const mins = focusSessions
       .filter((s) => new Date(s.started_at).getTime() >= weekAgo)
       .reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
-    return Math.round(minutes / 60);
+    return Math.round(mins / 60);
   }, [focusSessions]);
 
   const studyStreak = useMemo(() => {
     const days = new Set(focusSessions.map((s) => format(new Date(s.started_at), "yyyy-MM-dd")));
     let streak = 0;
     for (let i = 0; i < 30; i++) {
-      const key = format(new Date(Date.now() - i * 86400000), "yyyy-MM-dd");
+      const key = format(new Date(Date.now() - i * 86_400_000), "yyyy-MM-dd");
       if (!days.has(key)) break;
       streak += 1;
     }
@@ -157,10 +184,10 @@ export default function DashboardPage() {
   }, [focusSessions]);
 
   const retrievalConfidence = useMemo(() => {
-    if (!canvasConnection) return { label: "Not available", tone: "text-slate-300", pct: 0 };
-    if (notesCount >= 25) return { label: "High", tone: "text-emerald-300", pct: 87 };
-    if (notesCount >= 8) return { label: "Medium", tone: "text-lime-300", pct: 68 };
-    return { label: "Low", tone: "text-orange-300", pct: 39 };
+    if (!canvasConnection) return { label: "Unavailable", tone: "text-slate-500", pct: 0 };
+    if (notesCount >= 25) return { label: "High",   tone: "text-sky-300",    pct: 87 };
+    if (notesCount >= 8)  return { label: "Medium", tone: "text-blue-300",   pct: 68 };
+    return                       { label: "Low",    tone: "text-orange-300", pct: 39 };
   }, [canvasConnection, notesCount]);
 
   async function handleSync() {
@@ -170,9 +197,9 @@ export default function DashboardPage() {
       const res = await fetch("/api/sync/all", { method: "POST", headers: { "Content-Type": "application/json" } });
       const data = await res.json();
       if (!res.ok || data?.success === false) {
-        setSyncMessage(data?.error || "Sync failed. Check your LMS connection and try again.");
+        setSyncMessage(data?.error || "Sync failed. Check your LMS connection.");
       } else {
-        setSyncMessage("Sync completed. Latest course content is now indexed.");
+        setSyncMessage("Sync complete — latest course content is now indexed.");
         await loadDashboardData();
       }
     } catch (err) {
@@ -184,167 +211,187 @@ export default function DashboardPage() {
 
   const emptyNoConnection = !canvasConnection;
   const emptyNoCourses = !emptyNoConnection && courses.length === 0;
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
+  const urgentCount = upcomingAssignments.filter((a) => a.due.getTime() - Date.now() < 48 * 3_600_000).length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <div className="mb-6 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto max-w-7xl space-y-5 px-4 pb-20 pt-6">
+
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(9,12,26,0.84)] px-7 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.3)] backdrop-blur">
+        <div className="pointer-events-none absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-sky-500/6 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/4 blur-3xl" />
+
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
-              <Sparkles className="h-3.5 w-3.5" /> AI Study Dashboard
+            <p className="mb-2 text-xs font-medium text-slate-500">
+              {format(new Date(), "EEEE, MMMM d, yyyy")}
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">
-              {profile?.full_name ? `${profile.full_name}, your study system is ready.` : "Your study system is ready."}
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">
+              {firstName ? `Good to see you, ${firstName}.` : "Welcome back."}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300">
-              PersonalTA pulls Canvas material, ranks the most relevant content, and helps you generate focused practice tests and study guides with source-grounded context.
+            <p className="mt-2 text-sm text-slate-400">
+              {upcomingAssignments.length > 0
+                ? `You have ${upcomingAssignments.length} assignment${upcomingAssignments.length !== 1 ? "s" : ""} due this week${urgentCount > 0 ? ` — ${urgentCount} urgent` : ""}.`
+                : "You're all caught up this week. Great work!"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <a href={emptyNoConnection ? "/settings/setup/canvas" : "/practice"} className="btn btn-primary" aria-label="Primary action">
-              {emptyNoConnection ? "Connect Canvas" : "Generate Practice Test"}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href={emptyNoConnection ? "/settings/setup/canvas" : "/practice"}
+              className="btn btn-primary inline-flex items-center gap-2"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              {emptyNoConnection ? "Connect Canvas" : "Practice Test"}
             </a>
-            <button className="btn btn-secondary" onClick={handleSync} disabled={syncing}>
-              {syncing ? "Syncing..." : "Sync Content"}
+            <button
+              className="btn btn-secondary inline-flex items-center gap-2"
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing…" : "Sync"}
             </button>
-            <a href="/notes" className="btn btn-secondary">Open Notes</a>
           </div>
         </div>
-        {syncMessage ? (
-          <p className="mt-3 inline-flex items-center gap-2 text-sm text-slate-200">
-            <AlertCircle className="h-4 w-4" /> {syncMessage}
+
+        {syncMessage && (
+          <p className="relative mt-4 flex items-start gap-2 text-xs text-slate-300">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-300" />
+            {syncMessage}
           </p>
-        ) : null}
+        )}
       </div>
 
-      {loadState === "loading" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Loading dashboard">
-          <SkeletonBlock className="h-28" />
-          <SkeletonBlock className="h-28" />
-          <SkeletonBlock className="h-28" />
-          <SkeletonBlock className="h-28" />
-          <SkeletonBlock className="h-72 md:col-span-2" />
-          <SkeletonBlock className="h-72 md:col-span-2" />
+      {/* ── Loading ── */}
+      {loadState === "loading" && (
+        <div className="space-y-5" role="status" aria-label="Loading dashboard">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[...Array(4)].map((_, i) => <SkeletonBlock key={i} className="h-[100px]" />)}
+          </div>
+          <div className="grid gap-5 lg:grid-cols-3">
+            <SkeletonBlock className="h-72 lg:col-span-2" />
+            <SkeletonBlock className="h-72" />
+          </div>
+          <div className="grid gap-5 xl:grid-cols-2">
+            <SkeletonBlock className="h-56" />
+            <SkeletonBlock className="h-56" />
+          </div>
         </div>
-      ) : null}
+      )}
 
-      {loadState === "error" ? (
-        <SectionCard title="Could not load dashboard" subtitle="We could not reach one or more data sources.">
-          <div className="flex flex-wrap items-center gap-3">
+      {/* ── Error ── */}
+      {loadState === "error" && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/8 p-8 text-center">
+          <p className="mb-4 text-sm text-slate-300">{syncMessage ?? "Failed to load dashboard."}</p>
+          <div className="flex justify-center gap-3">
             <button className="btn btn-primary" onClick={() => loadDashboardData()}>Retry</button>
-            <a href="/settings" className="btn btn-secondary">Check LMS settings</a>
+            <a href="/settings" className="btn btn-secondary">Settings</a>
           </div>
-        </SectionCard>
-      ) : null}
+        </div>
+      )}
 
-      {loadState === "ready" ? (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <SectionCard title="Canvas status" subtitle={canvasConnection?.canvas_domain ?? "No active Canvas connection"}>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${canvasConnection ? "text-emerald-300" : "text-orange-300"}`}>
-                  {canvasConnection ? "Connected" : "Disconnected"}
-                </span>
-                <Link2 className="h-4 w-4 text-slate-300" />
-              </div>
-              <p className="mt-2 text-xs text-slate-400">
-                Last sync: {canvasConnection?.last_synced_at ? format(new Date(canvasConnection.last_synced_at), "PPpp") : "Never"}
-              </p>
-            </SectionCard>
-
-            <SectionCard title="Content sync" subtitle="Indexed source materials">
-              <p className="text-2xl font-semibold text-white">{notesCount}</p>
-              <p className="mt-1 text-xs text-slate-400">documents available for retrieval and practice generation</p>
-            </SectionCard>
-
-            <SectionCard title="Retrieval confidence" subtitle="Content selection reliability">
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-medium ${retrievalConfidence.tone}`}>{retrievalConfidence.label}</span>
-                <span className="text-lg font-semibold text-white">{retrievalConfidence.pct}%</span>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">Estimate based on synced course coverage; rises as more course materials are ingested.</p>
-            </SectionCard>
-
-            <SectionCard title="Study momentum" subtitle="Last 7 days">
-              <div className="flex items-center justify-between text-white">
-                <span className="text-sm">{hoursThisWeek}h focused</span>
-                <Clock3 className="h-4 w-4 text-slate-300" />
-              </div>
-              <p className="mt-2 text-xs text-slate-400">{studyStreak} day streak</p>
-            </SectionCard>
+      {/* ── Ready ── */}
+      {loadState === "ready" && (
+        <>
+          {/* Stat cards */}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={<Clock3 className="h-5 w-5" />}
+              label="Due this week"
+              value={upcomingAssignments.length}
+              tone={urgentCount > 0 ? "orange" : "sky"}
+              sub={urgentCount > 0 ? `${urgentCount} due within 48h` : "No urgent deadlines"}
+            />
+            <StatCard
+              icon={<Flame className="h-5 w-5" />}
+              label="Study streak"
+              value={studyStreak}
+              unit="days"
+              tone="violet"
+              sub={studyStreak > 0 ? "Keep the momentum" : "Start a session today"}
+            />
+            <StatCard
+              icon={<BookOpen className="h-5 w-5" />}
+              label="Focus hours"
+              value={hoursThisWeek}
+              unit="hrs"
+              tone="sky"
+              sub="Logged this week"
+            />
+            <StatCard
+              icon={<GraduationCap className="h-5 w-5" />}
+              label="Content indexed"
+              value={notesCount}
+              unit="items"
+              tone="emerald"
+              sub={`${retrievalConfidence.label} retrieval confidence`}
+            />
           </div>
 
-          {(emptyNoConnection || emptyNoCourses) ? (
-            <SectionCard title="Get started" subtitle="Finish setup to unlock AI practice generation.">
-              {emptyNoConnection ? (
-                <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/5 p-4">
-                  <p className="text-sm text-slate-100">Connect your Canvas account to automatically import modules, pages, assignments, files, and linked resources.</p>
-                  <a href="/settings/setup/canvas" className="btn btn-primary mt-3">Connect Canvas</a>
+          {/* Setup prompt */}
+          {(emptyNoConnection || emptyNoCourses) && (
+            <div className="flex items-start gap-4 rounded-2xl border border-sky-400/20 bg-sky-500/8 px-5 py-4">
+              <Link2 className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" />
+              <div>
+                <p className="text-sm font-medium text-sky-100">
+                  {emptyNoConnection
+                    ? "Connect Canvas to import your courses, assignments, and materials automatically."
+                    : "Canvas is connected — run your first sync to import courses."}
+                </p>
+                <div className="mt-3 flex gap-2.5">
+                  {emptyNoConnection ? (
+                    <a href="/settings/setup/canvas" className="btn btn-primary">Connect Canvas</a>
+                  ) : (
+                    <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
+                      {syncing ? "Syncing…" : "Run first sync"}
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-sm text-slate-100">Canvas is connected, but no courses were imported yet.</p>
-                  <button className="btn btn-primary mt-3" onClick={handleSync} disabled={syncing}>Run first sync</button>
-                </div>
-              )}
-            </SectionCard>
-          ) : null}
+              </div>
+            </div>
+          )}
 
-          <div className="grid gap-4 xl:grid-cols-3">
+          {/* Due this week + Quick actions */}
+          <div className="grid gap-5 lg:grid-cols-3">
             <SectionCard
-              title="My courses"
-              subtitle="Choose courses to filter dashboard content"
-              action={
-                <div className="flex gap-2">
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedCourseIds(new Set(courses.map((c) => c.id)))}>All</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedCourseIds(new Set())}>None</button>
-                </div>
-              }
+              title="Due this week"
+              subtitle={`${upcomingAssignments.length} assignment${upcomingAssignments.length !== 1 ? "s" : ""} coming up`}
+              action={<a href="/assignments" className="btn btn-secondary">View all →</a>}
+              className="lg:col-span-2"
             >
-              <div className="grid gap-2">
-                {courses.map((course) => {
-                  const selected = selectedCourseIds.has(course.id);
-                  return (
-                    <label key={course.id} className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${selected ? "border-emerald-300/45 bg-emerald-400/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                      <span className="flex items-center gap-2 text-slate-100">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: course.color ?? "#22d3ee" }} />
-                        {course.name}
-                      </span>
-                      <input
-                        aria-label={`Toggle ${course.name}`}
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => {
-                          setSelectedCourseIds((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(course.id)) next.delete(course.id);
-                            else next.add(course.id);
-                            return next;
-                          });
-                        }}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Upcoming tests & assignments" subtitle="Next 14 days" action={<a href="/assignments" className="btn btn-secondary">View all</a>}>
               {upcomingAssignments.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-white/20 bg-white/5 p-3 text-sm text-slate-300">No upcoming due dates in selected courses.</p>
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <CheckCircle2 className="h-9 w-9 text-sky-300/50" />
+                  <p className="text-sm text-slate-400">Nothing due this week — you&apos;re ahead of the game.</p>
+                </div>
               ) : (
                 <ul className="space-y-2">
-                  {upcomingAssignments.map((assignment) => {
-                    const urgent = assignment.due.getTime() - Date.now() < 48 * 3600 * 1000;
+                  {upcomingAssignments.map((a) => {
+                    const urgent = a.due.getTime() - Date.now() < 48 * 3_600_000;
+                    const daysLeft = Math.ceil((a.due.getTime() - Date.now()) / 86_400_000);
                     return (
-                      <li key={assignment.id} className={`rounded-xl border p-3 ${urgent ? "border-orange-300/40 bg-orange-500/10" : "border-white/10 bg-white/5"}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-white">{assignment.title}</p>
-                            <p className="text-xs text-slate-300">{assignment.course?.name ?? "Course"}</p>
-                          </div>
-                          <p className="text-xs text-slate-200">{format(assignment.due, "MMM d, p")}</p>
+                      <li
+                        key={a.id}
+                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150 hover:scale-[1.003] ${
+                          urgent
+                            ? "border-orange-400/25 bg-orange-500/8 hover:border-orange-400/35"
+                            : "border-white/8 bg-white/3 hover:border-white/14 hover:bg-white/5"
+                        }`}
+                      >
+                        <div className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-center ${urgent ? "bg-orange-500/20 text-orange-300" : "bg-white/8 text-slate-300"}`}>
+                          <span className="text-[9px] font-bold uppercase leading-none tracking-wider">{format(a.due, "MMM")}</span>
+                          <span className="text-base font-bold leading-snug">{format(a.due, "d")}</span>
                         </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-white">{a.title}</p>
+                          <p className="text-xs text-slate-500">{a.course?.name ?? "Unknown course"}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                          urgent ? "bg-orange-500/20 text-orange-200" : "bg-white/6 text-slate-400"
+                        }`}>
+                          {daysLeft <= 0 ? "Today" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d`}
+                        </span>
                       </li>
                     );
                   })}
@@ -352,15 +399,132 @@ export default function DashboardPage() {
               )}
             </SectionCard>
 
-            <SectionCard title="Recommended practice" subtitle="Based on weak areas" action={<a href="/practice" className="btn btn-secondary">Start</a>}>
+            {/* Quick actions */}
+            <div className="flex flex-col gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Quick actions</p>
+              <QuickAction
+                href="/practice"
+                icon={<Target className="h-[1.1rem] w-[1.1rem] text-sky-300" />}
+                label="Practice Test"
+                desc="AI quiz on any topic"
+              />
+              <QuickAction
+                href="/flashcards"
+                icon={<Sparkles className="h-[1.1rem] w-[1.1rem] text-violet-300" />}
+                label="Flashcards"
+                desc="Spaced repetition study"
+              />
+              <QuickAction
+                href="/notes"
+                icon={<BookOpen className="h-[1.1rem] w-[1.1rem] text-emerald-300" />}
+                label="Study Guide"
+                desc="AI notes from your course"
+              />
+              <QuickAction
+                href="/chat"
+                icon={<GraduationCap className="h-[1.1rem] w-[1.1rem] text-amber-300" />}
+                label="Ask Conlearn"
+                desc="Chat with your AI tutor"
+              />
+            </div>
+          </div>
+
+          {/* Courses + Recommendations */}
+          <div className="grid gap-5 xl:grid-cols-2">
+            <SectionCard
+              title="My courses"
+              subtitle="Filter dashboard by course"
+              action={
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}
+                    onClick={() => setSelectedCourseIds(new Set(courses.map((c) => c.id)))}
+                  >All</button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: "0.3rem 0.7rem", fontSize: "0.72rem" }}
+                    onClick={() => setSelectedCourseIds(new Set())}
+                  >None</button>
+                </div>
+              }
+            >
+              {courses.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <GraduationCap className="h-8 w-8 text-slate-600" />
+                  <p className="text-sm text-slate-400">No courses synced yet.</p>
+                  <button className="btn btn-secondary mt-1" onClick={handleSync} disabled={syncing}>Sync now</button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {courses.map((course) => {
+                    const selected = selectedCourseIds.has(course.id);
+                    return (
+                      <label
+                        key={course.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-all duration-150 ${
+                          selected
+                            ? "border-sky-400/30 bg-sky-400/8"
+                            : "border-white/6 bg-white/3 hover:border-white/12 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: course.color ?? "#22d3ee" }} />
+                        <span className="flex-1 truncate text-sm text-slate-100">{course.name}</span>
+                        <input
+                          type="checkbox"
+                          aria-label={`Toggle ${course.name}`}
+                          checked={selected}
+                          className="accent-sky-400"
+                          onChange={() => {
+                            setSelectedCourseIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(course.id)) next.delete(course.id);
+                              else next.add(course.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="Practice recommendations"
+              subtitle="Topics where you can improve most"
+              action={<a href="/practice" className="btn btn-secondary">Practice →</a>}
+            >
               {metrics.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-white/20 bg-white/5 p-3 text-sm text-slate-300">No weak topics detected yet. Complete a practice session to get recommendations.</p>
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <Target className="h-8 w-8 text-slate-600" />
+                  <p className="text-sm text-slate-400">Complete a practice session to see recommendations.</p>
+                  <a href="/practice" className="btn btn-primary">Start now</a>
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {metrics.slice(0, 5).map((m) => (
-                    <li key={m.topic} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
-                      <span className="inline-flex items-center gap-2 text-sm text-slate-100"><Target className="h-3.5 w-3.5 text-emerald-300" />{m.topic}</span>
-                      <span className="text-xs text-lime-300">{m.accuracy_pct}%</span>
+                    <li key={m.topic} className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/3 px-3 py-3 transition-all duration-150 hover:border-white/12">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{m.topic}</p>
+                        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/8">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${m.accuracy_pct}%`,
+                              background: m.accuracy_pct < 50 ? "#fda4af" : m.accuracy_pct < 70 ? "#fcd34d" : "#7dd3fc",
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <span className={`shrink-0 text-sm font-bold ${
+                        m.accuracy_pct < 50 ? "text-red-300" : m.accuracy_pct < 70 ? "text-amber-300" : "text-sky-300"
+                      }`}>
+                        {m.accuracy_pct}%
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -368,53 +532,34 @@ export default function DashboardPage() {
             </SectionCard>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            <SectionCard title="Recent study sessions" subtitle="Your latest focus blocks" action={<a href="/focus" className="btn btn-secondary">Open focus</a>}>
-              {recentSessions.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-white/20 bg-white/5 p-3 text-sm text-slate-300">No sessions yet. Start a focus block to build progress history.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {recentSessions.map((s, i) => (
-                    <li key={`${s.started_at}_${i}`} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
-                      <span className="inline-flex items-center gap-2 text-sm text-slate-100"><Flame className="h-3.5 w-3.5 text-orange-300" />{format(new Date(s.started_at), "PPp")}</span>
-                      <span className="text-xs text-slate-200">{s.duration_minutes ?? 0} min</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SectionCard>
-
-            <SectionCard title="Recent activity & trust signals" subtitle="System status and updates">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-500/10 p-3 text-sm text-emerald-100">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Retrieval pipeline active: hybrid ranking + confidence gating enabled.
-                </div>
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
-                  <GraduationCap className="h-4 w-4" />
-                  Notes + assignments are used with source citations during practice context assembly.
-                </div>
-                {notifications.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-white/20 bg-white/5 p-3 text-sm text-slate-300">No unread notifications.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {notifications.slice(0, 3).map((n) => (
-                      <li key={n.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                        <p className="text-sm font-medium text-white">{n.title}</p>
-                        {n.body ? <p className="mt-1 text-xs text-slate-300">{n.body}</p> : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </SectionCard>
+          {/* Status footer */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/2 px-5 py-3.5">
+            <span className="flex items-center gap-2 text-xs text-slate-500">
+              <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-sky-400" : "bg-orange-400"}`} />
+              Canvas: {canvasConnection
+                ? `${canvasConnection.canvas_domain} · last sync ${canvasConnection.last_synced_at ? format(new Date(canvasConnection.last_synced_at), "MMM d, p") : "never"}`
+                : "Not connected"}
+            </span>
+            <span className={`text-xs font-medium ${retrievalConfidence.tone}`}>
+              Retrieval: {retrievalConfidence.label} · {retrievalConfidence.pct}%
+            </span>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-4 text-xs text-slate-400">
-            <p className="inline-flex items-center gap-2"><RefreshCw className="h-3.5 w-3.5" /> Data freshness and retrieval confidence improve as more up-to-date course content is synced.</p>
-          </div>
-        </div>
-      ) : null}
+          {/* Notifications — only when present */}
+          {notifications.length > 0 && (
+            <SectionCard title="Notifications" subtitle="Unread updates">
+              <ul className="space-y-2">
+                {notifications.slice(0, 3).map((n) => (
+                  <li key={n.id} className="rounded-xl border border-white/8 bg-white/3 p-3">
+                    <p className="text-sm font-medium text-white">{n.title}</p>
+                    {n.body && <p className="mt-0.5 text-xs text-slate-400">{n.body}</p>}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+        </>
+      )}
     </div>
   );
 }

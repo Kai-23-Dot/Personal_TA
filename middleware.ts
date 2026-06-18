@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     "/manifest.webmanifest",
     "/icon.svg",
   ]);
-  const isPublicRoute = publicRoutes.has(pathname);
+  const isPublicRoute = publicRoutes.has(pathname) || pathname.startsWith("/api/auth/");
   const cookieKeys = request.cookies.getAll().map((cookie) => cookie.name);
   const hasAuthCookie = cookieKeys.some(
     (name) =>

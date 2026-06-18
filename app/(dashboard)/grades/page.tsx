@@ -63,13 +63,13 @@ export default async function GradesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <section className="mb-8 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+      <section className="mb-8 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
           <TrendingUp className="h-3.5 w-3.5" /> Synced performance
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">Grade Insights</h1>
+        <h2 className="text-3xl font-semibold tracking-tight text-white">Grade insights</h2>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Grades shown here come from synced LMS submissions. Placeholder class grades have been removed.
+          Grades shown here come from your synced Canvas submissions.
         </p>
       </section>
 
@@ -84,7 +84,7 @@ export default async function GradesPage() {
         <EmptyState
           icon={BarChart3}
           title="No synced grades yet"
-          description="Your courses are available, but PersonalTA has not received graded submissions from Canvas yet."
+          description="Your courses are available, but Conlearn has not received graded submissions from Canvas yet."
           action={<Link href="/dashboard" className="btn btn-primary">Sync from dashboard</Link>}
         />
       ) : (
@@ -94,15 +94,15 @@ export default async function GradesPage() {
             if (!total || total.count === 0 || total.possible <= 0) return null;
             const score = percent(total.earned, total.possible);
             return (
-              <div key={course.id} className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
+              <div key={course.id} className="rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
                 <div className="flex items-center justify-between gap-4">
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
                     {course.platform === "canvas" ? "Canvas" : course.platform}
                   </span>
-                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: course.color ?? "#3ecf8e" }} />
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: course.color ?? "#8ab4ff" }} />
                 </div>
                 <h2 className="mt-4 text-lg font-semibold text-white">{course.name}</h2>
-                <p className="mt-3 text-3xl font-semibold text-emerald-200">{score}%</p>
+                <p className="mt-3 text-3xl font-semibold text-sky-200">{score}%</p>
                 <p className="mt-1 text-sm text-slate-400">{total.count} graded item{total.count === 1 ? "" : "s"} synced</p>
                 {total.latest ? (
                   <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">

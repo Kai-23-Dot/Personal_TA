@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+
+function resumeKey(sid: string) {
+  return `practice_resume_${sid}`;
+}
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useChat } from "ai/react";
 import { CodeBlock } from "@/components/practice/CodeBlock";
 import { OptionsList } from "@/components/practice/OptionsList";
 import { FeedbackBox } from "@/components/practice/FeedbackBox";
-import { HintBox } from "@/components/practice/HintBox";
 import { NavigationControls } from "@/components/practice/NavigationControls";
+import { useSetPageContent } from "@/lib/contexts/page-context";
 
 type QuizQuestion = {
   question: string;
@@ -52,12 +54,25 @@ export default function PracticeSessionPage() {
   const [times, setTimes] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [relatedNotes, setRelatedNotes] = useState<Array<{ id: string; title?: string; content: string }>>([]);
-  const [loadingNotes, setLoadingNotes] = useState(false);
   const sessionStartRef = useRef<number | null>(null);
   const questionStartRef = useRef<number | null>(null);
+  const sessionRef = useRef<PracticeSession | null>(null);
+
+  // Auto-save progress to localStorage whenever answers or index change
+  useEffect(() => {
+    if (!sessionId || !sessionRef.current || submitted) return;
+    try {
+      localStorage.setItem(resumeKey(sessionId), JSON.stringify({
+        answers,
+        index,
+        topic: sessionRef.current.topic,
+        total: sessionRef.current.question_count,
+        savedAt: new Date().toISOString(),
+      }));
+    } catch {
+      // ignore storage errors
+    }
+  }, [answers, index, sessionId, submitted]);
 
   const loadSession = useCallback(async () => {
     if (!sessionId) {
@@ -73,7 +88,19 @@ export default function PracticeSessionPage() {
       if (!res.ok) {
         throw new Error(data?.error || "Failed to load session");
       }
+      sessionRef.current = data;
       setSession(data);
+      // Restore saved progress (no extra API calls / tokens)
+      try {
+        const saved = localStorage.getItem(resumeKey(sessionId));
+        if (saved) {
+          const { answers: savedAnswers, index: savedIndex } = JSON.parse(saved);
+          if (savedAnswers && typeof savedAnswers === "object") setAnswers(savedAnswers);
+          if (typeof savedIndex === "number") setIndex(savedIndex);
+        }
+      } catch {
+        // ignore — start fresh if parsing fails
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -91,10 +118,12 @@ export default function PracticeSessionPage() {
   }, [loadSession]);
 
   useEffect(() => {
-    setShowHint(false);
     questionStartRef.current = Date.now();
-    setRelatedNotes([]);
   }, [index]);
+
+  useEffect(() => {
+    if (!sessionStartRef.current) sessionStartRef.current = Date.now();
+  }, []);
 
   const questions = session?.questions ?? [];
   const current = questions[index];
@@ -105,7 +134,6 @@ export default function PracticeSessionPage() {
   }, [index, questions.length]);
 
   const currentAnswer = answers[index] ?? null;
-  const showFeedback = Boolean(currentAnswer);
 
   const parsedQuestion = useMemo(() => {
     if (!current) return { prompt: "", code: null };
@@ -117,29 +145,25 @@ export default function PracticeSessionPage() {
     return current.options.map((opt) => ({ value: opt, label: opt }));
   }, [current]);
 
-  const chatContext = useMemo(() => {
-    if (!current || !session) return "";
-    return [
-      `Topic: ${session.topic}`,
-      `Difficulty: ${session.difficulty}`,
-      `Question: ${current.question}`,
-      parsedQuestion.code ? `Code:\n${parsedQuestion.code}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-  }, [current, session, parsedQuestion.code]);
+  // Push visible screen content so the AI Assistant can see the current question
+  const screenContent = useMemo(() => {
+    if (!session || !current || submitted) return "";
+    const lines = [
+      `Practice Test — Topic: ${session.topic} | Difficulty: ${session.difficulty}`,
+      `Question ${index + 1} of ${questions.length}:`,
+      current.question,
+    ];
+    if (current.options && current.options.length > 0) {
+      lines.push("Answer choices:");
+      current.options.forEach((opt, i) => lines.push(`  ${String.fromCharCode(65 + i)}. ${opt}`));
+    } else {
+      lines.push("(Short answer question)");
+    }
+    if (answers[index]) lines.push(`Student's current answer: ${answers[index]}`);
+    return lines.join("\n");
+  }, [session, current, index, questions.length, answers, submitted]);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading: chatLoading } = useChat({
-    api: "/api/chat/context",
-    body: {
-      sessionId: sessionId ?? "practice",
-      context: chatContext,
-    },
-  });
-
-  useEffect(() => {
-    if (!sessionStartRef.current) sessionStartRef.current = Date.now();
-  }, []);
+  useSetPageContent(screenContent);
 
   function setAnswer(value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
@@ -182,49 +206,12 @@ export default function PracticeSessionPage() {
       });
 
       setSubmitted(true);
+      // Clear saved progress — test is done
+      if (sessionId) {
+        try { localStorage.removeItem(resumeKey(sessionId)); } catch {}
+      }
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleSaveNote() {
-    if (!current || !session) return;
-    const payload = {
-      title: `Practice: ${session.topic} — Q${index + 1}`,
-      content: `Question:\n${current.question}\n\nCorrect Answer:\n${current.correct_answer}\n\nExplanation:\n${current.explanation}`,
-      courseId: session.course_id,
-    };
-
-    const res = await fetch("/api/notes/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      toast.error("Could not save note.");
-      return;
-    }
-
-    toast.success("Saved to Notes");
-  }
-
-  async function loadRelatedNotes() {
-    if (!current || !session) return;
-    setLoadingNotes(true);
-    try {
-      const res = await fetch("/api/notes/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: current.question,
-          courseId: session.course_id,
-        }),
-      });
-      const data = await res.json();
-      setRelatedNotes(data?.results ?? []);
-    } finally {
-      setLoadingNotes(false);
     }
   }
 
@@ -241,8 +228,128 @@ export default function PracticeSessionPage() {
             Retry
           </button>
           <button className="btn btn-secondary" type="button" onClick={() => router.push("/practice")}>
-            Back to Practice
+            Back to practice
           </button>
+        </div>
+      </section>
+    );
+  }
+
+  const score = questions.reduce(
+    (count, q, idx) =>
+      q.correct_answer.trim().toLowerCase() === (answers[idx] ?? "").trim().toLowerCase()
+        ? count + 1
+        : count,
+    0
+  );
+  const totalMinutes = sessionStartRef.current
+    ? Math.round((Date.now() - sessionStartRef.current) / 60_000)
+    : 0;
+  const scorePct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+
+  if (submitted) {
+    const scoreColor =
+      scorePct >= 80 ? "#7dd3fc" : scorePct >= 60 ? "#fbbf24" : "#fda4af";
+
+    return (
+      <section className="section">
+        <header className="practice-header">
+          <div>
+            <h2>Test Results</h2>
+            <p style={{ color: "var(--gray)" }}>
+              Topic: {session.topic} · Difficulty: {session.difficulty}
+            </p>
+          </div>
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => router.push("/practice")}
+          >
+            Back to practice
+          </button>
+        </header>
+
+        <div
+          className="practice-card"
+          style={{ marginBottom: "1.5rem", textAlign: "center", padding: "2rem" }}
+        >
+          <p
+            style={{
+              fontSize: "3.5rem",
+              fontWeight: "700",
+              color: scoreColor,
+              lineHeight: 1,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {score} / {questions.length}
+          </p>
+          <p style={{ color: "var(--gray)", marginTop: "0.6rem", fontSize: "1rem" }}>
+            {scorePct}% correct · {totalMinutes} min
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gap: "1rem" }}>
+          {questions.map((q, idx) => {
+            const userAnswer = answers[idx] ?? "";
+            const isCorrect =
+              q.correct_answer.trim().toLowerCase() === userAnswer.trim().toLowerCase();
+            const parsedQ = extractCodeFromQuestion(q.question);
+            return (
+              <article
+                key={idx}
+                className="practice-card"
+                style={{
+                  borderLeft: `3px solid ${isCorrect ? "#7dd3fc" : "#fda4af"}`,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "1.1rem",
+                      color: isCorrect ? "#7dd3fc" : "#fda4af",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {isCorrect ? "✓" : "✗"}
+                  </span>
+                  <h4
+                    style={{
+                      margin: 0,
+                      color: "var(--light)",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Question {idx + 1}
+                  </h4>
+                </div>
+                <div
+                  className="practice-prompt"
+                  style={{
+                    marginBottom: "0.75rem",
+                    fontSize: "0.95rem",
+                    lineHeight: "1.65",
+                  }}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQ.prompt}</ReactMarkdown>
+                </div>
+                {parsedQ.code ? <CodeBlock code={parsedQ.code} /> : null}
+                <FeedbackBox
+                  selected={userAnswer || "(no answer)"}
+                  correctAnswer={q.correct_answer}
+                  explanation={q.explanation}
+                />
+              </article>
+            );
+          })}
         </div>
       </section>
     );
@@ -253,18 +360,40 @@ export default function PracticeSessionPage() {
       <header className="practice-header">
         <div>
           <h2 className="animate-on-scroll">Practice Test</h2>
-          <p style={{ color: "var(--gray)" }}>Topic: {session.topic} · Difficulty: {session.difficulty}</p>
+          <p style={{ color: "var(--gray)" }}>
+            Topic: {session.topic} · Difficulty: {session.difficulty}
+          </p>
         </div>
-        <div className="practice-progress" aria-label="Question progress">
-          Question {index + 1} · {progressLabel}
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div className="practice-progress" aria-label="Question progress">
+            Question {index + 1} · {progressLabel}
+          </div>
+          <button
+            className="btn btn-secondary"
+            type="button"
+            style={{ fontSize: "0.8rem", padding: "0.4rem 0.9rem" }}
+            onClick={() => router.push("/practice")}
+          >
+            Exit & resume later
+          </button>
         </div>
       </header>
 
       {current ? (
         <article className="practice-card" aria-labelledby="question-title">
-          <h3 id="question-title" className="practice-question-title">Question {index + 1}</h3>
+          <h3 id="question-title" className="practice-question-title">
+            Question {index + 1}
+          </h3>
           <section className="practice-question">
-            <div className="practice-prompt">
+            <div
+              className="practice-prompt"
+              style={{
+                fontSize: "1.08rem",
+                lineHeight: "1.8",
+                fontWeight: "400",
+                letterSpacing: "0.01em",
+              }}
+            >
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQuestion.prompt}</ReactMarkdown>
             </div>
             {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}
@@ -276,7 +405,7 @@ export default function PracticeSessionPage() {
               options={options}
               selected={currentAnswer}
               correctAnswer={current.correct_answer}
-              showFeedback={showFeedback}
+              showFeedback={false}
               onSelect={setAnswer}
             />
           ) : (
@@ -291,59 +420,6 @@ export default function PracticeSessionPage() {
             </div>
           )}
 
-          <div className="practice-actions">
-            <button className="btn btn-secondary" type="button" onClick={() => setShowHint((v) => !v)}>
-              {showHint ? "Hide Hint" : "Show Hint"}
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => setChatOpen(true)}>
-              Ask PersonalTA
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={handleSaveNote}>
-              Save as Note
-            </button>
-          </div>
-
-          <HintBox explanation={current.explanation} show={showHint} />
-          {showFeedback ? (
-            <FeedbackBox
-              selected={currentAnswer}
-              correctAnswer={current.correct_answer}
-              explanation={current.explanation}
-            />
-          ) : null}
-
-          {showFeedback ? (
-            <div className="practice-actions" style={{ marginTop: "0.75rem" }}>
-              <button className="btn btn-secondary" type="button" onClick={loadRelatedNotes} disabled={loadingNotes}>
-                {loadingNotes ? "Finding notes..." : "See related notes"}
-              </button>
-            </div>
-          ) : null}
-
-          {relatedNotes.length > 0 ? (
-            <div className="contact-info-section" style={{ marginTop: "1rem" }}>
-              <h4 className="contact-info-title">Related Notes</h4>
-              <div style={{ display: "grid", gap: "0.75rem" }}>
-                {relatedNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    style={{
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: "12px",
-                      padding: "0.8rem 1rem",
-                      background: "rgba(9,14,24,0.5)",
-                    }}
-                  >
-                    <strong style={{ color: "var(--light)" }}>{note.title ?? "Related note"}</strong>
-                    <p style={{ color: "var(--gray)", marginTop: "0.4rem" }}>
-                      {note.content.slice(0, 180)}...
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           <NavigationControls
             onPrev={() => setIndex((i) => Math.max(i - 1, 0))}
             onNext={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}
@@ -353,64 +429,6 @@ export default function PracticeSessionPage() {
             submitting={submitting}
           />
         </article>
-      ) : null}
-
-      {submitted ? (
-        <section className="contact-info-section" style={{ marginTop: "2rem" }}>
-          <h3 className="contact-info-title">Session Summary</h3>
-          <p style={{ color: "var(--light)" }}>
-            Score: {questions.reduce((count, q, idx) => (
-              q.correct_answer.trim().toLowerCase() === (answers[idx] ?? "").trim().toLowerCase()
-                ? count + 1
-                : count
-            ), 0)} / {questions.length}
-          </p>
-          <p style={{ color: "var(--gray)" }}>
-            Total time: {sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 60_000) : 0} min
-          </p>
-          <div style={{ marginTop: "0.75rem", color: "var(--light)" }}>
-            Recommended next steps:
-            <ul>
-              <li>Review the questions you missed and save them as notes.</li>
-              <li>Generate a new practice set for your weakest topics.</li>
-              <li>Use Flashcards for quick recall practice.</li>
-            </ul>
-          </div>
-        </section>
-      ) : null}
-
-      {chatOpen ? (
-        <aside className="practice-chat" aria-label="Ask PersonalTA">
-          <div className="practice-chat__header">
-            <strong>Ask PersonalTA</strong>
-            <button type="button" className="btn btn-secondary" onClick={() => setChatOpen(false)}>
-              Close
-            </button>
-          </div>
-          <div className="practice-chat__body">
-            {messages.length === 0 ? (
-              <p style={{ color: "var(--gray)" }}>Ask about this question or concept.</p>
-            ) : null}
-            {messages.map((msg) => (
-              <div key={msg.id} className={`practice-chat__message practice-chat__message--${msg.role} md-content chat-readable`}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}
-                </ReactMarkdown>
-              </div>
-            ))}
-          </div>
-          <form className="practice-chat__form" onSubmit={handleSubmit}>
-            <textarea
-              rows={3}
-              placeholder="Why does this output appear in this order?"
-              value={input}
-              onChange={handleInputChange}
-            />
-            <button type="submit" className="btn btn-primary" disabled={chatLoading}>
-              {chatLoading ? "Sending..." : "Send"}
-            </button>
-          </form>
-        </aside>
       ) : null}
     </section>
   );

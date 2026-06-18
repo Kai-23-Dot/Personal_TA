@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
 type NavLink = {
@@ -8,7 +9,7 @@ type NavLink = {
   href: string;
 };
 
-type PersonalTAHeaderProps = {
+type ConlearnHeaderProps = {
   links: NavLink[];
   showSignIn?: boolean;
   signInHref?: string;
@@ -18,47 +19,21 @@ type PersonalTAHeaderProps = {
 
 import { usePathname } from "next/navigation";
 
-export function PersonalTAHeader({
+export function ConlearnHeader({
   links,
   showSignIn = true,
   signInHref = "/login",
   showSignOut = false,
   signOutHref = "/logout",
-}: PersonalTAHeaderProps) {
+}: ConlearnHeaderProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <header>
-      <nav>
+    <header className="premium-public-header">
+      <nav className="premium-public-nav">
         <Link href="/" className="logo">
-          <svg className="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon
-              points="50,5 85,25 85,65 50,85 15,65 15,25"
-              fill="none"
-              stroke="url(#gradientStroke)"
-              strokeWidth="2"
-            />
-            <circle cx="50" cy="30" r="4" fill="#00ffff" />
-            <circle cx="35" cy="45" r="4" fill="#ff00ff" />
-            <circle cx="65" cy="45" r="4" fill="#ff00ff" />
-            <circle cx="35" cy="65" r="4" fill="#00ffff" />
-            <circle cx="65" cy="65" r="4" fill="#00ffff" />
-            <circle cx="50" cy="55" r="5" fill="#7c3aed" />
-            <line x1="50" y1="30" x2="35" y2="45" stroke="#00ffff" strokeWidth="1" opacity="0.5" />
-            <line x1="50" y1="30" x2="65" y2="45" stroke="#00ffff" strokeWidth="1" opacity="0.5" />
-            <line x1="35" y1="45" x2="50" y2="55" stroke="#ff00ff" strokeWidth="1" opacity="0.5" />
-            <line x1="65" y1="45" x2="50" y2="55" stroke="#ff00ff" strokeWidth="1" opacity="0.5" />
-            <line x1="50" y1="55" x2="35" y2="65" stroke="#7c3aed" strokeWidth="1" opacity="0.5" />
-            <line x1="50" y1="55" x2="65" y2="65" stroke="#7c3aed" strokeWidth="1" opacity="0.5" />
-            <defs>
-              <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style={{ stopColor: "#00ffff", stopOpacity: 1 }} />
-                <stop offset="50%" style={{ stopColor: "#ff00ff", stopOpacity: 1 }} />
-                <stop offset="100%" style={{ stopColor: "#7c3aed", stopOpacity: 1 }} />
-              </linearGradient>
-            </defs>
-          </svg>
-          <span className="logo-text">PersonalTA</span>
+          <Image src="/conlearn-logo.png" alt="Conlearn" width={36} height={36} className="object-contain" />
+          <span className="logo-text">Conlearn</span>
         </Link>
 
         <ul className="nav-links">

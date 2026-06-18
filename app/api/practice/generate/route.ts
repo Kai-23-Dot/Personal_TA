@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generateQuiz } from "@/lib/ai/generateQuiz";
-import { retrieveRankedSources } from "@/lib/canvas-intelligence/hybridRetriever";
+import { canvasDeepFetch } from "@/lib/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
 
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     // Fetch course name (needed for AP detection and language detection)
     let courseName: string | undefined;
     let courseNotes: string | undefined;
+    let styleHintContext: string | undefined;
     let isAP = false;
     let courseLanguage: string | undefined;
     if (courseId) {
@@ -86,24 +87,27 @@ export async function POST(req: Request) {
           .join("\n\n---\n\n");
       }
     } else if (courseId) {
-      const retrieval = await retrieveRankedSources({
+      const retrieval = await canvasDeepFetch({
         userId: user.id,
-        query: topic,
         courseId,
         topic,
-        assignmentId: assignmentId ?? null,
         limit: 12,
       });
 
-      const rankedForGeneration = retrieval.ranked.length > 0
-        ? retrieval.ranked
-        : [];
-
-      courseNotes = rankedForGeneration
-        .filter((r) => r.confidence >= 0.35)
-        .slice(0, lowTokenMode ? 5 : 12)
-        .map((r) => `### ${r.chunk.title}\n${r.chunk.text.slice(0, charsPerNote)}\n[Source: ${r.chunk.sourceUrl ?? "Canvas"}]\n[Why: ${r.reasons.join(", ")}]`)
-        .join("\n\n---\n\n");
+      // Use content with sufficient confidence for direct question generation
+      const directSources = retrieval.ranked.filter((r) => r.confidence >= 0.3);
+      if (directSources.length > 0) {
+        courseNotes = directSources
+          .slice(0, lowTokenMode ? 5 : 12)
+          .map(
+            (r) =>
+              `### ${r.chunk.title}${r.chunk.moduleName ? ` (${r.chunk.moduleName})` : ""}\n${r.chunk.text.slice(0, charsPerNote)}`
+          )
+          .join("\n\n---\n\n");
+      } else if (retrieval.styleHint) {
+        // No direct notes for topic — use style hint so questions match the class style
+        styleHintContext = retrieval.styleHint;
+      }
     }
 
     if (assignmentId) {
@@ -158,7 +162,7 @@ export async function POST(req: Request) {
     }
 
     // If we still have no course context, block generation to avoid off-topic content
-    if (!courseNotes) {
+    if (!courseNotes && !styleHintContext) {
       return NextResponse.json(
         {
           success: false,
@@ -174,6 +178,7 @@ export async function POST(req: Request) {
       difficulty: effectiveDifficulty,
       questionCount: Math.min(Math.max(questionCount, 1), lowTokenMode ? 12 : 50),
       courseNotes,
+      styleHint: styleHintContext,
       isAP,
       recentMistakes,
       courseName,

@@ -43,12 +43,10 @@ export default function OnboardingPage() {
 
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">Welcome to PersonalTA</h2>
-      <p style={{ color: "var(--gray)" }}>Complete these steps to personalize your assistant.</p>
-
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "800px", margin: "0 auto" }}>
         <div className="contact-form-column">
-          <h3 className="contact-form-title">Getting Started</h3>
+          <h2 className="contact-form-title">Getting started</h2>
+          <p style={{ color: "var(--gray)", marginBottom: "1rem" }}>Complete these steps to personalize your assistant.</p>
           <ul style={{ color: "var(--light)" }}>
             <li>
               <input
@@ -84,7 +82,7 @@ export default function OnboardingPage() {
             </li>
           </ul>
           <button className="contact-submit-btn" onClick={finishOnboarding}>
-            Finish Onboarding
+            Finish onboarding
           </button>
           {completed ? <p style={{ color: "var(--gray)" }}>Onboarding complete.</p> : null}
         </div>

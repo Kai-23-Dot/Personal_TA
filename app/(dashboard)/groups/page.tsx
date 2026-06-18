@@ -49,13 +49,13 @@ export default async function GroupsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <section className="mb-8 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+      <section className="mb-8 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
           <Users className="h-3.5 w-3.5" /> Collaboration
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">Study Groups</h1>
+        <h2 className="text-3xl font-semibold tracking-tight text-white">Study groups</h2>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Groups shown here are real groups you belong to. Demo groups have been removed.
+          Groups you belong to, organized around your synced courses.
         </p>
       </section>
 
@@ -69,9 +69,9 @@ export default async function GroupsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {((groups ?? []) as unknown as StudyGroupRow[]).map((group) => (
-            <div key={group.id} className="rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
+            <div key={group.id} className="rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/25 bg-emerald-400/10 text-sm font-semibold text-emerald-100">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-300/25 bg-sky-400/10 text-sm font-semibold text-sky-100">
                   {group.name.slice(0, 2).toUpperCase()}
                 </div>
                 <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">

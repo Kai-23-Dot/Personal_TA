@@ -100,8 +100,6 @@ export default function SettingsPage() {
 
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">Settings</h2>
-
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
         <div className="contact-form-column">
           <h3 className="contact-form-title">Profile</h3>
@@ -183,7 +181,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <button type="submit" className="contact-submit-btn" disabled={savingProfile}>
-              {savingProfile ? "Saving..." : "Save Profile"}
+              {savingProfile ? "Saving..." : "Save profile"}
             </button>
             {message ? (
               <div className={`form-message ${messageType ?? "success"}`} style={{ display: "block" }}>

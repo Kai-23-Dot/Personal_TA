@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { runTAChatAgent, type AgentContext } from "@/lib/ai/agent";
-import { type CoreMessage } from "ai";
+import { type CoreMessage } from "ai"; // CoreMessage still used for messages type
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
 
@@ -26,11 +26,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
     }
 
-    const contextMessage: CoreMessage | null = context
-      ? { role: "system", content: `Practice context:\n${context}` }
-      : null;
-
-    const enrichedMessages = contextMessage ? [contextMessage, ...messages] : messages;
+    const pageContextExtra = context ? `\n\nCURRENT PAGE CONTEXT:\n${context}` : "";
 
     const lastUserMessage = messages[messages.length - 1];
     if (lastUserMessage?.role === "user") {
@@ -136,7 +132,7 @@ export async function POST(req: Request) {
         : { has_plan: false },
     };
 
-    const result = await runTAChatAgent(user.id, enrichedMessages, contextData);
+    const result = await runTAChatAgent(user.id, messages, contextData, pageContextExtra);
 
     return result.toDataStreamResponse({
       getErrorMessage: (err: unknown) => {

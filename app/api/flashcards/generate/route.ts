@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generateFlashcardsFromContent } from "@/lib/ai/generateFlashcards";
+import { canvasDeepFetch } from "@/lib/canvas-intelligence/canvasDeepFetch";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const { noteId, courseId, topic, count = 10 } = await req.json();
+    const { noteId, courseId, topic, count = 10, difficulty = "mixed" } = await req.json();
 
     if (!noteId && !topic) {
       return NextResponse.json(
@@ -49,7 +50,29 @@ export async function POST(req: Request) {
       courseName = course?.name;
     }
 
-    // If no note content, pull recent summaries for the topic
+    // If no note content, use canvasDeepFetch to pull the most relevant course content
+    if (!content && topic && courseId) {
+      const retrieval = await canvasDeepFetch({
+        userId: user.id,
+        courseId,
+        topic,
+        limit: 10,
+      });
+
+      if (retrieval.ranked.length > 0) {
+        // Use direct content if available, otherwise style-hint content
+        const sources = retrieval.hasDirectContent
+          ? retrieval.ranked.filter((r) => r.confidence >= 0.3)
+          : retrieval.ranked;
+
+        content = sources
+          .slice(0, 8)
+          .map((r) => `## ${r.chunk.title}\n${r.chunk.text.slice(0, 3000)}`)
+          .join("\n\n---\n\n");
+      }
+    }
+
+    // Final fallback: recent summaries for the topic
     if (!content && topic) {
       const { data: summaries } = await supabase
         .from("note_summaries")
@@ -63,7 +86,7 @@ export async function POST(req: Request) {
 
     if (!content) {
       return NextResponse.json(
-        { success: false, error: "No content available to generate flashcards. Upload notes first." },
+        { success: false, error: "No content available to generate flashcards. Sync Canvas or upload notes first." },
         { status: 400 }
       );
     }
@@ -72,7 +95,8 @@ export async function POST(req: Request) {
       content,
       derivedTopic,
       count,
-      courseName
+      courseName,
+      difficulty
     );
 
     if (generatedCards.length === 0) {

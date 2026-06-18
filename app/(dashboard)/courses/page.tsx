@@ -70,15 +70,15 @@ export default async function CoursesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <section className="mb-8 rounded-3xl border border-emerald-400/15 bg-[rgba(11,17,15,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+      <section className="mb-8 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
               <Sparkles className="h-3.5 w-3.5" /> Canvas courses
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">Your Courses</h1>
+            <h2 className="text-3xl font-semibold tracking-tight text-white">Courses</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-300">
-              These are pulled from your synced LMS data. No demo classes are shown.
+              Your active courses pulled from Canvas. Run a sync to keep them up to date.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -117,13 +117,13 @@ export default async function CoursesPage() {
             return (
               <Link
                 key={course.id}
-                href={`/assignments?course_id=${course.id}`}
-                className="group rounded-2xl border border-white/10 bg-[rgba(8,12,24,0.72)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:-translate-y-0.5 hover:border-emerald-300/35 hover:bg-emerald-400/5"
+                href={`/courses/${course.id}`}
+                className="group rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:-translate-y-0.5 hover:border-sky-300/35 hover:bg-sky-400/5"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div
                     className="flex h-14 w-14 items-center justify-center rounded-2xl text-sm font-semibold text-[#05110b]"
-                    style={{ backgroundColor: course.color ?? "#3ecf8e" }}
+                    style={{ backgroundColor: course.color ?? "#8ab4ff" }}
                   >
                     {initialsFor(course.name)}
                   </div>
@@ -131,7 +131,7 @@ export default async function CoursesPage() {
                     {course.platform === "canvas" ? "Canvas" : course.platform}
                   </span>
                 </div>
-                <h2 className="mt-5 text-lg font-semibold text-white group-hover:text-emerald-100">{course.name}</h2>
+                <h2 className="mt-5 text-lg font-semibold text-white group-hover:text-sky-100">{course.name}</h2>
                 <p className="mt-1 text-sm text-slate-400">
                   {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
                 </p>
@@ -155,13 +155,13 @@ export default async function CoursesPage() {
       )}
 
       <section className="mt-8 grid gap-4 md:grid-cols-2">
-        <Link href="/dashboard" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-emerald-300/35 hover:bg-emerald-400/5">
-          <RefreshCw className="mb-3 h-5 w-5 text-emerald-300" />
+        <Link href="/dashboard" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
+          <RefreshCw className="mb-3 h-5 w-5 text-sky-300" />
           <h2 className="text-lg font-semibold text-white">Sync content</h2>
           <p className="mt-1 text-sm text-slate-400">Pull updated Canvas courses, assignments, modules, files, and notes.</p>
         </Link>
-        <Link href="/practice" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-emerald-300/35 hover:bg-emerald-400/5">
-          <BookOpen className="mb-3 h-5 w-5 text-emerald-300" />
+        <Link href="/practice" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
+          <BookOpen className="mb-3 h-5 w-5 text-sky-300" />
           <h2 className="text-lg font-semibold text-white">Generate practice</h2>
           <p className="mt-1 text-sm text-slate-400">Use synced course materials to build source-grounded practice tests.</p>
         </Link>

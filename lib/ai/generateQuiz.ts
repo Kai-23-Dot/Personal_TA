@@ -17,6 +17,12 @@ export interface GenerateQuizOptions {
   courseLanguage?: string;
   /** Reduce prompt/output token usage for local testing. */
   lowTokenMode?: boolean;
+  /**
+   * Representative course content used for style inference when no topic-specific
+   * notes were found. Questions will match the depth and terminology of this class
+   * even without dedicated notes for the topic.
+   */
+  styleHint?: string;
 }
 
 type RawQuestion = {
@@ -127,6 +133,7 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
     isAP = false,
     courseLanguage,
     lowTokenMode = false,
+    styleHint,
   } = options;
 
   const hasNotes = !!courseNotes;
@@ -143,6 +150,13 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
     ``,
     `CRITICAL REQUIREMENT: Every single question MUST be about the topic below. Do NOT generate questions about any other subject.`,
     `TOPIC: "${topic}"`,
+    ``,
+    `⛔ ABSOLUTE PROHIBITION — NEVER generate questions about ANY of the following:`,
+    `- Quiz or test logistics: time limits, how long an assessment takes, number of questions, point values, when it's due, how to submit`,
+    `- Administrative or course management info: attendance, grading policy, late submission rules, office hours, course schedule`,
+    `- The structure of an assessment ("this quiz has 20 questions") or metadata about Canvas items`,
+    `- Anything about HOW an assessment is administered — only ask about WHAT the student should have LEARNED`,
+    `Every question must test the student's knowledge of the SUBJECT MATTER, not knowledge about how the class is run.`,
     courseName ? `COURSE: ${courseName}${isAP ? " (AP COURSE)" : ""}` : null,
     courseLanguage
       ? [
@@ -171,6 +185,19 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
         }`
       : null,
     context && !courseNotes ? `\nAdditional context:\n${context.slice(0, 6000)}` : null,
+    styleHint && !courseNotes
+      ? [
+          ``,
+          `NOTE: No class notes were found specifically for "${topic}".`,
+          `Below is a sample of how content is structured in this course. Generate questions`,
+          `that match the same depth, terminology, and style as this class — as if the teacher`,
+          `were testing students who have studied this topic in class:`,
+          ``,
+          `=== COURSE STYLE REFERENCE ===`,
+          styleHint.slice(0, lowTokenMode ? 2000 : 5000),
+          `=== END REFERENCE ===`,
+        ].join("\n")
+      : null,
     ``,
     `FORMATTING RULES FOR QUESTION TEXT:
 - If a question includes code (functions, pseudocode, algorithms, syntax examples), wrap it in a markdown fenced code block with the appropriate language tag.${
@@ -232,6 +259,10 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
   const DANGLING_REF = /\b(the given|the above|the following|this)\s+(function|code|algorithm|method|example|snippet|program|class|implementation)\b/i;
   const HAS_CODE_BLOCK = /```/;
 
+  // Filter out logistics/administrative questions about how assessments work, not what was learned
+  const LOGISTICS_QUESTION =
+    /\b(time\s*limit|how\s+long\s+(is|does|will|do|it\s+take)|how\s+many\s+(question|point|minute|attempt)|point\s*(value|worth)|due\s*(date|time)\b|when\s+is\s+(the|this)\s+(quiz|test|exam|assignment|due)|how\s+to\s+submit|submission\s*(policy|method|format)|how\s+much\s+time|allott?ed\s+time|attempt\s+limit|allowed\s+attempts?|retake|late\s+(submission|work|policy|penalty)|grading\s+(policy|scale|rubric)|office\s+hours|extra\s+credit|when\s+(is|are)\s+(it|they|the)\s+due|number\s+of\s+questions?\s+in\s+(this|the)|what\s+is\s+the\s+(time|point|question|attempt))\b/i;
+
   // Wrong-language code blocks — e.g. ```python in a Java course
   const WRONG_LANG_PATTERN =
     courseLanguage
@@ -249,6 +280,8 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
     if (DANGLING_REF.test(q.question) && !HAS_CODE_BLOCK.test(q.question)) return false;
     // Drop questions containing code blocks in the wrong programming language
     if (WRONG_LANG_PATTERN && WRONG_LANG_PATTERN.test(q.question)) return false;
+    // Drop logistics/meta questions about assessment structure (time limits, point values, due dates, etc.)
+    if (LOGISTICS_QUESTION.test(q.question)) return false;
     return true;
   });
   const normalized = valid.slice(0, questionCount).map((q) => {

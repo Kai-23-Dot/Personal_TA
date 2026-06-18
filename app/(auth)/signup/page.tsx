@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { PersonalTABackdrop } from "@/components/layout/PersonalTABackdrop";
-import { PersonalTAHeader } from "@/components/layout/PersonalTAHeader";
+import { ConlearnBackdrop } from "@/components/layout/ConlearnBackdrop";
+import { ConlearnHeader } from "@/components/layout/ConlearnHeader";
 
 export default function SignupPage() {
   const router = useRouter();
-  const supabase = createClient();
   // Optional OAuth providers (comma-separated) for Supabase auth, e.g. "google,azure".
   const oauthProviders = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
     .split(",")
@@ -27,43 +25,67 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function showAuthFailure(error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not reach the authentication server. Check your connection and Supabase environment settings.";
+    toast.error(message);
+  }
+
+  async function readAuthResponse(response: Response) {
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error ?? "Authentication failed. Please try again.");
+    }
+    return payload;
+  }
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    });
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, password }),
+      });
+      await readAuthResponse(response);
 
-    if (error) {
-      toast.error(error.message);
+      toast.success("Account created! Check your email to confirm.");
+      router.push("/login");
+    } catch (error) {
+      showAuthFailure(error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    toast.success("Account created! Check your email to confirm.");
-    router.push("/login");
   }
 
   async function handleOAuth(provider: string) {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider as "google" | "github" | "azure",
-      options: { redirectTo: `${window.location.origin}/callback` },
-    });
-    if (error) {
-      toast.error(error.message);
+    try {
+      const response = await fetch("/api/auth/oauth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, redirectTo: `${window.location.origin}/callback` }),
+      });
+      const payload = await readAuthResponse(response);
+      if (typeof payload?.url === "string") {
+        window.location.href = payload.url;
+        return;
+      }
+      throw new Error("Could not start OAuth sign in. Please try again.");
+    } catch (error) {
+      showAuthFailure(error);
+    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <PersonalTABackdrop>
-      <PersonalTAHeader
+    <ConlearnBackdrop>
+      <ConlearnHeader
         links={[
           { label: "Home", href: "/" },
           { label: "About", href: "/about" },
@@ -73,11 +95,10 @@ export default function SignupPage() {
         showSignIn={false}
       />
 
-      <section className="section" style={{ paddingTop: "120px" }}>
-        <h2 className="animate-on-scroll">Create Your PersonalTA</h2>
-        <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "640px", margin: "0 auto" }}>
-          <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
-            <h3 className="contact-form-title">Start free during beta</h3>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
+        <div style={{ width: "100%", maxWidth: "420px" }}>
+          <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
+            <h2 className="contact-form-title">Start free during beta</h2>
             {oauthProviders.length > 0 ? (
               <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
                 {oauthProviders.map((provider) => (
@@ -136,7 +157,7 @@ export default function SignupPage() {
             </form>
           </div>
         </div>
-      </section>
-    </PersonalTABackdrop>
+      </div>
+    </ConlearnBackdrop>
   );
 }

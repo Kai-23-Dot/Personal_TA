@@ -5,6 +5,31 @@ import { type CoreMessage } from "ai";
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
 
+/** Convert Vercel AI SDK UI messages (which may carry experimental_attachments)
+ *  into CoreMessage[] with proper image content parts for vision models. */
+function toCoreMsgs(rawMessages: any[]): CoreMessage[] {
+  return rawMessages.map((msg) => {
+    if (msg.role === "user") {
+      const attachments: Array<{ contentType?: string; url: string; name?: string }> =
+        msg.experimental_attachments ?? [];
+      const imageAtts = attachments.filter((a) => a.contentType?.startsWith("image/"));
+
+      if (imageAtts.length > 0) {
+        const parts: any[] = [];
+        if (msg.content) parts.push({ type: "text", text: String(msg.content) });
+        for (const att of imageAtts) {
+          parts.push({ type: "image", image: att.url, mimeType: att.contentType as any });
+        }
+        return { role: "user", content: parts } as CoreMessage;
+      }
+    }
+    return {
+      role: msg.role as "user" | "assistant" | "system",
+      content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
+    } as CoreMessage;
+  });
+}
+
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
@@ -17,16 +42,19 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { messages, sessionId, noteId, assignmentId } = body as {
-      messages: CoreMessage[];
+    const { messages: rawMessages, sessionId, noteId, assignmentId } = body as {
+      messages: any[];
       sessionId: string;
       noteId?: string;
       assignmentId?: string;
     };
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!rawMessages || !Array.isArray(rawMessages)) {
       return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
     }
+
+    // Convert UI messages (with experimental_attachments) → CoreMessages with image parts
+    const messages = toCoreMsgs(rawMessages);
 
     // Persist the latest user message (best-effort)
     const lastUserMessage = messages[messages.length - 1];
@@ -134,8 +162,13 @@ export async function POST(req: Request) {
         : { has_plan: false },
     };
 
-    const lastUserText = lastUserMessage && typeof lastUserMessage.content === "string"
-      ? lastUserMessage.content
+    const lastUserText = lastUserMessage
+      ? typeof lastUserMessage.content === "string"
+        ? lastUserMessage.content
+        : (lastUserMessage.content as any[])
+            .filter((p: any) => p.type === "text")
+            .map((p: any) => p.text)
+            .join(" ")
       : "";
     let ragResults = lastUserText ? await retrieveRelevantContext(user.id, lastUserText, 6) : [];
 

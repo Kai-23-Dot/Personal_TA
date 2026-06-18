@@ -1,5 +1,5 @@
 {
-  "name": "personal-ta",
+  "name": "conlearn",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,13 @@
     "clean:build": "rm -rf .next-build",
     "dev": "node scripts/dev-server.mjs",
     "prebuild": "npm run clean:build",
-    "build": "NEXT_DIST_DIR=.next-build next build",
+    "build": "env -u __NEXT_PRIVATE_STANDALONE_CONFIG -u __NEXT_PRIVATE_ORIGIN NEXT_DIST_DIR=.next-build next build",
     "start": "NEXT_DIST_DIR=.next-build next start",
     "lint": "next lint",
+    "regente:install": "/Users/kairavkaran/.regente/bin/regente install --root .",
+    "regente:status": "/Users/kairavkaran/.regente/bin/regente status --root .",
+    "regente:watch": "/Users/kairavkaran/.regente/bin/regente watch --root .",
+    "regente:join": "AGENT_NAME=${AGENT_NAME:-$USER-$(hostname -s)} AGENT_TOOL=${AGENT_TOOL:-codex} /Users/kairavkaran/.regente/bin/regente join --root . --agent \"$AGENT_NAME\" --tool \"$AGENT_TOOL\"",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset"
   },
@@ -34,6 +38,8 @@
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-toast": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.97",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
     "ai": "^4.1.19",
@@ -63,7 +69,7 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/pdf-parse": "^1.1.4",
-    "@types/react": "^19",
+    "@types/react": "19.2.17",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "eslint": "^9",

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PersonalTA.ai",
-    short_name: "PersonalTA",
+    name: "Conlearn",
+    short_name: "Conlearn",
     description: "Your AI personal teaching assistant for study planning, practice, and notes.",
     start_url: "/dashboard",
     display: "standalone",
@@ -11,9 +11,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0a0a0f",
     icons: [
       {
-        src: "/icon.svg",
+        src: "/conlearn-logo.png",
         sizes: "any",
-        type: "image/svg+xml",
+        type: "image/png",
       },
     ],
   };

@@ -33,6 +33,14 @@ type Assignment = {
   course_id: string;
 };
 
+type ResumeEntry = {
+  sessionId: string;
+  topic: string;
+  total: number;
+  answeredCount: number;
+  savedAt: string;
+};
+
 export default function PracticePage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -45,8 +53,33 @@ export default function PracticePage() {
   const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState("adaptive");
   const [mode, setMode] = useState("quiz");
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumable, setResumable] = useState<ResumeEntry[]>([]);
+
+  // Scan localStorage for saved practice sessions
+  useEffect(() => {
+    const entries: ResumeEntry[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith("practice_resume_")) continue;
+      const sid = key.replace("practice_resume_", "");
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) ?? "{}");
+        entries.push({
+          sessionId: sid,
+          topic: parsed.topic ?? "Practice Test",
+          total: parsed.total ?? 0,
+          answeredCount: Object.keys(parsed.answers ?? {}).length,
+          savedAt: parsed.savedAt ?? "",
+        });
+      } catch {
+        // skip corrupt entries
+      }
+    }
+    setResumable(entries);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -71,6 +104,7 @@ export default function PracticePage() {
         setSelectedNotes({});
         return;
       }
+      setLoadingNotes(true);
       try {
         const res = await fetch(`/api/notes/list?courseId=${courseId}`);
         const data = await res.json();
@@ -84,6 +118,8 @@ export default function PracticePage() {
           setNotes([]);
           setSelectedNotes({});
         }
+      } finally {
+        if (mounted) setLoadingNotes(false);
       }
     }
     loadNotes();
@@ -171,9 +207,64 @@ export default function PracticePage() {
     }
   }
 
+  function dismissResume(sessionId: string) {
+    try { localStorage.removeItem(`practice_resume_${sessionId}`); } catch {}
+    setResumable((prev) => prev.filter((e) => e.sessionId !== sessionId));
+  }
+
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">Practice Tests</h2>
+      {resumable.length > 0 && (
+        <div style={{ marginBottom: "2rem" }}>
+          <h3 style={{ color: "var(--light)", marginBottom: "0.75rem", fontSize: "1rem", fontWeight: 600 }}>
+            Resume in-progress tests
+          </h3>
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {resumable.map((entry) => (
+              <div
+                key={entry.sessionId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "0.9rem 1.2rem",
+                  borderRadius: "14px",
+                  border: "1px solid rgba(125,211,252,0.2)",
+                  background: "rgba(9,12,26,0.72)",
+                  gap: "1rem",
+                }}
+              >
+                <div>
+                  <p style={{ color: "var(--light)", fontWeight: 600, fontSize: "0.9rem", marginBottom: "0.2rem" }}>
+                    {entry.topic}
+                  </p>
+                  <p style={{ color: "var(--gray)", fontSize: "0.78rem" }}>
+                    {entry.answeredCount}{entry.total ? ` / ${entry.total}` : ""} questions answered
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ fontSize: "0.8rem", padding: "0.45rem 1rem" }}
+                    onClick={() => router.push(`/practice/session?sessionId=${entry.sessionId}`)}
+                  >
+                    Resume →
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.8rem", padding: "0.45rem 0.75rem" }}
+                    onClick={() => dismissResume(entry.sessionId)}
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
         <div className="contact-form-column">
           <h3 className="contact-form-title">Generate a practice test</h3>
@@ -240,7 +331,12 @@ export default function PracticePage() {
             </div>
             <div className="form-field">
               <label>Practice from selected notes (optional)</label>
-              {courseId && notes.length === 0 ? (
+              {loadingNotes ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem", color: "var(--gray)" }}>
+                  <div className="skeleton-shimmer" style={{ width: "14px", height: "14px", borderRadius: "50%", flexShrink: 0 }} aria-hidden="true" />
+                  <span style={{ fontSize: "0.85rem" }}>Loading notes…</span>
+                </div>
+              ) : courseId && notes.length === 0 ? (
                 <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
                   No notes found for this course yet. Upload or import notes first.
                 </p>
@@ -365,7 +461,7 @@ export default function PracticePage() {
               </select>
             </div>
             <button type="submit" className="contact-submit-btn" disabled={loading}>
-              {loading ? "Generating..." : "Generate Test"}
+              {loading ? "Generating..." : "Generate test"}
             </button>
             {error ? <div className="form-message error" style={{ display: "block" }}>{error}</div> : null}
           </form>

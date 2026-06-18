@@ -24,14 +24,26 @@ export async function generateFlashcardsFromContent(
   content: string,
   topic: string,
   count: number = 10,
-  courseName?: string
+  courseName?: string,
+  difficulty: "easy" | "medium" | "hard" | "mixed" = "mixed"
 ): Promise<GeneratedFlashcard[]> {
+  const difficultyInstruction =
+    difficulty === "mixed"
+      ? `Mix difficulties evenly across easy, medium, and hard.`
+      : `All cards must have difficulty: "${difficulty}". ${
+          difficulty === "easy"
+            ? "Focus on basic definitions, recall, and simple facts."
+            : difficulty === "medium"
+            ? "Focus on concept explanations, comparisons, and application."
+            : "Focus on synthesis, analysis, edge cases, and complex reasoning."
+        }`;
   const prompt = [
-    `Create ${count} flashcards for a high school student.`,
+    `Create exactly ${count} flashcards for a high school student.`,
     courseName ? `Course: ${courseName}` : null,
     `Topic: ${topic}`,
+    `Difficulty requirement: ${difficultyInstruction}`,
     `Rules: concise fronts (question or term), complete backs (answer/definition), hint when tricky.`,
-    `Mix: definitions, concept explanations, formulas, comparisons.`,
+    `Mix content types: definitions, concept explanations, formulas, comparisons.`,
     "",
     `Study material:\n${content.slice(0, 20000)}`,
     `\nReturn ONLY a valid JSON object — no markdown fences, no extra commentary. Format:
@@ -73,7 +85,7 @@ difficulty must be one of: easy, medium, hard. hint is optional.`,
     throw new Error("Flashcard generation failed: could not parse AI response as JSON");
   }
 
-  return cards.map((c) => ({
+  return cards.slice(0, count).map((c) => ({
     ...c,
     id: uuidv4(),
     hint: c.hint ?? null,

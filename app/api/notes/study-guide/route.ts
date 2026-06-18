@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { summarizeNotes } from "@/lib/ai/summarizeNotes";
 import { extractTextFromImage, type ImageMediaType } from "@/lib/ai/ocrImage";
 import { detectFileType, extractFileText } from "@/lib/utils/extractFileText";
-import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages } from "@/lib/lms/canvas";
+import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages, htmlToPlainText } from "@/lib/lms/canvas";
 import { extractFromGoogleLink } from "@/lib/canvas-intelligence/contentExtractor";
 import type { SummaryType } from "@/types";
 
@@ -15,8 +15,11 @@ const IMAGE_TYPES: Record<string, ImageMediaType> = {
   "image/gif": "image/gif",
   "image/webp": "image/webp",
 };
+/** Max images to OCR per Canvas page (prevents runaway cost on image-heavy pages) */
+const MAX_IMAGES_PER_PAGE = 5;
+
 const STUDY_GUIDE_INSTRUCTION =
-  "Use only the selected Canvas lesson content below, prioritizing Google Slides text when present. Do not invent topics that are not supported by the selected content. Include a complete Study Checklist and do not stop mid-section.";
+  "Use only the selected Canvas lesson content below, prioritizing Google Slides text when present. Do not invent topics that are not in the selected content. Include a complete Study Checklist and do not stop mid-section. When content comes from multiple Canvas modules/units (indicated by '# Lesson Content: Unit Name —' prefixes in the source), organize the output with a '## Unit: [Name]' header for each module before listing its topics.";
 
 type SelectedLessonItem = {
   itemKey?: string;
@@ -103,6 +106,53 @@ async function extractGoogleSlidesLessonText(params: {
   });
 }
 
+/**
+ * Parse <img> src URLs from Canvas page HTML.
+ * Only returns Canvas-hosted images (same domain or /files/ paths); skips tiny icons.
+ */
+function extractCanvasImageUrls(html: string, domain: string): string[] {
+  const urls: string[] = [];
+  const re = /src=["']([^"']+)["']/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const src = m[1];
+    if (
+      (src.includes(domain) || src.startsWith("/") || /\/files\/\d+/.test(src)) &&
+      !/favicon|avatar|icon\.png|logo\.|emoji/i.test(src)
+    ) {
+      urls.push(src.startsWith("http") ? src : `https://${domain}${src.startsWith("/") ? "" : "/"}${src}`);
+    }
+  }
+  return [...new Set(urls)].slice(0, MAX_IMAGES_PER_PAGE);
+}
+
+/**
+ * Download a Canvas-hosted image (bearer auth required) and OCR it with the vision model.
+ * Returns the structured OCR text, or null if download or OCR fails.
+ */
+async function ocrCanvasImage(
+  url: string,
+  accessToken: string,
+  context: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    const imgType = IMAGE_TYPES[ct];
+    if (!imgType) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 5 * 1024 * 1024) return null; // skip images > 5 MB
+    const ocr = await extractTextFromImage(buf, imgType, context);
+    return ocr.structuredContent || ocr.extractedText || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
@@ -110,21 +160,23 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { summaryStyle = "bullet_points", courseId, lessonItemIds, lessonItems } = body as {
+    const { summaryStyle = "bullet_points", courseId, lessonItemIds, lessonItems, unitName } = body as {
       summaryStyle?: SummaryType;
       courseId?: string;
       lessonItemIds?: number[];
       lessonItems?: SelectedLessonItem[];
+      unitName?: string;
     };
     let lessonContentIncluded = false;
+    const isUnitMode = Boolean(unitName?.trim());
 
     if (!courseId) {
       return NextResponse.json({ success: false, error: "courseId is required" }, { status: 400 });
     }
 
-    if ((!Array.isArray(lessonItems) || lessonItems.length === 0) && (!Array.isArray(lessonItemIds) || lessonItemIds.length === 0)) {
+    if (!isUnitMode && (!Array.isArray(lessonItems) || lessonItems.length === 0) && (!Array.isArray(lessonItemIds) || lessonItemIds.length === 0)) {
       return NextResponse.json(
-        { success: false, error: "Select at least one lesson source." },
+        { success: false, error: "Select at least one lesson source or enter a unit name." },
         { status: 400 }
       );
     }
@@ -321,79 +373,137 @@ export async function POST(req: Request) {
       lessonContentIncluded = true;
     }
 
-    const modules = await fetchCanvasModules(connection.canvas_domain, connection.access_token, canvasCourseId);
+    const allModules = await fetchCanvasModules(connection.canvas_domain, connection.access_token, canvasCourseId);
 
-    const moduleItems = (
-      await Promise.all(
-        modules.map(async (module) => {
-          const items = await fetchCanvasModuleItems(
-            connection.canvas_domain,
-            connection.access_token,
-            canvasCourseId,
-            module.id
-          );
-          return items.map((item) => ({
-            itemKey: `ModuleItem:${item.id}`,
-            moduleName: module.name,
-            ...item,
-          }));
-        })
-      )
-    ).flat();
+    let combinedItems: Array<{
+      id: number;
+      itemKey: string;
+      moduleName: string;
+      title: string;
+      type: string;
+      page_url: string | null;
+      external_url: string | null;
+      content_id: number | null;
+    }>;
+    let assignments: Awaited<ReturnType<typeof fetchCanvasAssignments>>;
 
-    const chosenItems = moduleItems.filter((item) => selectedBy("ModuleItem", item.id, item.content_id ?? null, item.itemKey));
-    const [allFiles, pages, assignments] = await Promise.all([
-      fetchCanvasFilesWide(
-        connection.canvas_domain,
-        connection.access_token,
-        canvasCourseId,
-        1000
-      ),
-      fetchCanvasPages(connection.canvas_domain, connection.access_token, canvasCourseId),
-      fetchCanvasAssignments(connection.canvas_domain, connection.access_token, canvasCourseId),
-    ]);
+    if (isUnitMode && unitName) {
+      // ── Unit-name mode: find modules whose name contains the typed unit ──
+      const needle = unitName.trim().toLowerCase();
+      const matchedModules = allModules.filter((m) => m.name.toLowerCase().includes(needle));
 
-    // Backfill selection for courses where teachers store materials in Files but not modules.
-    const fallbackFileItems = allFiles
-      .filter((file) => selectedBy("File", file.id, file.id, `File:${file.id}`))
-      .map((file) => ({
-        id: file.id,
-        itemKey: `File:${file.id}`,
-        moduleName: "Course Files",
-        title: file.display_name || file.filename,
-        type: "File",
-        page_url: null as string | null,
-        external_url: null as string | null,
-        content_id: file.id,
-      }));
+      if (matchedModules.length === 0) {
+        return NextResponse.json(
+          { success: false, error: `No Canvas modules found matching "${unitName}". Check the exact module name in your Canvas course.` },
+          { status: 404 }
+        );
+      }
 
-    const fallbackPageItems = pages
-      .filter((page) => selectedBy("Page", page.page_id, null, `Page:${page.page_id}`))
-      .map((page) => ({
-        id: page.page_id,
-        itemKey: `Page:${page.page_id}`,
-        moduleName: "Course Pages",
-        title: page.title,
-        type: "Page",
-        page_url: page.url,
-        external_url: null as string | null,
-        content_id: null as number | null,
-      }));
+      assignments = await fetchCanvasAssignments(connection.canvas_domain, connection.access_token, canvasCourseId);
 
-    const fallbackAssignmentItems = assignments
-      .filter((a) => selectedBy("Assignment", a.id, a.id, `Assignment:${a.id}`))
-      .map((a) => ({
-        id: a.id,
-        itemKey: `Assignment:${a.id}`,
-        moduleName: "Assignments",
-        title: a.name,
-        type: "Assignment",
-        page_url: null as string | null,
-        external_url: null as string | null,
-        content_id: a.id,
-      }));
+      combinedItems = (
+        await Promise.all(
+          matchedModules.map(async (module) => {
+            const items = await fetchCanvasModuleItems(
+              connection.canvas_domain,
+              connection.access_token,
+              canvasCourseId,
+              module.id
+            );
+            return items.map((item) => ({
+              id: item.id,
+              itemKey: `ModuleItem:${item.id}`,
+              moduleName: module.name,
+              title: item.title,
+              type: item.type,
+              page_url: item.page_url ?? null,
+              external_url: item.external_url ?? null,
+              content_id: item.content_id ?? null,
+            }));
+          })
+        )
+      ).flat();
 
-    const combinedItems = [...chosenItems, ...fallbackFileItems, ...fallbackPageItems, ...fallbackAssignmentItems];
+      if (combinedItems.length === 0) {
+        return NextResponse.json(
+          { success: false, error: `Module "${unitName}" was found but has no items yet. Sync Canvas and try again.` },
+          { status: 400 }
+        );
+      }
+    } else {
+      // ── Checklist mode: use only the items the user explicitly selected ──
+      const moduleItems = (
+        await Promise.all(
+          allModules.map(async (module) => {
+            const items = await fetchCanvasModuleItems(
+              connection.canvas_domain,
+              connection.access_token,
+              canvasCourseId,
+              module.id
+            );
+            return items.map((item) => ({
+              id: item.id,
+              itemKey: `ModuleItem:${item.id}`,
+              moduleName: module.name,
+              title: item.title,
+              type: item.type,
+              page_url: item.page_url ?? null,
+              external_url: item.external_url ?? null,
+              content_id: item.content_id ?? null,
+            }));
+          })
+        )
+      ).flat();
+
+      const chosenItems = moduleItems.filter((item) => selectedBy("ModuleItem", item.id, item.content_id, item.itemKey));
+      const [allFiles, pages, assignments_] = await Promise.all([
+        fetchCanvasFilesWide(connection.canvas_domain, connection.access_token, canvasCourseId, 1000),
+        fetchCanvasPages(connection.canvas_domain, connection.access_token, canvasCourseId),
+        fetchCanvasAssignments(connection.canvas_domain, connection.access_token, canvasCourseId),
+      ]);
+      assignments = assignments_;
+
+      const fallbackFileItems = allFiles
+        .filter((file) => selectedBy("File", file.id, file.id, `File:${file.id}`))
+        .map((file) => ({
+          id: file.id,
+          itemKey: `File:${file.id}`,
+          moduleName: "Course Files",
+          title: file.display_name || file.filename,
+          type: "File",
+          page_url: null as string | null,
+          external_url: null as string | null,
+          content_id: file.id,
+        }));
+
+      const fallbackPageItems = pages
+        .filter((page) => selectedBy("Page", page.page_id, null, `Page:${page.page_id}`))
+        .map((page) => ({
+          id: page.page_id,
+          itemKey: `Page:${page.page_id}`,
+          moduleName: "Course Pages",
+          title: page.title,
+          type: "Page",
+          page_url: page.url,
+          external_url: null as string | null,
+          content_id: null as number | null,
+        }));
+
+      const fallbackAssignmentItems = assignments
+        .filter((a) => selectedBy("Assignment", a.id, a.id, `Assignment:${a.id}`))
+        .map((a) => ({
+          id: a.id,
+          itemKey: `Assignment:${a.id}`,
+          moduleName: "Assignments",
+          title: a.name,
+          type: "Assignment",
+          page_url: null as string | null,
+          external_url: null as string | null,
+          content_id: a.id,
+        }));
+
+      combinedItems = [...chosenItems, ...fallbackFileItems, ...fallbackPageItems, ...fallbackAssignmentItems];
+    }
 
     for (const item of combinedItems) {
       let lessonText: string | null = null;
@@ -405,16 +515,42 @@ export async function POST(req: Request) {
         );
         if (pageRes.ok) {
           const page = await pageRes.json();
-          const slideUrls = extractGoogleSlidesUrls(page?.body ?? "");
-          for (const slideUrl of slideUrls) {
-            lessonText = await extractGoogleSlidesLessonText({
+          const html = page?.body ?? "";
+
+          // 1. Google Slides (highest quality when present)
+          for (const slideUrl of extractGoogleSlidesUrls(html)) {
+            const slideText = await extractGoogleSlidesLessonText({
               url: slideUrl,
               googleApiKey,
               oauthAccessToken: googleConn?.access_token ?? null,
             });
-            if (lessonText) {
-              lessonText = `Source Google Slides: ${slideUrl}\n${lessonText}`;
+            if (slideText) {
+              lessonText = `Source Google Slides: ${slideUrl}\n${slideText}`;
               break;
+            }
+          }
+
+          // 2. Plain text from the page HTML body (always extract — catches typed notes,
+          //    definitions, formulas written as text, etc.)
+          const bodyText = htmlToPlainText(html) ?? "";
+          if (bodyText.length > 50) {
+            lessonText = lessonText ? `${lessonText}\n\n${bodyText}` : bodyText;
+          }
+
+          // 3. Vision OCR for embedded images (math diagrams, handwritten notes,
+          //    formula screenshots, etc. — common in math/science courses)
+          const imageUrls = extractCanvasImageUrls(html, connection.canvas_domain);
+          if (imageUrls.length > 0) {
+            const ocrTexts = await Promise.all(
+              imageUrls.map((imgUrl) =>
+                ocrCanvasImage(imgUrl, connection.access_token, `${courseName ?? "class"} notes`)
+              )
+            );
+            const imageContent = ocrTexts.filter(Boolean).join("\n\n---\n\n");
+            if (imageContent) {
+              lessonText = lessonText
+                ? `${lessonText}\n\n## Images on Page\n${imageContent}`
+                : `## Images on Page\n${imageContent}`;
             }
           }
         }
@@ -519,9 +655,9 @@ export async function POST(req: Request) {
 
     const { summary } = await summarizeNotes({
       content: combinedContent,
-      title: "Study Guide",
+      title: isUnitMode && unitName ? `${unitName} Study Guide` : "Study Guide",
       summaryType: "unit_aggregate",
-      customInstruction: `${STUDY_GUIDE_INSTRUCTION} Output style: ${safeStyle.replace("_", " ")}. Keep it student-friendly.`,
+      customInstruction: `${STUDY_GUIDE_INSTRUCTION}${isUnitMode && unitName ? ` Focus exclusively on "${unitName}" content — do not include topics from other modules.` : ""} Output style: ${safeStyle.replace("_", " ")}. Keep it student-friendly.`,
       courseName,
       maxTokens: 7000,
     });

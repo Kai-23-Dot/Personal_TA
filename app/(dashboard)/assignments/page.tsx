@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "ai/react";
+import { format, parseISO } from "date-fns";
+import { CalendarClock, ChevronDown, Zap, X } from "lucide-react";
 
 type Assignment = {
   id: string;
@@ -11,6 +13,7 @@ type Assignment = {
   description: string | null;
   assignment_type: string;
   due_date: string | null;
+  is_completed: boolean;
   course?: { name: string } | null;
   course_id: string | null;
 };
@@ -21,31 +24,60 @@ type Course = {
   color: string | null;
 };
 
+function TypeBadge({ type }: { type: string }) {
+  const t = (type ?? "").toLowerCase();
+  const map: Record<string, string> = {
+    quiz: "bg-sky-500/15 text-sky-300 border-sky-400/25",
+    test: "bg-sky-500/15 text-sky-300 border-sky-400/25",
+    exam: "bg-purple-500/15 text-purple-300 border-purple-400/25",
+    project: "bg-violet-500/15 text-violet-300 border-violet-400/25",
+    lab: "bg-emerald-500/15 text-emerald-300 border-emerald-400/25",
+  };
+  const label = t ? t.charAt(0).toUpperCase() + t.slice(1) : "Assignment";
+  const cls = map[t] ?? "bg-white/10 text-slate-300 border-white/15";
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function UrgencyLabel({ due }: { due: Date }) {
+  const ms = due.getTime() - Date.now();
+  const hours = ms / 3600000;
+  if (hours < 0) return <span className="text-[11px] text-slate-500 font-medium">Past due</span>;
+  if (hours < 24) return <span className="text-[11px] font-semibold text-red-400">Due today</span>;
+  if (hours < 48) return <span className="text-[11px] font-semibold text-orange-400">Due tomorrow</span>;
+  return null;
+}
+
 export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId");
+
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed">("pending");
+  const [sortOrder, setSortOrder] = useState<"due_asc" | "due_desc" | "title">("due_asc");
+  const [summary, setSummary] = useState<{ id: string; text: string } | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [helperOpen, setHelperOpen] = useState(false);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [helperPrompt, setHelperPrompt] = useState("");
 
   const sessionId = useMemo(() => {
-    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-      return crypto.randomUUID();
-    }
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
     return String(Date.now());
   }, []);
 
   const helperContext = useMemo(() => {
     if (!activeAssignment) return "";
     const mode =
-      activeAssignment.assignment_type === "quiz" || activeAssignment.assignment_type === "test" || activeAssignment.assignment_type === "exam"
+      ["quiz", "test", "exam"].includes(activeAssignment.assignment_type)
         ? "multiple-choice or quiz-style assessment"
         : "written/typing assignment";
     return [
@@ -66,16 +98,14 @@ export default function AssignmentsPage() {
     let mounted = true;
     setLoadingAssignments(true);
     setAssignmentsError(null);
-    const assignmentUrl = selectedCourseId
+    const url = selectedCourseId
       ? `/api/assignments?course_id=${encodeURIComponent(selectedCourseId)}`
       : "/api/assignments";
 
     Promise.all([
-      fetch(assignmentUrl).then(async (res) => {
+      fetch(url).then(async (res) => {
         const data = await res.json().catch(() => []);
-        if (!res.ok) {
-          throw new Error((data && typeof data === "object" && "error" in data) ? String((data as { error?: string }).error) : "Failed to load assignments");
-        }
+        if (!res.ok) throw new Error((data as { error?: string })?.error ?? "Failed to load");
         return Array.isArray(data) ? data : [];
       }),
       fetch("/api/courses").then(async (res) => {
@@ -94,12 +124,9 @@ export default function AssignmentsPage() {
           setAssignmentsError(err instanceof Error ? err.message : "Failed to load assignments");
         }
       })
-      .finally(() => {
-        if (mounted) setLoadingAssignments(false);
-      });
-    return () => {
-      mounted = false;
-    };
+      .finally(() => { if (mounted) setLoadingAssignments(false); });
+
+    return () => { mounted = false; };
   }, [selectedCourseId]);
 
   useEffect(() => {
@@ -109,25 +136,49 @@ export default function AssignmentsPage() {
     setActiveAssignment(null);
   }, [selectedCourseId]);
 
-  /*
-   * Keep a second, client-side guard even though the API does the real filtering.
-   * This prevents stale responses from a previous course request from flashing
-   * under the wrong subject if the user switches quickly.
-   */
   const visibleAssignments = useMemo(() => {
-    if (!selectedCourseId) return assignments;
-    return assignments.filter((assignment) => assignment.course_id === selectedCourseId);
-  }, [assignments, selectedCourseId]);
+    let result = selectedCourseId ? assignments.filter((a) => a.course_id === selectedCourseId) : assignments;
+    if (statusFilter === "pending") result = result.filter((a) => !a.is_completed);
+    else if (statusFilter === "completed") result = result.filter((a) => a.is_completed);
+    if (sortOrder === "due_asc") {
+      result = [...result].sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      });
+    } else if (sortOrder === "due_desc") {
+      result = [...result].sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
+      });
+    } else if (sortOrder === "title") {
+      result = [...result].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    return result;
+  }, [assignments, selectedCourseId, statusFilter, sortOrder]);
 
-  const selectedCourse = useMemo(() => {
-    if (!selectedCourseId) return null;
-    return courses.find((course) => course.id === selectedCourseId) ?? null;
-  }, [courses, selectedCourseId]);
+  const selectedCourse = useMemo(
+    () => courses.find((c) => c.id === selectedCourseId) ?? null,
+    [courses, selectedCourseId]
+  );
+
+  const dueThisWeek = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 7 * 86400000);
+    return visibleAssignments
+      .filter((a) => a.due_date && !a.is_completed)
+      .map((a) => ({ ...a, due: parseISO(a.due_date as string) }))
+      .filter((a) => a.due >= now && a.due <= cutoff)
+      .sort((a, b) => a.due.getTime() - b.due.getTime());
+  }, [visibleAssignments]);
 
   const filterLabel = selectedCourse?.name ?? (selectedCourseId ? "Selected course" : "All courses");
 
   async function handleSummary(assignmentId: string) {
-    setLoading(true);
+    setSummaryLoading(true);
     setSummary(null);
     const res = await fetch("/api/assignments/summary", {
       method: "POST",
@@ -135,8 +186,8 @@ export default function AssignmentsPage() {
       body: JSON.stringify({ assignmentId }),
     });
     const data = await res.json();
-    if (res.ok) setSummary(data?.summary ?? null);
-    setLoading(false);
+    if (res.ok && data?.summary) setSummary({ id: assignmentId, text: data.summary });
+    setSummaryLoading(false);
   }
 
   async function handleQuiz(assignment: Assignment) {
@@ -155,7 +206,7 @@ export default function AssignmentsPage() {
     if (data?.sessionId) router.push(`/practice/session?sessionId=${data.sessionId}`);
   }
 
-  function openHelperForAssignment(assignment: Assignment) {
+  function openHelper(assignment: Assignment) {
     setActiveAssignment(assignment);
     const isQuizLike = ["quiz", "test", "exam"].includes(assignment.assignment_type);
     setHelperPrompt(
@@ -166,168 +217,328 @@ export default function AssignmentsPage() {
     setHelperOpen(true);
   }
 
+  const pillBase = "rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-200 whitespace-nowrap";
+  const pillActive = "border-sky-300/50 bg-sky-400/15 text-sky-100 shadow-[0_0_16px_rgba(56,189,248,0.12)]";
+  const pillInactive = "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 hover:border-white/20";
+
   return (
-    <section className="section">
-      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="mx-auto max-w-5xl px-4 pb-20 pt-8">
+
+      {/* ── Page header ── */}
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-2 inline-flex items-center rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
+          <p className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
+            <CalendarClock className="h-3.5 w-3.5" />
             {selectedCourseId ? "Filtered by course" : "All synced coursework"}
           </p>
-          <h2 className="animate-on-scroll">Assignments</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Showing {selectedCourseId ? `assignments for ${filterLabel}` : "assignments from every synced course"}.
+          <h2 className="text-3xl font-semibold tracking-tight text-white">Assignments</h2>
+          <p className="mt-1.5 text-sm text-slate-400">
+            {selectedCourseId
+              ? `Showing assignments for ${filterLabel}`
+              : `${visibleAssignments.length} assignment${visibleAssignments.length !== 1 ? "s" : ""} across all courses`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/assignments" className="btn btn-secondary">All assignments</Link>
-          {selectedCourseId ? <Link href="/courses" className="btn btn-primary">Back to courses</Link> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status filter */}
+          <div className="flex rounded-xl border border-white/10 bg-white/5 p-0.5">
+            {(["all", "pending", "completed"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatusFilter(s)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                  statusFilter === s ? "bg-white/10 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+          {/* Sort */}
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+            className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-300 outline-none cursor-pointer"
+          >
+            <option value="due_asc">Due: earliest</option>
+            <option value="due_desc">Due: latest</option>
+            <option value="title">Title A–Z</option>
+          </select>
+          {selectedCourseId && (
+            <Link href="/assignments" className="btn btn-secondary" style={{ fontSize: "0.75rem", padding: "0.35rem 0.75rem" }}>
+              Clear filter
+            </Link>
+          )}
         </div>
       </div>
 
+      {/* ── Course filter pills ── */}
       {courses.length > 0 ? (
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-          <Link
-            href="/assignments"
-            className={`rounded-full border px-3 py-1.5 text-sm transition ${!selectedCourseId ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
-          >
+        <div className="mb-7 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <Link href="/assignments" className={`${pillBase} ${!selectedCourseId ? pillActive : pillInactive}`}>
             All
           </Link>
           {courses.map((course) => (
             <Link
               key={course.id}
               href={`/assignments?course_id=${course.id}`}
-              className={`rounded-full border px-3 py-1.5 text-sm transition ${selectedCourseId === course.id ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+              className={`${pillBase} ${selectedCourseId === course.id ? pillActive : pillInactive}`}
             >
-              {course.name}
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: course.color ?? "#22d3ee" }}
+                />
+                {course.name}
+              </span>
             </Link>
           ))}
         </div>
       ) : null}
 
+      {/* ── Due this week ── */}
+      {!loadingAssignments && !assignmentsError && dueThisWeek.length > 0 ? (
+        <section className="mb-8 rounded-2xl border border-sky-400/20 bg-[rgba(10,18,38,0.75)] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur">
+          <div className="mb-4 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-sky-300" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-sky-300">Due this week</h3>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {dueThisWeek.map((a) => {
+              const urgent = a.due.getTime() - Date.now() < 48 * 3600 * 1000;
+              return (
+                <div
+                  key={a.id}
+                  className={`group flex flex-col gap-1.5 rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg cursor-default ${
+                    urgent
+                      ? "border-orange-400/35 bg-orange-500/8 hover:border-orange-400/55"
+                      : "border-white/10 bg-white/5 hover:border-sky-400/30 hover:bg-sky-400/5"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-white leading-snug">{a.title}</p>
+                    <TypeBadge type={a.assignment_type} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400">{a.course?.name ?? "Course"}</p>
+                    <div className="flex items-center gap-2">
+                      <UrgencyLabel due={a.due} />
+                      <p className="text-xs text-slate-300">{format(a.due, "MMM d")}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── Assignment list ── */}
       {loadingAssignments ? (
-        <p style={{ color: "var(--gray)" }}>Loading assignments...</p>
-      ) : assignmentsError ? (
-        <p style={{ color: "#fda4af" }}>{assignmentsError}</p>
-      ) : visibleAssignments.length === 0 ? (
-        <p style={{ color: "var(--gray)" }}>
-          {selectedCourseId ? `No assignments found for ${filterLabel}.` : "No assignments synced yet."}
-        </p>
-      ) : (
-        <div className="timeline">
-          {visibleAssignments.map((assignment) => (
-            <div key={assignment.id} className="timeline-item animate-on-scroll">
-              <div className="timeline-header">
-                <div className="timeline-time">
-                  {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : "TBD"}
-                </div>
-                <div className="timeline-info">
-                  <div className="timeline-title">{assignment.title}</div>
-                  <div className="timeline-speaker">{assignment.course?.name ?? "Course"}</div>
-                </div>
-                <div className="timeline-collapse-icon">▼</div>
-              </div>
-              <div className="timeline-details">
-                <div className="timeline-desc">
-                  {assignment.description ?? "No description"}
-                </div>
-                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
-                  <button className="btn btn-secondary" onClick={() => handleSummary(assignment.id)} disabled={loading}>
-                    {loading ? "Generating..." : "Summary"}
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => handleQuiz(assignment)}>
-                    Generate Quiz
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => openHelperForAssignment(assignment)}>
-                    {["quiz", "test", "exam"].includes(assignment.assignment_type) ? "Quiz Helper" : "Writing Helper"}
-                  </button>
-                </div>
-              </div>
-            </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton-shimmer h-20 rounded-2xl" aria-hidden="true" />
           ))}
+        </div>
+      ) : assignmentsError ? (
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/5 p-5 text-sm text-red-300">
+          {assignmentsError}
+        </div>
+      ) : visibleAssignments.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/3 p-10 text-center">
+          <p className="text-slate-400">
+            {selectedCourseId
+              ? `No assignments found for ${filterLabel}. Try selecting a different course.`
+              : "No assignments yet. Sync Canvas from the dashboard to import your coursework."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visibleAssignments.map((assignment) => {
+            const isExpanded = expandedId === assignment.id;
+            const hasDue = Boolean(assignment.due_date);
+            const due = hasDue ? parseISO(assignment.due_date as string) : null;
+            const urgent = due && due.getTime() - Date.now() < 48 * 3600 * 1000;
+
+            return (
+              <article
+                key={assignment.id}
+                className={`rounded-2xl border bg-[rgba(9,12,24,0.72)] backdrop-blur shadow-sm transition-all duration-200 ${
+                  isExpanded
+                    ? "border-sky-400/30 shadow-[0_4px_32px_rgba(56,189,248,0.08)]"
+                    : urgent
+                    ? "border-orange-400/25 hover:border-orange-400/45"
+                    : "border-white/10 hover:border-white/20 hover:shadow-md"
+                }`}
+              >
+                {/* Card header — always visible */}
+                <button
+                  type="button"
+                  className="flex w-full items-start gap-4 p-5 text-left transition-colors duration-150 active:bg-white/[0.03]"
+                  onClick={() => setExpandedId(isExpanded ? null : assignment.id)}
+                >
+                  {/* Date chip */}
+                  <div
+                    className={`flex flex-col items-center justify-center rounded-xl px-3 py-2 text-center flex-shrink-0 min-w-[52px] transition-colors duration-200 ${
+                      urgent
+                        ? "bg-orange-500/15 border border-orange-400/25"
+                        : "bg-sky-500/10 border border-sky-400/15"
+                    }`}
+                  >
+                    {due ? (
+                      <>
+                        <span className={`text-[10px] font-semibold uppercase tracking-wide ${urgent ? "text-orange-300" : "text-sky-300"}`}>
+                          {format(due, "MMM")}
+                        </span>
+                        <span className={`text-lg font-bold leading-none mt-0.5 ${urgent ? "text-orange-100" : "text-white"}`}>
+                          {format(due, "d")}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400">No date</span>
+                    )}
+                  </div>
+
+                  {/* Title + meta */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-base font-medium text-white leading-snug">{assignment.title}</p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <TypeBadge type={assignment.assignment_type} />
+                        <ChevronDown
+                          className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3">
+                      <span className="text-sm text-slate-400">{assignment.course?.name ?? "Course"}</span>
+                      {due ? <UrgencyLabel due={due} /> : null}
+                      {due ? (
+                        <span className="text-xs text-slate-500">{format(due, "p")}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expandable content */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="border-t border-white/10 px-5 pb-5 pt-4">
+                      {assignment.description ? (
+                        <p className="text-sm text-slate-300 leading-relaxed mb-4">
+                          {assignment.description}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-slate-500 italic mb-4">No description provided.</p>
+                      )}
+
+                      {/* Summary display */}
+                      {summary?.id === assignment.id ? (
+                        <div className="mb-4 rounded-xl border border-sky-400/20 bg-sky-500/5 p-4">
+                          <p className="text-xs font-semibold text-sky-300 uppercase tracking-wider mb-2">AI Summary</p>
+                          <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{summary.text}</p>
+                        </div>
+                      ) : null}
+
+                      {/* Action buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="btn btn-secondary active:scale-95 transition-transform duration-100"
+                          onClick={() => handleSummary(assignment.id)}
+                          disabled={summaryLoading}
+                        >
+                          {summaryLoading && summary?.id !== assignment.id ? "Generating..." : "Summary"}
+                        </button>
+                        <button
+                          className="btn btn-secondary active:scale-95 transition-transform duration-100"
+                          onClick={() => handleQuiz(assignment)}
+                        >
+                          Generate quiz
+                        </button>
+                        <button
+                          className="btn btn-secondary active:scale-95 transition-transform duration-100"
+                          onClick={() => openHelper(assignment)}
+                        >
+                          {["quiz", "test", "exam"].includes(assignment.assignment_type) ? "Quiz helper" : "Writing helper"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 
-      {summary ? (
-        <div className="contact-info-section animate-on-scroll" style={{ marginTop: "2rem" }}>
-          <h3 className="contact-info-title">Assignment Summary</h3>
-          <p style={{ color: "var(--light)", whiteSpace: "pre-wrap" }}>{summary}</p>
-        </div>
-      ) : null}
-
+      {/* ── Assignment helper chat ── */}
       {helperOpen ? (
         <aside
           aria-label="Assignment helper"
-          style={{
-            position: "fixed",
-            left: "1.25rem",
-            bottom: "1.25rem",
-            width: "min(420px, calc(100vw - 2rem))",
-            zIndex: 1200,
-            borderRadius: "16px",
-            border: "1px solid rgba(148,163,184,0.25)",
-            background: "rgba(10, 16, 28, 0.96)",
-            boxShadow: "0 24px 56px rgba(2, 8, 20, 0.6)",
-            padding: "0.9rem",
-          }}
+          className="fixed bottom-5 right-5 z-[1200] flex w-[min(420px,calc(100vw-2rem))] flex-col rounded-2xl border border-white/15 bg-[rgba(8,14,28,0.97)] shadow-[0_24px_60px_rgba(0,0,0,0.65)] backdrop-blur"
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
-            <strong style={{ color: "#e6edf8" }}>
-              {activeAssignment ? `Helper: ${activeAssignment.title}` : "Assignment Helper"}
-            </strong>
-            <button type="button" className="btn btn-secondary" onClick={() => setHelperOpen(false)}>
-              Close
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {activeAssignment ? activeAssignment.title : "Assignment helper"}
+              </p>
+              <p className="text-xs text-slate-400">
+                {activeAssignment && ["quiz", "test", "exam"].includes(activeAssignment.assignment_type)
+                  ? "Quiz review mode"
+                  : "Writing support mode"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setHelperOpen(false)}
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white active:scale-95"
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
-          <p style={{ color: "#9aa8bf", fontSize: "0.85rem", marginBottom: "0.6rem" }}>
-            {activeAssignment && ["quiz", "test", "exam"].includes(activeAssignment.assignment_type)
-              ? "Mode: Quiz support (concept hints, elimination strategy, review guidance)."
-              : "Mode: Writing support (outline, thesis, clarity, rubric alignment)."}
-          </p>
-          <div style={{ maxHeight: "240px", overflowY: "auto", display: "grid", gap: "0.5rem", marginBottom: "0.6rem" }}>
+
+          <div className="flex max-h-[260px] flex-col gap-2 overflow-y-auto p-4 [scrollbar-width:thin]">
             {messages.length === 0 ? (
-              <p style={{ color: "#9aa8bf", margin: 0 }}>Ask for help with this assignment without requesting final answers.</p>
+              <p className="text-sm text-slate-500">Ask for help — no direct answers will be given.</p>
             ) : (
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  style={{
-                    alignSelf: msg.role === "user" ? "end" : "start",
-                    background: msg.role === "user" ? "rgba(34, 211, 238, 0.16)" : "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(148,163,184,0.18)",
-                    borderRadius: "10px",
-                    padding: "0.55rem 0.7rem",
-                    color: "#e6edf8",
-                    whiteSpace: "pre-wrap",
-                  }}
+                  className={`rounded-xl border px-3 py-2.5 text-sm leading-relaxed ${
+                    msg.role === "user"
+                      ? "self-end border-sky-400/25 bg-sky-500/15 text-sky-50"
+                      : "self-start border-white/10 bg-white/5 text-slate-200"
+                  }`}
                 >
                   {typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}
                 </div>
               ))
             )}
-            {isLoading ? <p style={{ color: "#9aa8bf", margin: 0 }}>Thinking...</p> : null}
+            {isLoading ? <p className="text-xs text-slate-500">Thinking...</p> : null}
           </div>
+
           <form
             onSubmit={handleSubmit}
-            style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.5rem" }}
+            className="flex gap-2 border-t border-white/10 p-3"
           >
             <input
               value={input}
               onChange={handleInputChange}
               placeholder={helperPrompt || "Ask for guidance..."}
-              style={{
-                borderRadius: "10px",
-                border: "1px solid rgba(148,163,184,0.25)",
-                background: "rgba(148,163,184,0.12)",
-                color: "#e6edf8",
-                padding: "0.6rem 0.75rem",
-              }}
+              className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
             />
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary active:scale-95 transition-transform duration-100"
+            >
               Send
             </button>
           </form>
         </aside>
       ) : null}
-    </section>
+    </div>
   );
 }

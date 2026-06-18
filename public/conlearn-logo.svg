@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Subtle teal-blue rounded bg -->
+  <rect width="32" height="32" rx="8" fill="rgba(14,165,233,0.14)"/>
+  <!-- C arc: stroke only, ~270° sweep, open on the right -->
+  <path
+    d="M22.5 9.5 C22.5 9.5 18 7 13 9 C8 11 7 16 7 16 C7 16 8 21 13 23 C18 25 22.5 22.5 22.5 22.5"
+    stroke="#7dd3fc"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    fill="none"
+  />
+</svg>

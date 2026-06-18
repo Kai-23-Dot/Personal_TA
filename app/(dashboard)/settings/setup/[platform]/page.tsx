@@ -61,10 +61,10 @@ export default function SetupPlatformPage() {
 
   return (
     <section className="section">
-      <h2 className="animate-on-scroll">Connect {platformLabel}</h2>
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "780px", margin: "0 auto" }}>
         <div className="contact-form-column">
-          <h3 className="contact-form-title">Bring your classes into PersonalTA</h3>
+          <h2 className="contact-form-title">Connect {platformLabel}</h2>
+          <p style={{ color: "var(--gray)", marginBottom: "1rem" }}>Bring your classes into Conlearn.</p>
 
           {!isCanvas ? (
             <p style={{ color: "var(--gray)" }}>

@@ -1,4 +1,4 @@
-/* PersonalTA UI interactions based on Chain Summit template styles */
+/* Conlearn UI interactions based on Chain Summit template styles */
 
 function animateCounters() {
   const counters = document.querySelectorAll('.stat-number');
@@ -278,9 +278,9 @@ function setupFormHandlers() {
   });
 }
 
-function initPersonalTAUi() {
-  if (window.__personalTAUiInitialized) return;
-  window.__personalTAUiInitialized = true;
+function initConlearnUi() {
+  if (window.__conlearnUiInitialized) return;
+  window.__conlearnUiInitialized = true;
 
   animateCounters();
   createNeuralNetwork();
@@ -301,14 +301,14 @@ function initPersonalTAUi() {
   }
 }
 
-function schedulePersonalTAUi() {
+function scheduleConlearnUi() {
   const run = () => {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(initPersonalTAUi, { timeout: 1500 });
+          window.requestIdleCallback(initConlearnUi, { timeout: 1500 });
         } else {
-          window.setTimeout(initPersonalTAUi, 250);
+          window.setTimeout(initConlearnUi, 250);
         }
       });
     });
@@ -318,4 +318,4 @@ function schedulePersonalTAUi() {
   else window.addEventListener('load', run, { once: true });
 }
 
-schedulePersonalTAUi();
+scheduleConlearnUi();

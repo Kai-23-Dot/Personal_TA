@@ -1,27 +1,17 @@
 /**
- * Sarvam AI provider for all AI model calls.
+ * OpenAI provider for all AI model calls.
  *
- * Uses the Vercel AI SDK @ai-sdk/openai adapter with Sarvam's OpenAI-compatible API.
- * Set SARVAM_API_KEY in your .env.local.
- *
- * Get a key at: https://app.sarvam.ai
+ * Uses the Vercel AI SDK @ai-sdk/openai adapter with the standard OpenAI API.
+ * Set OPENAI_API_KEY in your .env.local.
  */
 import { createOpenAI } from "@ai-sdk/openai";
 
-const sarvam = createOpenAI({
-  baseURL: "https://api.sarvam.ai/v1",
-  // Sarvam uses api-subscription-key header instead of Bearer auth — overridden via fetch below
-  apiKey: "x",
-  fetch: async (url, init) => {
-    const headers = new Headers(init?.headers);
-    headers.delete("authorization");
-    headers.set("api-subscription-key", process.env.SARVAM_API_KEY ?? "");
-    return fetch(url, { ...init, headers });
-  },
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY ?? "",
 });
 
 /** Primary model — used for chat, quiz generation, summarization, flashcards, and vision */
-export const chatModel = sarvam("sarvam-30b");
+export const chatModel = openai("gpt-4.1-mini");
 
 /** Lightweight model — used for quick structured extraction tasks */
-export const fastModel = sarvam("sarvam-30b");
+export const fastModel = openai("gpt-4.1-mini");
