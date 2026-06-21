@@ -11,10 +11,6 @@
     "build": "env -u __NEXT_PRIVATE_STANDALONE_CONFIG -u __NEXT_PRIVATE_ORIGIN NEXT_DIST_DIR=.next-build next build",
     "start": "NEXT_DIST_DIR=.next-build next start",
     "lint": "next lint",
-    "regente:install": "/Users/kairavkaran/.regente/bin/regente install --root .",
-    "regente:status": "/Users/kairavkaran/.regente/bin/regente status --root .",
-    "regente:watch": "/Users/kairavkaran/.regente/bin/regente watch --root .",
-    "regente:join": "AGENT_NAME=${AGENT_NAME:-$USER-$(hostname -s)} AGENT_TOOL=${AGENT_TOOL:-codex} /Users/kairavkaran/.regente/bin/regente join --root . --agent \"$AGENT_NAME\" --tool \"$AGENT_TOOL\"",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset"
   },
