@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",

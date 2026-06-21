@@ -4,10 +4,10 @@
  * Upload an audio file (MP3, M4A, WAV, etc.) and transcribe it via Gemini,
  * then structure it as lecture notes.
  */
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { transcribeAudio } from "@/lib/ai/transcribeAudio";
-import { generateEmbedding } from "@/lib/utils/embeddings";
+import { transcribeAudio } from "@/backend/ai/transcribeAudio";
+import { generateEmbedding } from "@/backend/utils/embeddings";
 import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 120; // Audio processing can take a while

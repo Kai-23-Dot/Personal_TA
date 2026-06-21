@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { DashboardClientWrapper } from "@/components/layout/DashboardClientWrapper";
+import { createClient } from "@/backend/supabase/server";
+import { Header } from "@/frontend/components/layout/Header";
+import { Sidebar } from "@/frontend/components/layout/Sidebar";
+import { DashboardClientWrapper } from "@/frontend/components/layout/DashboardClientWrapper";
 import type { Profile } from "@/types";
 
 export default async function DashboardLayout({

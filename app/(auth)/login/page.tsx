@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ConlearnBackdrop } from "@/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/components/layout/ConlearnHeader";
+import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
+import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
 
 export default function LoginPage() {
   const router = useRouter();

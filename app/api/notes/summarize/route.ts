@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { summarizeNotes } from "@/lib/ai/summarizeNotes";
-import { generateEmbedding } from "@/lib/utils/embeddings";
+import { summarizeNotes } from "@/backend/ai/summarizeNotes";
+import { generateEmbedding } from "@/backend/utils/embeddings";
 import type { SummaryType } from "@/types";
 
 export const maxDuration = 60;

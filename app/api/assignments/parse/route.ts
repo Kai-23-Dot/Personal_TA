@@ -9,8 +9,8 @@
  */
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
-import { chatModel } from "@/lib/ai/provider";
-import { createClient } from "@/lib/supabase/server";
+import { chatModel } from "@/backend/ai/provider";
+import { createClient } from "@/backend/supabase/server";
 
 export interface ParsedAssignment {
   title: string;

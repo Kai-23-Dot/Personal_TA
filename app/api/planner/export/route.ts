@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 
 function toICSDate(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");

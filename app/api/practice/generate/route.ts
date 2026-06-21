@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { generateQuiz } from "@/lib/ai/generateQuiz";
-import { canvasDeepFetch } from "@/lib/canvas-intelligence/canvasDeepFetch";
+import { generateQuiz } from "@/backend/ai/generateQuiz";
+import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
 

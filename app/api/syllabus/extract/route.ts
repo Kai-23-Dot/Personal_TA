@@ -7,7 +7,7 @@
  * Used by the Courses page "Upload Syllabus" flow.
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 
 export const maxDuration = 30;
 

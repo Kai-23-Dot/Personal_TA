@@ -6,8 +6,8 @@
  * Used by the Notes and Flashcards sections to surface the right material.
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { canvasDeepFetch } from "@/lib/canvas-intelligence/canvasDeepFetch";
+import { createClient } from "@/backend/supabase/server";
+import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 
 export const maxDuration = 60;
 

@@ -12,7 +12,7 @@ import {
   PlugZap,
   Sparkles,
 } from "lucide-react";
-import { ConlearnFooter } from "@/components/layout/ConlearnFooter";
+import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
 
 /* ─── Data ─────────────────────────────────────────────────────── */
 

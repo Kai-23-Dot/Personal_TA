@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Layers3 } from "lucide-react";
-import { useSetPageContent } from "@/lib/contexts/page-context";
+import { useSetPageContent } from "@/frontend/contexts/page-context";
 
 type Course = { id: string; name: string };
 type Flashcard = {

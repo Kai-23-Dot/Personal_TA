@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { summarizeNotes } from "@/lib/ai/summarizeNotes";
-import { extractTextFromImage, type ImageMediaType } from "@/lib/ai/ocrImage";
-import { detectFileType, extractFileText } from "@/lib/utils/extractFileText";
-import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages, htmlToPlainText } from "@/lib/lms/canvas";
-import { extractFromGoogleLink } from "@/lib/canvas-intelligence/contentExtractor";
+import { createClient } from "@/backend/supabase/server";
+import { summarizeNotes } from "@/backend/ai/summarizeNotes";
+import { extractTextFromImage, type ImageMediaType } from "@/backend/ai/ocrImage";
+import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
+import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages, htmlToPlainText } from "@/backend/lms/canvas";
+import { extractFromGoogleLink } from "@/backend/canvas-intelligence/contentExtractor";
 import type { SummaryType } from "@/types";
 
 export const maxDuration = 90;

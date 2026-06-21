@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { evaluateRetrieval } from "@/lib/canvas-intelligence/retrievalEvaluation";
-import { sampleEvaluationCases } from "@/lib/canvas-intelligence/evalCases";
+import { evaluateRetrieval } from "@/backend/canvas-intelligence/retrievalEvaluation";
+import { sampleEvaluationCases } from "@/backend/canvas-intelligence/evalCases";
 
 export async function GET() {
   const cases = sampleEvaluationCases();

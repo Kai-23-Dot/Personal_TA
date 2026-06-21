@@ -4,10 +4,10 @@
  * Upload an image (JPG/PNG/WEBP/GIF) and extract text using AI vision.
  * Stores the result as a Note in Supabase.
  */
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { extractTextFromImage, type ImageMediaType } from "@/lib/ai/ocrImage";
-import { generateEmbedding } from "@/lib/utils/embeddings";
+import { extractTextFromImage, type ImageMediaType } from "@/backend/ai/ocrImage";
+import { generateEmbedding } from "@/backend/utils/embeddings";
 import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 60;

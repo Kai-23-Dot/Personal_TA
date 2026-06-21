@@ -14,8 +14,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { fetchICProfile } from "@/lib/lms/infinite-campus";
+import { createClient } from "@/backend/supabase/server";
+import { fetchICProfile } from "@/backend/lms/infinite-campus";
 
 function icBase(domain: string) {
   const d = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");

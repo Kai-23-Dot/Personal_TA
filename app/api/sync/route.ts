@@ -7,14 +7,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import {
   fetchGCCourses,
   fetchGCCourseWork,
   parseDueDate,
   mapWorkType,
   refreshGoogleAccessToken,
-} from "@/lib/lms/google-classroom";
+} from "@/backend/lms/google-classroom";
 import {
   fetchCanvasCourses,
   fetchCanvasAssignments,
@@ -28,22 +28,22 @@ import {
   fetchCanvasModuleItems,
   mapCanvasAssignmentType,
   htmlToPlainText,
-} from "@/lib/lms/canvas";
+} from "@/backend/lms/canvas";
 import {
   fetchMSClasses,
   fetchMSAssignments,
   refreshMicrosoftAccessToken,
-} from "@/lib/lms/microsoft-teams";
+} from "@/backend/lms/microsoft-teams";
 import {
   fetchICProfile,
   fetchICSections,
   fetchICAssignments,
   mapICAssignmentType,
-} from "@/lib/lms/infinite-campus";
-import { extractFileText, mimeToFileType } from "@/lib/utils/extractFileText";
-import { crawlCanvasCourseContent } from "@/lib/canvas-intelligence/canvasCrawler";
-import { extractFromGoogleLink, extractFromHtml } from "@/lib/canvas-intelligence/contentExtractor";
-import { classifyContent } from "@/lib/canvas-intelligence/contentClassifier";
+} from "@/backend/lms/infinite-campus";
+import { extractFileText, mimeToFileType } from "@/backend/utils/extractFileText";
+import { crawlCanvasCourseContent } from "@/backend/canvas-intelligence/canvasCrawler";
+import { extractFromGoogleLink, extractFromHtml } from "@/backend/canvas-intelligence/contentExtractor";
+import { classifyContent } from "@/backend/canvas-intelligence/contentClassifier";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 

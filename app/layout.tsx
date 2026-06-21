@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ThemeProvider } from "@/frontend/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import "./globals.css";
 import "./chain-summit.css";

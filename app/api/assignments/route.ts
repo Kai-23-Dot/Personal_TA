@@ -7,7 +7,7 @@
  * DELETE → hard-delete a manual assignment
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 
 export async function GET(req: Request) {
   const supabase = await createClient();

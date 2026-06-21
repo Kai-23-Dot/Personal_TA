@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { fetchCanvasModules, fetchCanvasModuleItems, fetchCanvasFilesWide, fetchCanvasPages, fetchCanvasAssignments } from "@/lib/lms/canvas";
+import { createClient } from "@/backend/supabase/server";
+import { fetchCanvasModules, fetchCanvasModuleItems, fetchCanvasFilesWide, fetchCanvasPages, fetchCanvasAssignments } from "@/backend/lms/canvas";
 
 export async function GET(req: Request) {
   const supabase = await createClient();

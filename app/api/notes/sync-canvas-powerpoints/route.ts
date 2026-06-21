@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { fetchCanvasFiles } from "@/lib/lms/canvas";
-import { extractFileText, mimeToFileType } from "@/lib/utils/extractFileText";
+import { createClient } from "@/backend/supabase/server";
+import { fetchCanvasFiles } from "@/backend/lms/canvas";
+import { extractFileText, mimeToFileType } from "@/backend/utils/extractFileText";
 
 export const maxDuration = 90;
 

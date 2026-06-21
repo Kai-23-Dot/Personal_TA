@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
-import { runTAChatAgent, type AgentContext } from "@/lib/ai/agent";
-import { retrieveRelevantContext, formatContextForPrompt } from "@/lib/utils/rag";
+import { createClient } from "@/backend/supabase/server";
+import { runTAChatAgent, type AgentContext } from "@/backend/ai/agent";
+import { retrieveRelevantContext, formatContextForPrompt } from "@/backend/utils/rag";
 import { type CoreMessage } from "ai";
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";

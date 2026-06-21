@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { generateFlashcardsFromContent } from "@/lib/ai/generateFlashcards";
-import { canvasDeepFetch } from "@/lib/canvas-intelligence/canvasDeepFetch";
+import { generateFlashcardsFromContent } from "@/backend/ai/generateFlashcards";
+import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 
 export const maxDuration = 60;
 

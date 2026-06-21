@@ -2,9 +2,9 @@
  * PATCH /api/flashcards/review
  * Record the result of a flashcard review and update SRS schedule.
  */
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { calculateNextReview } from "@/lib/ai/generateFlashcards";
+import { calculateNextReview } from "@/backend/ai/generateFlashcards";
 import type { SRSGrade } from "@/types";
 
 export async function PATCH(req: Request) {

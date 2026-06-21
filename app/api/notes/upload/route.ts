@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { generateEmbedding } from "@/lib/utils/embeddings";
+import { generateEmbedding } from "@/backend/utils/embeddings";
 import { generateText } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { chatModel } from "@/backend/ai/provider";
 import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 60;
@@ -33,7 +33,7 @@ async function extractTextFromFile(file: File): Promise<string> {
   }
 
   if (fileName.endsWith(".pptx")) {
-    const { extractFileText } = await import("@/lib/utils/extractFileText");
+    const { extractFileText } = await import("@/backend/utils/extractFileText");
     const text = await extractFileText(buffer, "pptx");
     if (text) return text;
   }
@@ -45,7 +45,7 @@ async function extractTextFromFile(file: File): Promise<string> {
   }
 
   if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a")) {
-    const { transcribeAudio } = await import("@/lib/ai/transcribeAudio");
+    const { transcribeAudio } = await import("@/backend/ai/transcribeAudio");
     const { structuredNotes } = await transcribeAudio(buffer, file.name);
     return structuredNotes;
   }

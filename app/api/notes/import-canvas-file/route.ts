@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { extractFileText, mimeToFileType } from "@/lib/utils/extractFileText";
+import { createClient } from "@/backend/supabase/server";
+import { extractFileText, mimeToFileType } from "@/backend/utils/extractFileText";
 
 export async function POST(req: Request) {
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { generateText } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { chatModel } from "@/backend/ai/provider";
 
 export const maxDuration = 60;
 

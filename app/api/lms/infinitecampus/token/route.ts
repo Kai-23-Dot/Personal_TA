@@ -11,8 +11,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { fetchICProfile } from "@/lib/lms/infinite-campus";
+import { createClient } from "@/backend/supabase/server";
+import { fetchICProfile } from "@/backend/lms/infinite-campus";
 
 export async function POST(req: Request) {
   const supabase = await createClient();

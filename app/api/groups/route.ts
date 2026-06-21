@@ -4,7 +4,7 @@
  * GET  /api/groups        → List groups the user belongs to
  * POST /api/groups/join   → Join via invite code
  */
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET() {

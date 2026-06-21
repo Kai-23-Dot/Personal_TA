@@ -1618,29 +1618,36 @@ footer p a:hover {
 
 .practice-header {
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
 	flex-wrap: wrap;
 }
 
 .practice-progress {
+	font-family: 'JetBrains Mono', monospace;
 	color: var(--gray);
-	font-size: 0.95rem;
+	font-size: 0.8rem;
+	letter-spacing: 0.04em;
 }
 
 .practice-card {
 	margin-top: 2rem;
-	background: var(--surface);
-	border: 1px solid var(--border-soft);
-	border-radius: 20px;
-	padding: 2rem;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 24px;
+	padding: 2.5rem;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
 .practice-question-title {
-	font-size: 1.4rem;
-	margin-bottom: 1rem;
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 0.72rem;
+	font-weight: 500;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--gray);
+	margin-bottom: 1.25rem;
 }
 
 .practice-question {
@@ -1649,7 +1656,16 @@ footer p a:hover {
 }
 
 .practice-prompt {
+	font-family: 'Sora', system-ui, sans-serif;
 	color: var(--light);
+	font-size: 1.15rem;
+	font-weight: 400;
+	line-height: 1.75;
+	letter-spacing: -0.01em;
+}
+
+.practice-prompt p {
+	margin: 0;
 }
 
 .code-block {
@@ -1675,9 +1691,13 @@ footer p a:hover {
 }
 
 .options-legend {
-	font-size: 0.95rem;
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 0.72rem;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
 	color: var(--gray);
-	margin-bottom: 0.75rem;
+	margin-bottom: 1rem;
 }
 
 .options-grid {
@@ -1687,50 +1707,68 @@ footer p a:hover {
 
 .option-card {
 	display: grid;
-	grid-template-columns: auto auto 1fr;
+	grid-template-columns: auto 1fr;
 	align-items: center;
-	gap: 0.75rem;
-	padding: 0.75rem 1rem;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
 	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	cursor: pointer;
-	transition: border 0.2s ease, background 0.2s ease;
+	transition: border-color 0.15s ease, background 0.15s ease;
+	font-family: 'Sora', system-ui, sans-serif;
+}
+
+.option-card:hover {
+	border-color: rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.07);
 }
 
 .option-card input {
-	accent-color: var(--primary);
+	display: none;
 }
 
 .option-card--selected {
-	border-color: var(--primary);
-	background: rgba(0, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.09);
 }
 
 .option-card--correct {
-	border-color: rgba(0, 255, 136, 0.6);
-	background: rgba(0, 255, 136, 0.12);
+	border-color: rgba(134, 239, 172, 0.6);
+	background: rgba(134, 239, 172, 0.08);
 }
 
 .option-card--wrong {
-	border-color: rgba(255, 107, 107, 0.6);
-	background: rgba(255, 107, 107, 0.12);
+	border-color: rgba(252, 165, 165, 0.6);
+	background: rgba(252, 165, 165, 0.08);
 }
 
 .option-letter {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.1);
-	color: var(--light);
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: var(--gray);
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 0.75rem;
 	font-weight: 600;
+	flex-shrink: 0;
+}
+
+.option-card--selected .option-letter {
+	background: rgba(255, 255, 255, 0.15);
+	border-color: rgba(255, 255, 255, 0.3);
+	color: var(--light);
 }
 
 .option-text {
 	color: var(--light);
+	font-size: 0.95rem;
+	line-height: 1.5;
 }
 
 .feedback-box {
@@ -2633,17 +2671,20 @@ body {
 .section h2 {
 	font-size: clamp(1.6rem, 2.5vw, 2.4rem) !important;
 	letter-spacing: -0.03em;
-	color: var(--light);
+	color: var(--light) !important;
+	-webkit-text-fill-color: var(--light) !important;
+	background: none !important;
+	text-align: left !important;
+	margin-bottom: 0.5rem;
 }
 
 .section p,
 .section li {
-	color: #a8b5ad;
+	color: var(--gray);
 }
 
 .contact-info-section,
-.contact-form-column,
-.practice-question {
+.contact-form-column {
 	background: rgba(11, 17, 15, 0.78) !important;
 	border: 1px solid rgba(255, 255, 255, 0.09) !important;
 	border-radius: 18px !important;
@@ -2662,6 +2703,8 @@ body {
 .contact-form-title,
 .contact-info-title {
 	color: var(--light) !important;
+	-webkit-text-fill-color: var(--light) !important;
+	background: none !important;
 	font-size: 1rem !important;
 	letter-spacing: -0.01em;
 }

@@ -8,11 +8,11 @@ function resumeKey(sid: string) {
 }
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CodeBlock } from "@/components/practice/CodeBlock";
-import { OptionsList } from "@/components/practice/OptionsList";
-import { FeedbackBox } from "@/components/practice/FeedbackBox";
-import { NavigationControls } from "@/components/practice/NavigationControls";
-import { useSetPageContent } from "@/lib/contexts/page-context";
+import { CodeBlock } from "@/frontend/components/practice/CodeBlock";
+import { OptionsList } from "@/frontend/components/practice/OptionsList";
+import { FeedbackBox } from "@/frontend/components/practice/FeedbackBox";
+import { NavigationControls } from "@/frontend/components/practice/NavigationControls";
+import { useSetPageContent } from "@/frontend/contexts/page-context";
 
 type QuizQuestion = {
   question: string;
@@ -331,14 +331,7 @@ export default function PracticeSessionPage() {
                     Question {idx + 1}
                   </h4>
                 </div>
-                <div
-                  className="practice-prompt"
-                  style={{
-                    marginBottom: "0.75rem",
-                    fontSize: "0.95rem",
-                    lineHeight: "1.65",
-                  }}
-                >
+                <div className="practice-prompt" style={{ marginBottom: "0.75rem" }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQ.prompt}</ReactMarkdown>
                 </div>
                 {parsedQ.code ? <CodeBlock code={parsedQ.code} /> : null}
@@ -385,15 +378,7 @@ export default function PracticeSessionPage() {
             Question {index + 1}
           </h3>
           <section className="practice-question">
-            <div
-              className="practice-prompt"
-              style={{
-                fontSize: "1.08rem",
-                lineHeight: "1.8",
-                fontWeight: "400",
-                letterSpacing: "0.01em",
-              }}
-            >
+            <div className="practice-prompt">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQuestion.prompt}</ReactMarkdown>
             </div>
             {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}

@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { generateStudyPlan } from "@/lib/ai/studyPlanner";
+import { generateStudyPlan } from "@/backend/ai/studyPlanner";
 import { addDays, format } from "date-fns";
 import type { Assignment } from "@/types";
 

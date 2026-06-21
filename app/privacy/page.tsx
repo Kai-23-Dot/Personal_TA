@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ConlearnBackdrop } from "@/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/components/layout/ConlearnHeader";
-import { ConlearnFooter } from "@/components/layout/ConlearnFooter";
+import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
+import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",

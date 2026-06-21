@@ -1,4 +1,4 @@
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { CardSkeleton } from "@/frontend/components/ui/loading-skeleton";
 
 export default function GlobalLoading() {
   return (

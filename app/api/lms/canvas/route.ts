@@ -9,8 +9,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { fetchCanvasUserProfile } from "@/lib/lms/canvas";
+import { createClient } from "@/backend/supabase/server";
+import { fetchCanvasUserProfile } from "@/backend/lms/canvas";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

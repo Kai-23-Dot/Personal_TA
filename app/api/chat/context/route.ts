@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { runTAChatAgent, type AgentContext } from "@/lib/ai/agent";
+import { createClient } from "@/backend/supabase/server";
+import { runTAChatAgent, type AgentContext } from "@/backend/ai/agent";
 import { type CoreMessage } from "ai"; // CoreMessage still used for messages type
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";

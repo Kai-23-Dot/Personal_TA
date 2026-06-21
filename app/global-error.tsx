@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyState } from "@/frontend/components/ui/empty-state";
 import "./globals.css";
 import "./chain-summit.css";
 

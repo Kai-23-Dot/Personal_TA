@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { extractNoteDetails } from "@/lib/ai/extractNoteDetails";
+import { createClient } from "@/backend/supabase/server";
+import { extractNoteDetails } from "@/backend/ai/extractNoteDetails";
 
 export const maxDuration = 60;
 

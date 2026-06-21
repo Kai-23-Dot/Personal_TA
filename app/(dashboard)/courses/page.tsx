@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BookOpen, CalendarDays, RefreshCw, Sparkles } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/frontend/components/ui/empty-state";
+import { createClient } from "@/backend/supabase/server";
 
 type CourseRow = {
   id: string;
