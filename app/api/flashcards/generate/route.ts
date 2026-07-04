@@ -2,6 +2,8 @@ import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 import { generateFlashcardsFromContent } from "@/backend/ai/generateFlashcards";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 60;
 
@@ -10,6 +12,14 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    if (!tokenCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
+        { status: 402 }
+      );
+    }
 
     const { noteId, courseId, topic, count = 10, difficulty = "mixed" } = await req.json();
 
@@ -91,12 +101,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const generatedCards = await generateFlashcardsFromContent(
-      content,
-      derivedTopic,
-      count,
-      courseName,
-      difficulty
+    const generatedCards = await runWithUsageContext(user.id, () =>
+      generateFlashcardsFromContent(content, derivedTopic, count, courseName, difficulty)
     );
 
     if (generatedCards.length === 0) {

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "edits": {
+    "vercel.json": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T21:41:21Z",
+        "tool": "claude-code"
+      }
+    ],
+    "app/(dashboard)/review/page.tsx": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T21:51:29Z",
+        "tool": "claude-code"
+      }
+    ],
+    "app/(dashboard)/study/page.tsx": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T21:55:10Z",
+        "tool": "claude-code"
+      }
+    ],
+    ".vercelignore": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T22:02:19Z",
+        "tool": "claude-code"
+      }
+    ],
+    "backend/billing/stripe.ts": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T22:06:04Z",
+        "tool": "claude-code"
+      }
+    ],
+    "next.config.ts": [
+      {
+        "agent": "claude-code-6687270bf3",
+        "at": "2026-07-03T22:11:13Z",
+        "tool": "claude-code"
+      }
+    ]
+  },
+  "warned": {}
+}

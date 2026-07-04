@@ -4,6 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 import type { Difficulty, QuizQuestion } from "@/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export interface QuizSource {
+  idx: number;
+  title: string;
+  moduleName?: string | null;
+  sourceUrl?: string | null;
+}
+
 export interface GenerateQuizOptions {
   topic: string;
   difficulty: Difficulty;
@@ -23,6 +30,11 @@ export interface GenerateQuizOptions {
    * even without dedicated notes for the topic.
    */
   styleHint?: string;
+  /**
+   * Source list corresponding to the courseNotes sections (0-indexed).
+   * When provided, the LLM will be asked to cite which source each question came from.
+   */
+  sources?: QuizSource[];
 }
 
 type RawQuestion = {
@@ -33,6 +45,7 @@ type RawQuestion = {
   explanation: string;
   topic: string;
   difficulty: "easy" | "medium" | "hard";
+  source_idx?: number;
 };
 
 // ---- Difficulty instruction builders ----
@@ -134,6 +147,7 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
     courseLanguage,
     lowTokenMode = false,
     styleHint,
+    sources,
   } = options;
 
   const hasNotes = !!courseNotes;
@@ -184,6 +198,15 @@ export async function generateQuiz(options: GenerateQuizOptions): Promise<QuizQu
             : `Use these notes as supplementary context for generating AP-level questions on "${topic}".`
         }`
       : null,
+    sources && sources.length > 0
+      ? [
+          ``,
+          `=== SOURCE INDEX ===`,
+          `The notes above are divided into ${sources.length} numbered source(s). For each question you generate, add a "source_idx" field (integer, 0-based) indicating which source the question was primarily derived from.`,
+          ...sources.map((s) => `  [${s.idx}] ${s.title}${s.moduleName ? ` (${s.moduleName})` : ""}`),
+          `=== END SOURCE INDEX ===`,
+        ].join("\n")
+      : null,
     context && !courseNotes ? `\nAdditional context:\n${context.slice(0, 6000)}` : null,
     styleHint && !courseNotes
       ? [
@@ -223,11 +246,12 @@ Return ONLY a valid JSON object — no outer markdown fences, no extra text befo
       "correct_answer": "The condition that stops recursion",
       "explanation": "A base case is a condition that terminates the recursion to prevent infinite loops.",
       "topic": "${topic}",
-      "difficulty": "easy"
+      "difficulty": "easy",
+      "source_idx": 0
     }
   ]
 }
-Rules: type must be "multiple_choice", "true_false", or "short_answer". For true_false use options ["True","False"]. For short_answer omit options. difficulty per question must be "easy", "medium", or "hard".`,
+Rules: type must be "multiple_choice", "true_false", or "short_answer". For true_false use options ["True","False"]. For short_answer omit options. difficulty per question must be "easy", "medium", or "hard". source_idx is an integer (0-based index into the source list provided); omit if no sources were provided.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -317,6 +341,7 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
         id: uuidv4(),
         options: tfOptions,
         correct_answer: correct,
+        source_idx: typeof q.source_idx === "number" ? q.source_idx : undefined,
       };
     }
 
@@ -336,6 +361,7 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
       id: uuidv4(),
       options: uniqueOptions,
       correct_answer: correct,
+      source_idx: typeof q.source_idx === "number" ? q.source_idx : undefined,
     };
   });
 

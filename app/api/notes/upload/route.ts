@@ -2,8 +2,10 @@ import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/backend/utils/embeddings";
 import { generateText } from "ai";
-import { chatModel } from "@/backend/ai/provider";
+import { visionModel } from "@/backend/ai/provider";
 import { v4 as uuidv4 } from "uuid";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 60;
 
@@ -54,7 +56,7 @@ async function extractTextFromFile(file: File): Promise<string> {
   if (IMAGE_MIME_TYPES.has(mimeType) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(fileName)) {
     const resolvedMime = IMAGE_MIME_TYPES.has(mimeType) ? mimeType : "image/jpeg";
     const { text } = await generateText({
-      model: chatModel,
+      model: visionModel,
       messages: [
         {
           role: "user",
@@ -107,6 +109,17 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
+    // Plan limits: block Free users at the weekly note cap or daily token cap.
+    for (const feature of ["note", "tokens"] as const) {
+      const check = await assertWithinLimit(user.id, feature);
+      if (!check.ok) {
+        return NextResponse.json(
+          { success: false, error: check.reason, code: "LIMIT_REACHED", feature: check.feature, limit: check.limit, used: check.used },
+          { status: 402 }
+        );
+      }
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const courseId = formData.get("courseId") as string | null;
@@ -120,7 +133,8 @@ export async function POST(req: Request) {
 
     let content: string;
     try {
-      content = await extractTextFromFile(file);
+      // Extraction may call vision/transcription models — attribute tokens to the user.
+      content = await runWithUsageContext(user.id, () => extractTextFromFile(file));
     } catch (err) {
       return NextResponse.json(
         { success: false, error: `Could not extract text: ${(err as Error).message}` },

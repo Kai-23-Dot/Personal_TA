@@ -1,0 +1,76 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''session-start'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''guard'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''heartbeat'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''heartbeat'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''stop'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'REGENTE_ROOT='\\''/Users/kairavkaran/Documents/Personal_TA'\\''; export REGENTE_ROOT; exec '\\''/usr/local/bin/node'\\'' '\\''/Users/kairavkaran/.regente/lib/bin/regente-hook'\\'' '\\''claude-code'\\'' '\\''stop'\\'''",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

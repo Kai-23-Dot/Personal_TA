@@ -1,9 +1,12 @@
 import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 import { generateQuiz } from "@/backend/ai/generateQuiz";
+import type { QuizSource } from "@/backend/ai/generateQuiz";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 60;
 const lowTokenMode = process.env.LOW_TOKEN_TEST_MODE === "true";
@@ -33,6 +36,17 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
+    // Plan limits: block Free users who've hit the weekly test cap or daily token cap.
+    for (const feature of ["practice_test", "tokens"] as const) {
+      const check = await assertWithinLimit(user.id, feature);
+      if (!check.ok) {
+        return NextResponse.json(
+          { success: false, error: check.reason, code: "LIMIT_REACHED", feature: check.feature, limit: check.limit, used: check.used },
+          { status: 402 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { topic, courseId, difficulty = "adaptive", questionCount = 5, noteIds, pdfContext, assignmentId } = body as {
       topic: string;
@@ -57,6 +71,7 @@ export async function POST(req: Request) {
     let styleHintContext: string | undefined;
     let isAP = false;
     let courseLanguage: string | undefined;
+    let quizSources: QuizSource[] = [];
     if (courseId) {
       const { data: course } = await supabase.from("courses").select("name").eq("id", courseId).single();
       courseName = course?.name;
@@ -97,13 +112,19 @@ export async function POST(req: Request) {
       // Use content with sufficient confidence for direct question generation
       const directSources = retrieval.ranked.filter((r) => r.confidence >= 0.3);
       if (directSources.length > 0) {
-        courseNotes = directSources
-          .slice(0, lowTokenMode ? 5 : 12)
+        const capped = directSources.slice(0, lowTokenMode ? 5 : 12);
+        courseNotes = capped
           .map(
-            (r) =>
-              `### ${r.chunk.title}${r.chunk.moduleName ? ` (${r.chunk.moduleName})` : ""}\n${r.chunk.text.slice(0, charsPerNote)}`
+            (r, idx) =>
+              `### [${idx}] ${r.chunk.title}${r.chunk.moduleName ? ` (${r.chunk.moduleName})` : ""}\n${r.chunk.text.slice(0, charsPerNote)}`
           )
           .join("\n\n---\n\n");
+        quizSources = capped.map((r, idx) => ({
+          idx,
+          title: r.chunk.title,
+          moduleName: r.chunk.moduleName,
+          sourceUrl: r.chunk.sourceUrl,
+        }));
       } else if (retrieval.styleHint) {
         // No direct notes for topic — use style hint so questions match the class style
         styleHintContext = retrieval.styleHint;
@@ -172,18 +193,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate questions
-    const questions = await generateQuiz({
-      topic,
-      difficulty: effectiveDifficulty,
-      questionCount: Math.min(Math.max(questionCount, 1), lowTokenMode ? 12 : 50),
-      courseNotes,
-      styleHint: styleHintContext,
-      isAP,
-      recentMistakes,
-      courseName,
-      courseLanguage,
-      lowTokenMode,
+    // Generate questions (token usage attributed to this user via the context)
+    const rawQuestions = await runWithUsageContext(user.id, () =>
+      generateQuiz({
+        topic,
+        difficulty: effectiveDifficulty,
+        questionCount: Math.min(Math.max(questionCount, 1), lowTokenMode ? 12 : 50),
+        courseNotes,
+        styleHint: styleHintContext,
+        isAP,
+        recentMistakes,
+        courseName,
+        courseLanguage,
+        lowTokenMode,
+        sources: quizSources.length > 0 ? quizSources : undefined,
+      })
+    );
+
+    // Attach citation metadata to each question using source_idx
+    const questions = rawQuestions.map((q) => {
+      if (typeof (q as any).source_idx === "number" && quizSources[(q as any).source_idx]) {
+        const src = quizSources[(q as any).source_idx];
+        return { ...q, source_title: src.title, source_module: src.moduleName ?? null, source_url: src.sourceUrl ?? null };
+      }
+      return q;
     });
 
     if (questions.length === 0) {

@@ -6,11 +6,71 @@
  *
  * Canvas OAuth is per-institution. The student provides their school's Canvas domain.
  * Credentials (CANVAS_CLIENT_ID, CANVAS_CLIENT_SECRET) must be issued by the school's IT admin.
+ *
+ * Multiple Canvas accounts are supported — one connection per (user, canvas_domain).
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { fetchCanvasUserProfile } from "@/backend/lms/canvas";
+
+/** Upsert a Canvas connection keyed by (user_id, canvas_domain). */
+async function upsertCanvasConnection(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  fields: {
+    canvas_domain: string;
+    access_token: string;
+    refresh_token?: string | null;
+    platform_user_id?: string | null;
+    platform_email?: string | null;
+    scopes?: string[];
+  }
+): Promise<string | null> {
+  const { canvas_domain, access_token, refresh_token, platform_user_id, platform_email, scopes } = fields;
+
+  // Check for an existing connection with this domain
+  const { data: existing } = await supabase
+    .from("lms_connections")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("platform", "canvas")
+    .eq("canvas_domain", canvas_domain)
+    .maybeSingle();
+
+  if (existing?.id) {
+    await supabase
+      .from("lms_connections")
+      .update({
+        access_token,
+        refresh_token: refresh_token ?? null,
+        platform_user_id: platform_user_id ?? null,
+        platform_email: platform_email ?? null,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+    return existing.id;
+  }
+
+  const { data: newConn } = await supabase
+    .from("lms_connections")
+    .insert({
+      user_id: userId,
+      platform: "canvas",
+      canvas_domain,
+      access_token,
+      refresh_token: refresh_token ?? null,
+      platform_user_id: platform_user_id ?? null,
+      platform_email: platform_email ?? null,
+      scopes: scopes ?? null,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  return newConn?.id ?? null;
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -52,26 +112,16 @@ export async function GET(req: Request) {
     });
     const profile = profileRes.ok ? await profileRes.json() : {};
 
-    const { data: conn, error: dbError } = await supabase.from("lms_connections").upsert(
-      {
-        user_id: user.id,
-        platform: "canvas",
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token ?? null,
-        canvas_domain: canvasDomain,
-        platform_user_id: profile.id ? String(profile.id) : null,
-        platform_email: profile.login_id ?? profile.primary_email ?? null,
-        is_active: true,
-      },
-      { onConflict: "user_id,platform" }
-    ).select("id").single();
-
-    if (dbError) {
-      console.error("DB error saving Canvas connection:", dbError);
-    }
+    const connId = await upsertCanvasConnection(supabase, user.id, {
+      canvas_domain: canvasDomain,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token ?? null,
+      platform_user_id: profile.id ? String(profile.id) : null,
+      platform_email: profile.login_id ?? profile.primary_email ?? null,
+    });
 
     // Pass the connection ID so the settings page can auto-trigger sync
-    const syncParam = conn?.id ? `&sync_id=${conn.id}` : "";
+    const syncParam = connId ? `&sync_id=${connId}` : "";
     return NextResponse.redirect(new URL(`/settings?connected=canvas${syncParam}`, req.url));
   }
 
@@ -132,26 +182,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Canvas token validation failed. Check domain/token and try again." }, { status: 400 });
     }
 
-    const { data: conn, error: dbError } = await supabase.from("lms_connections").upsert(
-      {
-        user_id: user.id,
-        platform: "canvas",
-        access_token: accessToken,
-        refresh_token: null,
-        canvas_domain: domain,
-        platform_user_id: profile.id ? String(profile.id) : null,
-        platform_email: profile.login_id ?? profile.primary_email ?? null,
-        scopes: ["personal_access_token"],
-        is_active: true,
-      },
-      { onConflict: "user_id,platform" }
-    ).select("id").single();
+    const connId = await upsertCanvasConnection(supabase, user.id, {
+      canvas_domain: domain,
+      access_token: accessToken,
+      refresh_token: null,
+      platform_user_id: profile.id ? String(profile.id) : null,
+      platform_email: profile.login_id ?? profile.primary_email ?? null,
+      scopes: ["personal_access_token"],
+    });
 
-    if (dbError) {
-      return NextResponse.json({ error: `Failed to save Canvas connection: ${dbError.message}` }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, connectionId: conn?.id ?? null });
+    return NextResponse.json({ success: true, connectionId: connId });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to connect Canvas" }, { status: 500 });
   }

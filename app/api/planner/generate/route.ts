@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { generateStudyPlan } from "@/backend/ai/studyPlanner";
 import { addDays, format } from "date-fns";
 import type { Assignment } from "@/types";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 30;
 
@@ -11,6 +13,14 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    if (!tokenCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
+        { status: 402 }
+      );
+    }
 
     const body = await req.json();
     const { date, availability, availableMinutes } = body as {
@@ -44,12 +54,14 @@ export async function POST(req: Request) {
       return sum + Math.max(0, minutes);
     }, 0);
 
-    const { tasks, totalMinutes, plannerNotes } = await generateStudyPlan({
-      date,
-      assignments: (assignments as Assignment[]) ?? [],
-      availableMinutes: availableMinutes ?? (derivedMinutes || 180),
-      availability: availability ?? [],
-    });
+    const { tasks, totalMinutes, plannerNotes } = await runWithUsageContext(user.id, () =>
+      generateStudyPlan({
+        date,
+        assignments: (assignments as Assignment[]) ?? [],
+        availableMinutes: availableMinutes ?? (derivedMinutes || 180),
+        availability: availability ?? [],
+      })
+    );
 
     // Upsert study plan (replace existing for that date)
     const { data: plan, error } = await supabase

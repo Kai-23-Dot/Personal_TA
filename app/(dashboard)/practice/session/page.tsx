@@ -21,6 +21,9 @@ type QuizQuestion = {
   correct_answer: string;
   explanation: string;
   difficulty: "easy" | "medium" | "hard";
+  source_title?: string | null;
+  source_module?: string | null;
+  source_url?: string | null;
 };
 
 type PracticeSession = {
@@ -335,6 +338,25 @@ export default function PracticeSessionPage() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQ.prompt}</ReactMarkdown>
                 </div>
                 {parsedQ.code ? <CodeBlock code={parsedQ.code} /> : null}
+                {q.source_title && (
+                  <div style={{ marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--gray)", opacity: 0.75 }}>From:</span>
+                    {q.source_url ? (
+                      <a
+                        href={q.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: "0.72rem", color: "#7dd3fc", textDecoration: "none", borderBottom: "1px dotted #7dd3fc44" }}
+                      >
+                        {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: "0.72rem", color: "var(--gray)" }}>
+                        {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <FeedbackBox
                   selected={userAnswer || "(no answer)"}
                   correctAnswer={q.correct_answer}
@@ -383,6 +405,26 @@ export default function PracticeSessionPage() {
             </div>
             {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}
           </section>
+
+          {current.source_title && (
+            <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--gray)", opacity: 0.75 }}>From:</span>
+              {current.source_url ? (
+                <a
+                  href={current.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: "0.72rem", color: "#7dd3fc", textDecoration: "none", borderBottom: "1px dotted #7dd3fc44" }}
+                >
+                  {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
+                </a>
+              ) : (
+                <span style={{ fontSize: "0.72rem", color: "var(--gray)" }}>
+                  {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
+                </span>
+              )}
+            </div>
+          )}
 
           {current.options && current.options.length > 0 ? (
             <OptionsList

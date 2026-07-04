@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+/** Show an upgrade toast for a 402 LIMIT_REACHED response. Returns true if handled. */
+function handleLimitResponse(res: Response, data: { code?: string; error?: string }): boolean {
+  if (res.status !== 402 || data?.code !== "LIMIT_REACHED") return false;
+  toast.error(data?.error || "You've reached your Free plan limit.", {
+    action: { label: "Upgrade", onClick: () => (window.location.href = "/pricing") },
+  });
+  return true;
+}
 
 const difficultyOptions = [
   { value: "adaptive", label: "Adaptive" },
@@ -171,6 +181,7 @@ export default function PracticePage() {
         });
         const data = await res.json();
         if (!res.ok || data?.success === false) {
+          if (handleLimitResponse(res, data)) return;
           setError(data?.error || "Failed to generate flashcards.");
           return;
         }
@@ -191,6 +202,7 @@ export default function PracticePage() {
         });
         const data = await res.json();
         if (!res.ok || data?.success === false) {
+          if (handleLimitResponse(res, data)) return;
           setError(data?.error || "Failed to generate practice test.");
           return;
         }

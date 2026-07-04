@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("assignments")
-    .select("*, course:courses(name, color)")
+    .select("*, course:courses(id, name, color)")
     .eq("user_id", user.id)
     .or(`due_date.is.null,due_date.gte.${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()}`)
     .order("due_date", { ascending: false, nullsFirst: false });

@@ -17,20 +17,31 @@ export async function GET() {
   return NextResponse.json(data ?? []);
 }
 
+/**
+ * DELETE /api/lms/connections?id=<connectionId>
+ * Soft-deletes the connection and marks its synced courses inactive.
+ */
 export async function DELETE(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const platform = searchParams.get("platform");
-  if (!platform) return NextResponse.json({ error: "platform required" }, { status: 400 });
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  // Cascade: mark courses from this connection as inactive
+  await supabase
+    .from("courses")
+    .update({ is_active: false })
+    .eq("connection_id", id)
+    .eq("user_id", user.id);
 
   const { error } = await supabase
     .from("lms_connections")
     .update({ is_active: false })
-    .eq("user_id", user.id)
-    .eq("platform", platform);
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

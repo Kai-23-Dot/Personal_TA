@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(node -e \":*)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(npm run *)",
+      "Bash(npm audit *)",
+      "Bash(grep -iA3 \"next\")"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "regente"
+  ]
 }

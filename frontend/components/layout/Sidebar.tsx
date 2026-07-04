@@ -15,6 +15,13 @@ import {
   Layers,
   ListChecks,
   ClipboardList,
+  Brain,
+  Users,
+  RotateCcw,
+  Timer,
+  CalendarDays,
+  BarChart3,
+  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/backend/supabase/client";
 import { useRouter } from "next/navigation";
@@ -23,13 +30,19 @@ import type { Profile } from "@/types";
 import { toast } from "sonner";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/courses", label: "Courses", icon: ListChecks },
+  { href: "/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
+  { href: "/courses",     label: "Courses",     icon: ListChecks },
   { href: "/assignments", label: "Assignments", icon: ClipboardList },
-  { href: "/notes", label: "Notes", icon: BookOpen },
-  { href: "/practice", label: "Practice", icon: Dumbbell },
-  { href: "/flashcards", label: "Flashcards", icon: Layers },
-  { href: "/chat", label: "Assistant", icon: MessageSquare },
+  { href: "/study",       label: "Study",       icon: Brain },
+  { href: "/planner",     label: "Planner",     icon: CalendarDays },
+  { href: "/notes",       label: "Notes",       icon: BookOpen },
+  { href: "/practice",    label: "Practice",    icon: Dumbbell },
+  { href: "/flashcards",  label: "Flashcards",  icon: Layers },
+  { href: "/review",      label: "Review",      icon: RotateCcw },
+  { href: "/focus",       label: "Focus",       icon: Timer },
+  { href: "/grades",      label: "Grades",      icon: BarChart3 },
+  { href: "/groups",      label: "Groups",      icon: Users },
+  { href: "/chat",        label: "Assistant",   icon: MessageSquare },
 ];
 
 interface SidebarProps {
@@ -55,9 +68,7 @@ export function Sidebar({ profile }: SidebarProps) {
     <aside className="fixed left-0 top-0 z-20 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-xl md:flex">
       <div className="px-5 py-[18px] border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div
-            className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105"
-          >
+          <div className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">
             <Image
               src="/conlearn-logo.png"
               alt="Conlearn"
@@ -99,6 +110,13 @@ export function Sidebar({ profile }: SidebarProps) {
           <p className="text-sky-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
             Account
           </p>
+          <Link
+            href="/pricing"
+            className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/pricing" && "active")}
+          >
+            <Sparkles className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
+            Upgrade
+          </Link>
           <Link
             href="/settings"
             className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/settings" && "active")}

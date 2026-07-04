@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+
+# Local build outputs (Vercel builds fresh on its own servers)
+.next
+.next-build
+.next-dev
+out
+
+.git
+.vercel
+.supabase
+.DS_Store

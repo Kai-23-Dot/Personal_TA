@@ -4,6 +4,8 @@ import { retrieveRelevantContext, formatContextForPrompt } from "@/backend/utils
 import { type CoreMessage } from "ai";
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 /** Convert Vercel AI SDK UI messages (which may carry experimental_attachments)
  *  into CoreMessage[] with proper image content parts for vision models. */
@@ -39,6 +41,15 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Plan limit: block Free users who've exhausted their daily token allowance.
+    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    if (!tokenCheck.ok) {
+      return NextResponse.json(
+        { error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
+        { status: 402 }
+      );
     }
 
     const body = await req.json();
@@ -204,7 +215,11 @@ export async function POST(req: Request) {
 
     const ragContext = formatContextForPrompt(ragResults);
 
-    const result = await runTAChatAgent(user.id, messages, context, ragContext);
+    // Token usage is attributed to this user; the userId is captured when the
+    // stream is set up here, then billed when the stream finishes.
+    const result = await runWithUsageContext(user.id, () =>
+      runTAChatAgent(user.id, messages, context, ragContext)
+    );
 
     return result.toDataStreamResponse({
       getErrorMessage: (err: unknown) => {

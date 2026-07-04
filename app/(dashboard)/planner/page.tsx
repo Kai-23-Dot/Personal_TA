@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
 type Availability = {
@@ -29,9 +29,6 @@ export default function PlannerPage() {
   const [loading, setLoading] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [autoAdjusted, setAutoAdjusted] = useState<Record<string, boolean>>({});
-  const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
-  const [timerSeconds, setTimerSeconds] = useState(1500);
-  const [timerRunning, setTimerRunning] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -44,19 +41,15 @@ export default function PlannerPage() {
       const planData = planRes.ok ? await planRes.json() : { blocks: [] };
       if (mounted) {
         setAvailability(availabilityData ?? []);
-        const loadedBlocks = planData?.blocks ?? [];
-        setBlocks(loadedBlocks);
+        setBlocks(planData?.blocks ?? []);
       }
     }
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [date]);
 
   useEffect(() => {
     if (blocks.length === 0) return;
-    // Auto-mark overdue blocks and reschedule to keep plan current.
     blocks.forEach((block) => {
       if (autoAdjusted[block.id]) return;
       if (new Date(block.end_time) < new Date() && block.status === "scheduled") {
@@ -67,20 +60,6 @@ export default function PlannerPage() {
     });
   }, [blocks, autoAdjusted]);
 
-  useEffect(() => {
-    if (!timerRunning) return;
-    const id = window.setInterval(() => {
-      setTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [timerRunning]);
-
-  const formattedTimer = useMemo(() => {
-    const minutes = Math.floor(timerSeconds / 60);
-    const seconds = timerSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }, [timerSeconds]);
-
   async function handleGeneratePlan() {
     setLoading(true);
     try {
@@ -89,17 +68,12 @@ export default function PlannerPage() {
       const availableMinutes = todaysAvailability.reduce((sum, slot) => {
         const [startH, startM] = slot.start_time.split(":").map(Number);
         const [endH, endM] = slot.end_time.split(":").map(Number);
-        const minutes = (endH * 60 + endM) - (startH * 60 + startM);
-        return sum + Math.max(0, minutes);
+        return sum + Math.max(0, (endH * 60 + endM) - (startH * 60 + startM));
       }, 0);
       await fetch("/api/planner/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          availableMinutes: availableMinutes || 180,
-          availability,
-        }),
+        body: JSON.stringify({ date, availableMinutes: availableMinutes || 180, availability }),
       });
       const planRes = await fetch(`/api/planner/plan?date=${date}`);
       const planData = await planRes.json();
@@ -113,16 +87,10 @@ export default function PlannerPage() {
     await fetch("/api/study/availability", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        day_of_week: dayOfWeek,
-        start_time: "16:00",
-        end_time: "18:00",
-        preferred_block_minutes: 45,
-      }),
+      body: JSON.stringify({ day_of_week: dayOfWeek, start_time: "16:00", end_time: "18:00", preferred_block_minutes: 45 }),
     });
     const res = await fetch("/api/study/availability");
-    const data = await res.json();
-    setAvailability(data ?? []);
+    setAvailability((await res.json()) ?? []);
   }
 
   async function handleRemoveAvailability(id: string) {
@@ -137,74 +105,37 @@ export default function PlannerPage() {
       body: JSON.stringify({ id, ...updates }),
     });
     const data = await res.json();
-    if (data?.block) {
-      setBlocks((prev) => prev.map((b) => (b.id === id ? data.block : b)));
-    }
+    if (data?.block) setBlocks((prev) => prev.map((b) => (b.id === id ? data.block : b)));
   }
 
   async function rescheduleBlock(id: string) {
     const block = blocks.find((b) => b.id === id);
     if (!block) return;
-    const start = new Date(block.start_time);
-    const end = new Date(block.end_time);
-    const nextStart = new Date(start.getTime() + 86400000);
-    const nextEnd = new Date(end.getTime() + 86400000);
-
+    const nextStart = new Date(new Date(block.start_time).getTime() + 86400000);
+    const nextEnd   = new Date(new Date(block.end_time).getTime()   + 86400000);
     await fetch("/api/study/blocks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        start_time: nextStart.toISOString(),
-        end_time: nextEnd.toISOString(),
-        status: "rescheduled",
-      }),
+      body: JSON.stringify({ id, start_time: nextStart.toISOString(), end_time: nextEnd.toISOString(), status: "rescheduled" }),
     });
     setBlocks((prev) => prev.filter((b) => b.id !== id));
   }
 
-  async function startFocus(blockId: string) {
-    const res = await fetch("/api/focus", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studyBlockId: blockId }),
-    });
-    const data = await res.json();
-    setFocusSessionId(data?.session?.id ?? null);
-    setTimerSeconds(1500);
-    setTimerRunning(true);
-  }
-
-  async function stopFocus(status: "completed" | "cancelled") {
-    if (!focusSessionId) return;
-    await fetch("/api/focus", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: focusSessionId, status }),
-    });
-    setTimerRunning(false);
-    setFocusSessionId(null);
-  }
-
-  function handleDragStart(id: string) {
-    setDraggingId(id);
-  }
+  function handleDragStart(id: string) { setDraggingId(id); }
 
   function handleDrop(targetId: string) {
     if (!draggingId || draggingId === targetId) return;
     const next = [...blocks];
     const fromIndex = next.findIndex((b) => b.id === draggingId);
-    const toIndex = next.findIndex((b) => b.id === targetId);
+    const toIndex   = next.findIndex((b) => b.id === targetId);
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
     setBlocks(next);
     setDraggingId(null);
-
-    // Reassign start times in order (30-minute increments) to persist the new order
     const base = new Date(next[0].start_time);
     next.forEach((block, idx) => {
       const newStart = new Date(base.getTime() + idx * 30 * 60000);
-      const newEnd = new Date(newStart.getTime() + 30 * 60000);
+      const newEnd   = new Date(newStart.getTime() + 30 * 60000);
       updateBlock(block.id, { start_time: newStart.toISOString(), end_time: newEnd.toISOString() });
     });
   }
@@ -303,32 +234,11 @@ export default function PlannerPage() {
                     <button className="btn btn-secondary" onClick={() => rescheduleBlock(block.id)}>
                       Reschedule +1 day
                     </button>
-                    <button className="btn btn-primary" onClick={() => startFocus(block.id)}>
-                      Focus timer
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Focus session</h3>
-          <p style={{ color: "var(--light)" }}>{formattedTimer}</p>
-          <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button className="btn btn-secondary" type="button" onClick={() => setTimerRunning((v) => !v)}>
-              {timerRunning ? "Pause" : "Start"}
-            </button>
-            <button className="btn btn-primary" type="button" onClick={() => stopFocus("completed")}>
-              Complete session
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => stopFocus("cancelled")}>
-              Cancel
-            </button>
-          </div>
         </div>
       </div>
     </section>

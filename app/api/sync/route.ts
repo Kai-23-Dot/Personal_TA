@@ -198,7 +198,7 @@ async function syncConnection(
             description: gc.description ?? null,
             is_active: true,
           },
-          { onConflict: "user_id,platform,platform_id" }
+          { onConflict: "user_id,connection_id,platform_id" }
         )
         .select()
         .single();
@@ -252,6 +252,9 @@ async function syncConnection(
       return { courses: 0, assignments: 0, notes: 0, errors };
     }
 
+    // Collect active platform IDs so we can deactivate stale courses after the loop
+    const activePlatformIds = canvasCourses.map((cc) => String(cc.id));
+
     for (const cc of canvasCourses) {
       const teacher = cc.teachers?.[0];
       const { data: course, error: courseErr } = await supabase
@@ -267,7 +270,7 @@ async function syncConnection(
             teacher_email: teacher?.login_id ?? null,
             is_active: true,
           },
-          { onConflict: "user_id,platform,platform_id" }
+          { onConflict: "user_id,connection_id,platform_id" }
         )
         .select()
         .single();
@@ -686,6 +689,20 @@ async function syncConnection(
       }
     }
 
+    // Deactivate courses that were removed from Canvas since the last sync
+    if (activePlatformIds.length > 0) {
+      const { error: deactivateErr } = await supabase
+        .from("courses")
+        .update({ is_active: false })
+        .eq("user_id", user_id)
+        .eq("platform", "canvas")
+        .eq("connection_id", connection.id)
+        .not("platform_id", "in", `(${activePlatformIds.join(",")})`);
+      if (deactivateErr) {
+        errors.push(`Failed to deactivate removed Canvas courses: ${deactivateErr.message}`);
+      }
+    }
+
   // ── Infinite Campus ───────────────────────────────────────────────────────
   } else if (platform === "infinite_campus" && canvas_domain) {
     // canvas_domain column is reused to store the IC district domain
@@ -724,7 +741,7 @@ async function syncConnection(
             teacher_email: section.teacherEmail ?? null,
             is_active: true,
           },
-          { onConflict: "user_id,platform,platform_id" }
+          { onConflict: "user_id,connection_id,platform_id" }
         )
         .select()
         .single();
@@ -792,7 +809,7 @@ async function syncConnection(
             description: cls.description ?? null,
             is_active: true,
           },
-          { onConflict: "user_id,platform,platform_id" }
+          { onConflict: "user_id,connection_id,platform_id" }
         )
         .select()
         .single();

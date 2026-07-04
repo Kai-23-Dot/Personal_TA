@@ -21,7 +21,11 @@ export async function middleware(request: NextRequest) {
     "/manifest.webmanifest",
     "/icon.svg",
   ]);
-  const isPublicRoute = publicRoutes.has(pathname) || pathname.startsWith("/api/auth/");
+  const isPublicRoute =
+    publicRoutes.has(pathname) ||
+    pathname.startsWith("/api/auth/") ||
+    // Stripe posts webhooks unauthenticated; signature is verified in the route.
+    pathname === "/api/billing/webhook";
   const cookieKeys = request.cookies.getAll().map((cookie) => cookie.name);
   const hasAuthCookie = cookieKeys.some(
     (name) =>

@@ -1,0 +1,10 @@
+{
+  "simpleBrowser.focusLockIndicator.enabled": true,
+  "livePreview.serverRoot": "/",
+  "livePreview.portNumber": 3000,
+  "editor.linkedEditing": true,
+  "css.hover.documentation": true,
+  "tailwindCSS.experimental.classRegex": [
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ]
+}

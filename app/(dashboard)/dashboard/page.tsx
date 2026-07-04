@@ -20,7 +20,17 @@ type LmsConnection = {
 type Course = { id: string; name: string; color: string | null };
 type Profile = { full_name: string | null };
 type FocusSession = { duration_minutes: number | null; started_at: string };
+type PracticeActivity = { created_at: string };
 type WeakMetric = { topic: string; accuracy_pct: number };
+type Recommendation = {
+  topic: string;
+  course_name: string | null;
+  accuracy_pct: number | null;
+  priority_score: number;
+  due_date: string | null;
+  reason: string;
+  course_id: string | null;
+};
 type Notification = { id: string; title: string; body: string | null; read_at: string | null };
 type DashboardLoadState = "loading" | "ready" | "error";
 
@@ -99,7 +109,9 @@ export default function DashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>([]);
+  const [practiceActivity, setPracticeActivity] = useState<PracticeActivity[]>([]);
   const [metrics, setMetrics] = useState<WeakMetric[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notesCount, setNotesCount] = useState(0);
   const [loadState, setLoadState] = useState<DashboardLoadState>("loading");
@@ -110,33 +122,39 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoadState("loading");
     try {
-      const [aR, cR, crR, pR, fR, mR, nR, ntsR] = await Promise.all([
+      const [aR, cR, crR, pR, fR, prR, mR, nR, ntsR, recR] = await Promise.all([
         fetch("/api/assignments"),
         fetch("/api/lms/connections"),
         fetch("/api/courses"),
         fetch("/api/profile"),
         fetch("/api/focus/history"),
+        fetch("/api/practice/history"),
         fetch("/api/performance/weak"),
         fetch("/api/notifications"),
         fetch("/api/notes/list"),
+        fetch("/api/study/recommendations"),
       ]);
       if (!aR.ok || !cR.ok || !crR.ok) throw new Error("Could not load dashboard data.");
-      const [aD, cD, crD, pD, fD, mD, nD, ntsD] = await Promise.all([
+      const [aD, cD, crD, pD, fD, prD, mD, nD, ntsD, recD] = await Promise.all([
         aR.json(), cR.json(), crR.json(),
         pR.ok ? pR.json() : null,
         fR.ok ? fR.json() : [],
+        prR.ok ? prR.json() : [],
         mR.ok ? mR.json() : [],
         nR.ok ? nR.json() : [],
         ntsR.ok ? ntsR.json() : [],
+        recR.ok ? recR.json() : [],
       ]);
       setAssignments(aD ?? []);
       setConnections(cD ?? []);
       setCourses(crD ?? []);
       setProfile(pD);
       setFocusSessions(fD ?? []);
+      setPracticeActivity(prD ?? []);
       setMetrics(mD ?? []);
+      setRecommendations(Array.isArray(recD) ? recD : []);
       setNotifications(nD ?? []);
-      setNotesCount((crD ?? []).length + (aD ?? []).length);
+      setNotesCount(Array.isArray(ntsD) ? ntsD.length : 0);
       setSelectedCourseIds(new Set((crD ?? []).map((c: Course) => c.id)));
       setLoadState("ready");
     } catch (err) {
@@ -173,15 +191,19 @@ export default function DashboardPage() {
   }, [focusSessions]);
 
   const studyStreak = useMemo(() => {
-    const days = new Set(focusSessions.map((s) => format(new Date(s.started_at), "yyyy-MM-dd")));
+    // Count any day with a focus session OR a completed practice session
+    const days = new Set([
+      ...focusSessions.map((s) => format(new Date(s.started_at), "yyyy-MM-dd")),
+      ...practiceActivity.map((s) => format(new Date(s.created_at), "yyyy-MM-dd")),
+    ]);
     let streak = 0;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 60; i++) {
       const key = format(new Date(Date.now() - i * 86_400_000), "yyyy-MM-dd");
       if (!days.has(key)) break;
       streak += 1;
     }
     return streak;
-  }, [focusSessions]);
+  }, [focusSessions, practiceActivity]);
 
   const retrievalConfidence = useMemo(() => {
     if (!canvasConnection) return { label: "Unavailable", tone: "text-slate-500", pct: 0 };
@@ -494,37 +516,59 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard
-              title="Practice recommendations"
-              subtitle="Topics where you can improve most"
+              title="What to study next"
+              subtitle="Ranked by grade impact × your mastery gaps"
               action={<a href="/practice" className="btn btn-secondary">Practice →</a>}
             >
-              {metrics.length === 0 ? (
+              {recommendations.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
                   <Target className="h-8 w-8 text-slate-600" />
-                  <p className="text-sm text-slate-400">Complete a practice session to see recommendations.</p>
-                  <a href="/practice" className="btn btn-primary">Start now</a>
+                  <p className="text-sm text-slate-400">Sync Canvas to generate personalized study priorities.</p>
+                  <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
+                    {syncing ? "Syncing…" : "Sync Canvas"}
+                  </button>
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {metrics.slice(0, 5).map((m) => (
-                    <li key={m.topic} className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/3 px-3 py-3 transition-all duration-150 hover:border-white/12">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-white">{m.topic}</p>
-                        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/8">
+                  {recommendations.slice(0, 5).map((r, i) => (
+                    <li key={`${r.topic}-${i}`} className="rounded-xl border border-white/6 bg-white/3 px-3 py-3 transition-all duration-150 hover:border-white/12">
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-white">{r.topic}</p>
+                          {r.course_name && (
+                            <p className="mt-0.5 truncate text-xs text-slate-500">{r.course_name}</p>
+                          )}
+                          <p className="mt-1 text-xs text-slate-500 leading-snug">{r.reason}</p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {r.accuracy_pct !== null ? (
+                            <span className={`text-sm font-bold ${
+                              r.accuracy_pct < 50 ? "text-red-300" : r.accuracy_pct < 70 ? "text-amber-300" : "text-sky-300"
+                            }`}>
+                              {r.accuracy_pct}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-500">Not tested</span>
+                          )}
+                          <a
+                            href={`/practice${r.course_id ? `?courseId=${r.course_id}` : ""}`}
+                            className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
+                          >
+                            Practice →
+                          </a>
+                        </div>
+                      </div>
+                      {r.accuracy_pct !== null && (
+                        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/8">
                           <div
                             className="h-full rounded-full transition-all duration-700"
                             style={{
-                              width: `${m.accuracy_pct}%`,
-                              background: m.accuracy_pct < 50 ? "#fda4af" : m.accuracy_pct < 70 ? "#fcd34d" : "#7dd3fc",
+                              width: `${r.accuracy_pct}%`,
+                              background: r.accuracy_pct < 50 ? "#fda4af" : r.accuracy_pct < 70 ? "#fcd34d" : "#7dd3fc",
                             }}
                           />
                         </div>
-                      </div>
-                      <span className={`shrink-0 text-sm font-bold ${
-                        m.accuracy_pct < 50 ? "text-red-300" : m.accuracy_pct < 70 ? "text-amber-300" : "text-sky-300"
-                      }`}>
-                        {m.accuracy_pct}%
-                      </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -540,9 +584,22 @@ export default function DashboardPage() {
                 ? `${canvasConnection.canvas_domain} · last sync ${canvasConnection.last_synced_at ? format(new Date(canvasConnection.last_synced_at), "MMM d, p") : "never"}`
                 : "Not connected"}
             </span>
-            <span className={`text-xs font-medium ${retrievalConfidence.tone}`}>
-              Retrieval: {retrievalConfidence.label} · {retrievalConfidence.pct}%
-            </span>
+            {retrievalConfidence.label === "Low" && canvasConnection ? (
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="flex items-center gap-1.5 text-xs font-medium text-orange-300 hover:text-orange-200 transition-colors"
+              >
+                <span className={`h-1.5 w-1.5 rounded-full bg-orange-400 ${syncing ? "animate-pulse" : ""}`} />
+                {syncing ? "Indexing…" : "Index more course files →"}
+              </button>
+            ) : (
+              <span className={`text-xs font-medium ${retrievalConfidence.tone}`}>
+                {retrievalConfidence.label === "High"
+                  ? `${notesCount} items indexed — questions are grounded in your actual class`
+                  : `Retrieval: ${retrievalConfidence.label} · ${retrievalConfidence.pct}%`}
+              </span>
+            )}
           </div>
 
           {/* Notifications — only when present */}

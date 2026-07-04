@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpen, Search, Sparkles } from "lucide-react";
-import { Button } from "@/frontend/components/ui/button";
+import Image from "next/image";
+import { Search } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -15,6 +15,18 @@ export function Header({ title, description }: HeaderProps) {
       role="banner"
       className="sticky top-0 z-10 flex min-h-16 items-center gap-4 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-6"
     >
+      {/* Logo — visible on mobile (sidebar is hidden on mobile) */}
+      <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0 md:hidden">
+        <Image
+          src="/conlearn-logo.png"
+          alt="Conlearn"
+          width={28}
+          height={28}
+          className="object-contain"
+        />
+        <span className="text-sm font-semibold text-foreground">Conlearn</span>
+      </Link>
+
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-foreground leading-none truncate sm:text-base">{title}</p>
         {description && (
@@ -30,23 +42,6 @@ export function Header({ title, description }: HeaderProps) {
           className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
         />
       </label>
-
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <Button asChild variant="secondary" size="sm" className="hidden border border-border bg-card/70 sm:inline-flex">
-          <Link href="/notes"><BookOpen className="h-4 w-4" /> Notes</Link>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-muted-foreground hover:text-foreground relative"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-sky-400 rounded-full" />
-        </Button>
-        <span className="hidden items-center gap-1 rounded-full border border-sky-400/20 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-200 xl:inline-flex">
-          <Sparkles className="h-3 w-3" /> AI ready
-        </span>
-      </div>
     </div>
   );
 }
