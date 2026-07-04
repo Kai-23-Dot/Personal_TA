@@ -1,107 +1,17 @@
 {
   "version": 1,
   "edits": {
-    "app/chain-summit.css": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    "app/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    "frontend/hooks/usePersistentState.ts": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    "app/(dashboard)/notes/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    "app/(dashboard)/flashcards/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    "app/(dashboard)/focus/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z",
-        "tool": "claude-code"
-      }
-    ],
-    ".regente/claims.json": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    ".regente/events.jsonl": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    ".regente/recent-edits.json": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    ".regente/status.json": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    "app/(auth)/signup/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    "app/(dashboard)/chat/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    "app/api/auth/signup/route.ts": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
-    "tsconfig.tsbuildinfo": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:50:17Z"
-      }
-    ],
     "app/(dashboard)/pricing/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:55:01Z",
+        "at": "2026-07-04T23:47:00Z",
         "tool": "claude-code"
       }
     ],
-    "frontend/components/layout/Sidebar.tsx": [
+    "app/chain-summit.css": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:56:15Z",
+        "at": "2026-07-04T23:47:06Z",
         "tool": "claude-code"
       }
     ]

@@ -3713,3 +3713,9 @@ body {
 .premium-section-header {
 	margin-bottom: 2.4rem;
 }
+
+/* Pricing heading: center it (overrides the global left-aligned `.section h2`) */
+.section h2.pricing-title,
+h2.pricing-title {
+	text-align: center !important;
+}
