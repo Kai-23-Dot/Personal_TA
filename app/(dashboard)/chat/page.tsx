@@ -16,6 +16,7 @@ export default function ChatPage() {
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [inputFocused, setInputFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -268,10 +269,15 @@ export default function ChatPage() {
               gridTemplateColumns: "auto 1fr auto",
               gap: "0.6rem",
               padding: "0.7rem",
-              borderRadius: "14px",
+              borderRadius: "16px",
               background: "rgba(12, 18, 32, 0.94)",
-              border: "1px solid rgba(148, 163, 184, 0.28)",
-              boxShadow: "0 14px 42px rgba(1, 6, 19, 0.45)",
+              border: inputFocused
+                ? "1px solid rgba(125, 211, 252, 0.45)"
+                : "1px solid rgba(148, 163, 184, 0.20)",
+              boxShadow: inputFocused
+                ? "0 18px 48px rgba(1, 6, 19, 0.5), 0 0 0 4px rgba(56, 189, 248, 0.10)"
+                : "0 14px 42px rgba(1, 6, 19, 0.45)",
+              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
             }}
           >
             {/* Attach button */}
@@ -312,18 +318,23 @@ export default function ChatPage() {
               value={input}
               onChange={handleInputChange}
               onPaste={handlePaste}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
               placeholder="Message Conlearn... (paste screenshot with Ctrl+V)"
               rows={1}
               style={{
-                resize: "vertical",
+                resize: "none",
                 minHeight: "44px",
                 maxHeight: "220px",
-                padding: "0.7rem 0.85rem",
-                borderRadius: "10px",
-                border: "1px solid rgba(148, 163, 184, 0.28)",
-                background: "rgba(148, 163, 184, 0.12)",
+                padding: "0.7rem 0.35rem",
+                alignSelf: "center",
+                border: "none",
+                outline: "none",
+                background: "transparent",
                 color: "#e6edf8",
-                caretColor: "#e6edf8",
+                caretColor: "#38bdf8",
+                fontSize: "0.95rem",
+                lineHeight: 1.5,
               }}
             />
 

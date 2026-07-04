@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, ChevronDown, X } from "lucide-react";
+import { usePersistentState, clearPersistentState } from "@/frontend/hooks/usePersistentState";
 
 type SavedGuide = {
   id: string;
@@ -77,8 +78,9 @@ const INPUT_STYLE: React.CSSProperties = {
 
 export default function NotesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [courseId, setCourseId] = useState("");
-  const [studyGuideStyle, setStudyGuideStyle] = useState("bullet_points");
+  // Draft builder state — persisted so an unfinished study guide survives exit.
+  const [courseId, setCourseId] = usePersistentState("conlearn:notes:courseId", "");
+  const [studyGuideStyle, setStudyGuideStyle] = usePersistentState("conlearn:notes:style", "bullet_points");
   const [studyGuideLoading, setStudyGuideLoading] = useState(false);
   const [studyGuideSummary, setStudyGuideSummary] = useState<string | null>(null);
   const [studyGuideError, setStudyGuideError] = useState<string | null>(null);
@@ -86,10 +88,10 @@ export default function NotesPage() {
   const [savedGuides, setSavedGuides] = useState<SavedGuide[]>([]);
   const [viewingGuide, setViewingGuide] = useState<SavedGuide | null>(null);
   const [moduleItems, setModuleItems] = useState<ModuleItem[]>([]);
-  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<string, boolean>>({});
+  const [selectedModuleItems, setSelectedModuleItems] = usePersistentState<Record<string, boolean>>("conlearn:notes:selectedItems", {});
   const [lessonFilter, setLessonFilter] = useState("");
-  const [unitName, setUnitName] = useState("");
-  const [inputMode, setInputMode] = useState<"items" | "unit">("items");
+  const [unitName, setUnitName] = usePersistentState("conlearn:notes:unitName", "");
+  const [inputMode, setInputMode] = usePersistentState<"items" | "unit">("conlearn:notes:inputMode", "items");
 
   useEffect(() => {
     setSavedGuides(loadSavedGuides());
@@ -218,6 +220,11 @@ export default function NotesPage() {
       };
       persistGuide(newGuide);
       setSavedGuides(loadSavedGuides());
+      // Guide is done — clear the in-progress selection so the builder resets.
+      setSelectedModuleItems({});
+      setUnitName("");
+      clearPersistentState("conlearn:notes:selectedItems");
+      clearPersistentState("conlearn:notes:unitName");
       if (!data?.lessonContentIncluded) {
         setStudyGuideWarning(
           "Lesson slides could not be accessed. If the Google Slides link is private, publish or share it, or attach the PPTX file in Canvas."

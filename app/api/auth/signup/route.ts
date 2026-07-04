@@ -3,12 +3,16 @@ import { authUnavailableResponse, createAuthRouteClient } from "../_supabase-rou
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
+  const username = typeof body?.username === "string" ? body.username.trim() : "";
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
 
-  if (!fullName || !email || !password) {
-    return NextResponse.json({ error: "Enter your name, email, and password." }, { status: 400 });
+  if (!username || !email || !password) {
+    return NextResponse.json({ error: "Enter a username, email, and password." }, { status: 400 });
+  }
+
+  if (username.length < 3) {
+    return NextResponse.json({ error: "Username must be at least 3 characters." }, { status: 400 });
   }
 
   const authClient = createAuthRouteClient(request);
@@ -21,7 +25,9 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        // Store the username as the profile display name so it shows across the app,
+        // and keep it under `username` in metadata for clarity.
+        data: { full_name: username, username },
       },
     });
 

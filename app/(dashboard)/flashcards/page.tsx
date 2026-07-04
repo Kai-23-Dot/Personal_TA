@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Layers3 } from "lucide-react";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
+import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 
 type Course = { id: string; name: string };
 type Flashcard = {
@@ -18,11 +19,12 @@ type SavedSet = { topic: string; count: number; cards: Flashcard[] };
 
 export default function FlashcardsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [courseId, setCourseId] = useState("");
+  // Draft form state — persisted so a half-configured set survives exit.
+  const [courseId, setCourseId] = usePersistentState("conlearn:flashcards:courseId", "");
   const [noteId] = useState("");
-  const [topic, setTopic] = useState("");
-  const [count, setCount] = useState(10);
-  const [difficulty, setDifficulty] = useState<"mixed" | "easy" | "medium" | "hard">("mixed");
+  const [topic, setTopic] = usePersistentState("conlearn:flashcards:topic", "");
+  const [count, setCount] = usePersistentState("conlearn:flashcards:count", 10);
+  const [difficulty, setDifficulty] = usePersistentState<"mixed" | "easy" | "medium" | "hard">("conlearn:flashcards:difficulty", "mixed");
   const [loading, setLoading] = useState(false);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);

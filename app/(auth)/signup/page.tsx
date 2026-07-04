@@ -20,7 +20,7 @@ export default function SignupPage() {
     github: "GitHub",
   };
 
-  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,13 +43,20 @@ export default function SignupPage() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
+
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length < 3) {
+      toast.error("Username must be at least 3 characters.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({ username: trimmedUsername, email, password }),
       });
       await readAuthResponse(response);
 
@@ -116,13 +123,14 @@ export default function SignupPage() {
             ) : null}
             <form className="contact-form" onSubmit={handleSignup}>
               <div className="form-field">
-                <label htmlFor="fullName">Full name</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  id="fullName"
+                  id="username"
                   type="text"
-                  placeholder="Student name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  minLength={3}
                   required
                 />
               </div>

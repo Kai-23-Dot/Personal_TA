@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Pause, Play, RotateCcw, CheckCircle2 } from "lucide-react";
+import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 
 // ── Mode presets ─────────────────────────────────────────────────────────────
 
@@ -84,10 +85,11 @@ export default function FocusPage() {
   const [modeIdx, setModeIdx] = useState(0);
   const [seconds, setSeconds] = useState(MODES[0].seconds);
   const [running, setRunning] = useState(false);
-  const [task, setTask] = useState("");
+  // Persisted so what you're focusing on (and today's count) survives exit.
+  const [task, setTask] = usePersistentState("conlearn:focus:task", "");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
-  const [sessionCount, setSessionCount] = useState(0);
+  const [sessionCount, setSessionCount] = usePersistentState("conlearn:focus:sessionCount", 0);
 
   const mode: Mode = MODES[modeIdx];
   const totalSeconds = mode.seconds;

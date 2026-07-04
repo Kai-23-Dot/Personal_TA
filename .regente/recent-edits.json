@@ -1,45 +1,52 @@
 {
   "version": 1,
   "edits": {
-    "vercel.json": [
+    "app/(dashboard)/chat/page.tsx": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T21:41:21Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T12:49:32Z",
         "tool": "claude-code"
       }
     ],
-    "app/(dashboard)/review/page.tsx": [
+    "app/chain-summit.css": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T21:51:29Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:47:43Z",
         "tool": "claude-code"
       }
     ],
-    "app/(dashboard)/study/page.tsx": [
+    "app/page.tsx": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T21:55:10Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T12:51:54Z",
         "tool": "claude-code"
       }
     ],
-    ".vercelignore": [
+    "frontend/hooks/usePersistentState.ts": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T22:02:19Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:34:50Z",
         "tool": "claude-code"
       }
     ],
-    "backend/billing/stripe.ts": [
+    "app/(dashboard)/notes/page.tsx": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T22:06:04Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:35:28Z",
         "tool": "claude-code"
       }
     ],
-    "next.config.ts": [
+    "app/(dashboard)/flashcards/page.tsx": [
       {
-        "agent": "claude-code-6687270bf3",
-        "at": "2026-07-03T22:11:13Z",
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:35:51Z",
+        "tool": "claude-code"
+      }
+    ],
+    "app/(dashboard)/focus/page.tsx": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:36:31Z",
         "tool": "claude-code"
       }
     ]

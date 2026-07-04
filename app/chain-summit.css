@@ -3481,3 +3481,235 @@ body {
 		transition: none !important;
 	}
 }
+
+/* ══════════════════════════════════════════════════════════════
+   PRODUCT SHOWCASE — macOS window mockup for an app screenshot
+   ══════════════════════════════════════════════════════════════ */
+.showcase-section {
+	padding: clamp(2rem, 5vw, 4.5rem) 0 clamp(3rem, 6vw, 6rem);
+	perspective: 1800px;
+}
+
+.showcase-heading {
+	max-width: 640px;
+	margin: 0 auto 2.6rem;
+	text-align: center;
+}
+
+.showcase-heading h2 {
+	margin-top: 0.9rem;
+	color: #f4f7fb;
+	font-size: clamp(1.8rem, 4vw, 3.2rem);
+	line-height: 1.02;
+	letter-spacing: -0.045em;
+}
+
+.showcase-heading p {
+	margin-top: 1rem;
+	color: rgba(226, 232, 240, 0.62);
+	font-size: 1.02rem;
+	line-height: 1.6;
+}
+
+.showcase-window {
+	position: relative;
+	max-width: 1060px;
+	margin: 0 auto;
+	border-radius: 16px;
+	overflow: hidden;
+	background: rgba(10, 14, 24, 0.92);
+	border: 1px solid rgba(148, 163, 184, 0.16);
+	box-shadow:
+		0 2px 0 rgba(255, 255, 255, 0.04) inset,
+		0 40px 120px -30px rgba(2, 8, 23, 0.85),
+		0 0 0 1px rgba(56, 189, 248, 0.04),
+		0 30px 90px -40px rgba(56, 189, 248, 0.22);
+	transform: rotateX(6deg) translateY(0);
+	transform-origin: center top;
+	transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+	animation: showcaseFloat 7s ease-in-out infinite;
+}
+
+.showcase-window:hover {
+	transform: rotateX(0deg) translateY(-6px);
+	box-shadow:
+		0 2px 0 rgba(255, 255, 255, 0.05) inset,
+		0 50px 140px -30px rgba(2, 8, 23, 0.9),
+		0 0 0 1px rgba(56, 189, 248, 0.10),
+		0 40px 110px -40px rgba(56, 189, 248, 0.35);
+	animation-play-state: paused;
+}
+
+@keyframes showcaseFloat {
+	0%, 100% { transform: rotateX(6deg) translateY(0); }
+	50%      { transform: rotateX(6deg) translateY(-10px); }
+}
+
+/* Title bar with traffic lights */
+.showcase-titlebar {
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
+	height: 42px;
+	padding: 0 1rem;
+	background: linear-gradient(180deg, rgba(30, 38, 54, 0.95), rgba(18, 24, 38, 0.95));
+	border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.showcase-lights {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.showcase-dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+.showcase-dot.red    { background: #ff5f57; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.2) inset; }
+.showcase-dot.amber  { background: #febc2e; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.2) inset; }
+.showcase-dot.green  { background: #28c840; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.2) inset; }
+
+.showcase-address {
+	flex: 1;
+	max-width: 320px;
+	margin: 0 auto;
+	padding: 0.28rem 0.9rem;
+	border-radius: 999px;
+	background: rgba(2, 6, 18, 0.55);
+	border: 1px solid rgba(148, 163, 184, 0.12);
+	color: rgba(226, 232, 240, 0.5);
+	font-size: 0.78rem;
+	text-align: center;
+	letter-spacing: 0.01em;
+}
+
+/* Screenshot body */
+.showcase-body {
+	position: relative;
+	aspect-ratio: 16 / 10;
+	width: 100%;
+	background:
+		radial-gradient(120% 120% at 50% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+		linear-gradient(180deg, rgba(15, 21, 34, 0.9), rgba(8, 12, 22, 0.95));
+	overflow: hidden;
+}
+
+.showcase-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: top center;
+	display: block;
+}
+
+/* Placeholder shown until a screenshot is added */
+.showcase-placeholder {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.9rem;
+	text-align: center;
+	padding: 2rem;
+}
+
+.showcase-placeholder-frame {
+	display: grid;
+	place-items: center;
+	width: 100%;
+	height: 100%;
+	border-radius: 12px;
+	border: 1.5px dashed rgba(125, 211, 252, 0.28);
+	background: rgba(56, 189, 248, 0.03);
+}
+
+.showcase-placeholder-icon {
+	display: grid;
+	place-items: center;
+	width: 58px;
+	height: 58px;
+	border-radius: 16px;
+	background: rgba(56, 189, 248, 0.12);
+	border: 1px solid rgba(125, 211, 252, 0.25);
+	color: #7dd3fc;
+	margin-bottom: 1rem;
+}
+
+.showcase-placeholder-title {
+	color: #e2e8f0;
+	font-size: 1.02rem;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.showcase-placeholder-hint {
+	margin-top: 0.35rem;
+	color: rgba(148, 163, 184, 0.7);
+	font-size: 0.85rem;
+	line-height: 1.5;
+	max-width: 340px;
+}
+
+.showcase-placeholder-hint code {
+	color: #7dd3fc;
+	background: rgba(56, 189, 248, 0.1);
+	border-radius: 5px;
+	padding: 1px 6px;
+	font-size: 0.82em;
+}
+
+@media (max-width: 640px) {
+	.showcase-window { transform: none; animation: none; }
+	.showcase-window:hover { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.showcase-window { animation: none !important; transform: rotateX(0deg) !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BREATHING ROOM — roomier text rhythm so nothing feels cramped
+   ══════════════════════════════════════════════════════════════ */
+
+/* Give the dashboard content room to breathe on the sides + top */
+[data-dashboard-shell] .app-container {
+	padding-left: clamp(1.25rem, 3.5vw, 2.75rem) !important;
+	padding-right: clamp(1.25rem, 3.5vw, 2.75rem) !important;
+}
+
+/* More comfortable leading for body copy across the dashboard */
+[data-dashboard-shell] p,
+[data-dashboard-shell] li,
+[data-dashboard-shell] label {
+	line-height: 1.7;
+}
+
+/* Vertical spacing between stacked headings and their descriptions */
+[data-dashboard-shell] h1 + p,
+[data-dashboard-shell] h2 + p,
+[data-dashboard-shell] h3 + p {
+	margin-top: 0.5rem;
+}
+
+/* Roomier cards on marketing + dashboard surfaces */
+.premium-feature-card {
+	padding: 1.5rem !important;
+}
+
+.premium-feature-card p {
+	margin-top: 0.9rem;
+	line-height: 1.72;
+}
+
+.premium-feature-grid {
+	gap: 1.25rem;
+}
+
+/* Slightly more air between feature sections */
+.premium-section-header {
+	margin-bottom: 2.4rem;
+}

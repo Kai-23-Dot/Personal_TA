@@ -2,17 +2,73 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import {
   ArrowRight,
   BookOpenCheck,
   Brain,
   CalendarCheck2,
   FileSearch,
+  ImageIcon,
   Layers3,
   PlugZap,
   Sparkles,
 } from "lucide-react";
 import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
+
+/* ─── Product showcase (macOS window) ──────────────────────────── */
+// Drop a screenshot at /public/app-preview.png and it appears automatically.
+function AppShowcase() {
+  const [hasImage, setHasImage] = useState(true);
+
+  return (
+    <section className="showcase-section" aria-label="Product preview">
+      <div className="showcase-heading premium-rise">
+        <span className="premium-eyebrow">A look inside</span>
+        <h2>Your whole semester, in one calm view.</h2>
+        <p>Courses, assignments, and AI practice — organized the moment you connect Canvas.</p>
+      </div>
+
+      <div className="showcase-window">
+        <div className="showcase-titlebar">
+          <div className="showcase-lights">
+            <span className="showcase-dot red" />
+            <span className="showcase-dot amber" />
+            <span className="showcase-dot green" />
+          </div>
+          <div className="showcase-address">conlearn.app/dashboard</div>
+        </div>
+
+        <div className="showcase-body">
+          {hasImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/app-preview.png"
+              alt="Conlearn dashboard preview"
+              className="showcase-img"
+              onError={() => setHasImage(false)}
+            />
+          ) : (
+            <div className="showcase-placeholder">
+              <div className="showcase-placeholder-frame">
+                <div>
+                  <div className="showcase-placeholder-icon">
+                    <ImageIcon className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <p className="showcase-placeholder-title">Add your Conlearn screenshot</p>
+                  <p className="showcase-placeholder-hint">
+                    Save a screenshot of the app as <code>app-preview.png</code> in the{" "}
+                    <code>/public</code> folder and it appears here automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* ─── Data ─────────────────────────────────────────────────────── */
 
@@ -177,6 +233,9 @@ export default function HomePage() {
           BELOW-HERO — features, workflow, CTA (unchanged)
           ══════════════════════════════════════════════════════════ */}
       <div className="landing-below-hero">
+
+        {/* Product showcase — macOS window */}
+        <AppShowcase />
 
         {/* Features */}
         <section id="features" className="premium-section">

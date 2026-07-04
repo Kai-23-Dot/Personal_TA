@@ -3,7 +3,7 @@
   "workspace": {
     "name": "Personal_TA",
     "created_at": "2026-06-21T14:17:06Z",
-    "updated_at": "2026-07-04T01:04:56Z"
+    "updated_at": "2026-07-04T13:49:45Z"
   },
   "agents": {
     "claude-code-2bcd098227": {
@@ -82,19 +82,37 @@
       "agent": "claude-code-6687270bf3",
       "tool": "claude-code",
       "role": "",
-      "task": "Adapter event: heartbeat",
-      "state": "active",
+      "task": "Adapter event: stop",
+      "state": "idle",
       "pid": 17028,
       "source": "hook",
       "cwd": "/Users/kairavkaran/Documents/Personal_TA",
       "session_id": "6687270b-f391-4ea8-91ac-9c7f39251342",
-      "hook_event": "heartbeat",
+      "hook_event": "stop",
       "public_key": "",
       "public_key_id": "",
       "public_keys": [],
       "joined_at": "2026-07-03T21:40:53Z",
-      "last_heartbeat_at": "2026-07-04T01:04:56Z",
-      "updated_at": "2026-07-04T01:04:56Z"
+      "last_heartbeat_at": "2026-07-04T01:11:51Z",
+      "updated_at": "2026-07-04T01:11:51Z"
+    },
+    "claude-code-b4e8e13b9b": {
+      "agent": "claude-code-b4e8e13b9b",
+      "tool": "claude-code",
+      "role": "",
+      "task": "Adapter event: heartbeat",
+      "state": "active",
+      "pid": 43021,
+      "source": "hook",
+      "cwd": "/Users/kairavkaran/Documents/Personal_TA",
+      "session_id": "b4e8e13b-9b93-4f5d-b1bd-7a4ac3b57520",
+      "hook_event": "heartbeat",
+      "public_key": "",
+      "public_key_id": "",
+      "public_keys": [],
+      "joined_at": "2026-07-04T01:26:48Z",
+      "last_heartbeat_at": "2026-07-04T13:49:45Z",
+      "updated_at": "2026-07-04T13:49:45Z"
     }
   }
 }
