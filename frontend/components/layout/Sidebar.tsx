@@ -7,7 +7,6 @@ import { cn } from "@/backend/utils";
 import {
   LayoutDashboard,
   BookOpen,
-  MessageSquare,
   Dumbbell,
   Settings,
   GraduationCap,
@@ -42,7 +41,6 @@ const navItems = [
   { href: "/focus",       label: "Focus",       icon: Timer },
   { href: "/grades",      label: "Grades",      icon: BarChart3 },
   { href: "/groups",      label: "Groups",      icon: Users },
-  { href: "/chat",        label: "Assistant",   icon: MessageSquare },
 ];
 
 interface SidebarProps {

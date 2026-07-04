@@ -67,7 +67,7 @@ export default function PricingPage() {
   return (
     <section className="section">
       <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-        <h2 className="contact-form-title" style={{ fontSize: "1.9rem" }}>Choose your plan</h2>
+        <h2 className="contact-form-title" style={{ fontSize: "1.9rem", textAlign: "center" }}>Choose your plan</h2>
         <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
           Upgrade to Pro for unlimited practice, notes, and AI.
         </p>

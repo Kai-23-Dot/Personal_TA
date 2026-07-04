@@ -1,52 +1,107 @@
 {
   "version": 1,
   "edits": {
-    "app/(dashboard)/chat/page.tsx": [
-      {
-        "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T12:49:32Z",
-        "tool": "claude-code"
-      }
-    ],
     "app/chain-summit.css": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:47:43Z",
+        "at": "2026-07-04T13:50:17Z",
         "tool": "claude-code"
       }
     ],
     "app/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T12:51:54Z",
+        "at": "2026-07-04T13:50:17Z",
         "tool": "claude-code"
       }
     ],
     "frontend/hooks/usePersistentState.ts": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:34:50Z",
+        "at": "2026-07-04T13:50:17Z",
         "tool": "claude-code"
       }
     ],
     "app/(dashboard)/notes/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:35:28Z",
+        "at": "2026-07-04T13:50:17Z",
         "tool": "claude-code"
       }
     ],
     "app/(dashboard)/flashcards/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:35:51Z",
+        "at": "2026-07-04T13:50:17Z",
         "tool": "claude-code"
       }
     ],
     "app/(dashboard)/focus/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T13:36:31Z",
+        "at": "2026-07-04T13:50:17Z",
+        "tool": "claude-code"
+      }
+    ],
+    ".regente/claims.json": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    ".regente/events.jsonl": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    ".regente/recent-edits.json": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    ".regente/status.json": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    "app/(auth)/signup/page.tsx": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    "app/(dashboard)/chat/page.tsx": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    "app/api/auth/signup/route.ts": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    "tsconfig.tsbuildinfo": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:50:17Z"
+      }
+    ],
+    "app/(dashboard)/pricing/page.tsx": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:55:01Z",
+        "tool": "claude-code"
+      }
+    ],
+    "frontend/components/layout/Sidebar.tsx": [
+      {
+        "agent": "claude-code-b4e8e13b9b",
+        "at": "2026-07-04T13:56:15Z",
         "tool": "claude-code"
       }
     ]

@@ -1025,6 +1025,30 @@
       "fence": 2,
       "created_at": "2026-07-04T13:36:20Z",
       "updated_at": "2026-07-04T13:36:20Z"
+    },
+    {
+      "id": "claim_90c26bac7c65",
+      "agent": "claude-code-b4e8e13b9b",
+      "path": "app/(dashboard)/pricing/page.tsx",
+      "mode": "write",
+      "reason": "auto-claim on edit",
+      "status": "active",
+      "via": "auto-claim",
+      "fence": 2,
+      "created_at": "2026-07-04T13:55:01Z",
+      "updated_at": "2026-07-04T13:55:01Z"
+    },
+    {
+      "id": "claim_759ce2cffffe",
+      "agent": "claude-code-b4e8e13b9b",
+      "path": "frontend/components/layout/Sidebar.tsx",
+      "mode": "write",
+      "reason": "auto-claim on edit",
+      "status": "active",
+      "via": "auto-claim",
+      "fence": 3,
+      "created_at": "2026-07-04T13:56:02Z",
+      "updated_at": "2026-07-04T13:56:02Z"
     }
   ],
   "queue": [],
@@ -1056,7 +1080,7 @@
     "app/api/performance/readiness/route.ts": 1,
     "app/api/notes/generate-materials/route.ts": 2,
     "app/(dashboard)/study/page.tsx": 2,
-    "frontend/components/layout/Sidebar.tsx": 2,
+    "frontend/components/layout/Sidebar.tsx": 3,
     "app/(dashboard)/groups/page.tsx": 1,
     "app/(dashboard)/review/page.tsx": 2,
     "tailwind.config.ts": 1,
@@ -1084,7 +1108,7 @@
     "app/api/chat/route.ts": 1,
     "app/api/flashcards/generate/route.ts": 1,
     "app/api/planner/generate/route.ts": 1,
-    "app/(dashboard)/pricing/page.tsx": 1,
+    "app/(dashboard)/pricing/page.tsx": 2,
     "app/(dashboard)/practice/page.tsx": 1,
     ".env.vercel.example": 1,
     ".env.local": 1,
