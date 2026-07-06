@@ -1049,6 +1049,42 @@
       "fence": 3,
       "created_at": "2026-07-04T13:56:02Z",
       "updated_at": "2026-07-04T13:56:02Z"
+    },
+    {
+      "id": "claim_6a1efbcbf674",
+      "agent": "claude-code-b4e8e13b9b",
+      "path": ".env.local",
+      "mode": "write",
+      "reason": "auto-claim on edit",
+      "status": "active",
+      "via": "auto-claim",
+      "fence": 2,
+      "created_at": "2026-07-04T23:54:19Z",
+      "updated_at": "2026-07-04T23:54:19Z"
+    },
+    {
+      "id": "claim_42899fc96915",
+      "agent": "claude-code-b4e8e13b9b",
+      "path": "app/(dashboard)/layout.tsx",
+      "mode": "write",
+      "reason": "auto-claim on edit",
+      "status": "active",
+      "via": "auto-claim",
+      "fence": 1,
+      "created_at": "2026-07-05T00:25:08Z",
+      "updated_at": "2026-07-05T00:25:08Z"
+    },
+    {
+      "id": "claim_c09901b8dbb6",
+      "agent": "claude-code-b4e8e13b9b",
+      "path": "app/(auth)/login/page.tsx",
+      "mode": "write",
+      "reason": "auto-claim on edit",
+      "status": "active",
+      "via": "auto-claim",
+      "fence": 1,
+      "created_at": "2026-07-06T18:18:43Z",
+      "updated_at": "2026-07-06T18:18:43Z"
     }
   ],
   "queue": [],
@@ -1111,7 +1147,7 @@
     "app/(dashboard)/pricing/page.tsx": 2,
     "app/(dashboard)/practice/page.tsx": 1,
     ".env.vercel.example": 1,
-    ".env.local": 1,
+    ".env.local": 2,
     "vercel.json": 1,
     ".vercelignore": 1,
     "next.config.ts": 1,
@@ -1121,6 +1157,8 @@
     "app/page.tsx": 1,
     "frontend/hooks/usePersistentState.ts": 1,
     "app/(dashboard)/notes/page.tsx": 1,
-    "app/(dashboard)/flashcards/page.tsx": 1
+    "app/(dashboard)/flashcards/page.tsx": 1,
+    "app/(dashboard)/layout.tsx": 1,
+    "app/(auth)/login/page.tsx": 1
   }
 }

@@ -3719,3 +3719,12 @@ body {
 h2.pricing-title {
 	text-align: center !important;
 }
+
+/* Practice question: remove the nested grey box so the question blends
+   into its card (overrides the shared glass-panel rule) */
+.practice-question {
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+}

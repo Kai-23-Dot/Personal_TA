@@ -1,17 +1,17 @@
 {
   "version": 1,
   "edits": {
-    "app/(dashboard)/pricing/page.tsx": [
+    "app/(auth)/login/page.tsx": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T23:47:00Z",
+        "at": "2026-07-06T18:19:15Z",
         "tool": "claude-code"
       }
     ],
     "app/chain-summit.css": [
       {
         "agent": "claude-code-b4e8e13b9b",
-        "at": "2026-07-04T23:47:06Z",
+        "at": "2026-07-06T18:29:15Z",
         "tool": "claude-code"
       }
     ]

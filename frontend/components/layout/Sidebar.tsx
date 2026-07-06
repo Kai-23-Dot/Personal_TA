@@ -45,9 +45,10 @@ const navItems = [
 
 interface SidebarProps {
   profile: Profile | null;
+  plan?: "free" | "pro";
 }
 
-export function Sidebar({ profile }: SidebarProps) {
+export function Sidebar({ profile, plan = "free" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -108,13 +109,15 @@ export function Sidebar({ profile }: SidebarProps) {
           <p className="text-sky-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
             Account
           </p>
-          <Link
-            href="/pricing"
-            className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/pricing" && "active")}
-          >
-            <Sparkles className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
-            Upgrade
-          </Link>
+          {plan !== "pro" && (
+            <Link
+              href="/pricing"
+              className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/pricing" && "active")}
+            >
+              <Sparkles className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
+              Upgrade
+            </Link>
+          )}
           <Link
             href="/settings"
             className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/settings" && "active")}

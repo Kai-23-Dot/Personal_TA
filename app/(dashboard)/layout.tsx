@@ -4,6 +4,7 @@ import { createClient } from "@/backend/supabase/server";
 import { Header } from "@/frontend/components/layout/Header";
 import { Sidebar } from "@/frontend/components/layout/Sidebar";
 import { DashboardClientWrapper } from "@/frontend/components/layout/DashboardClientWrapper";
+import { getUserPlan } from "@/backend/billing/limits";
 import type { Profile } from "@/types";
 
 export default async function DashboardLayout({
@@ -28,6 +29,10 @@ export default async function DashboardLayout({
       .maybeSingle<Profile>(),
   ]);
 
+  // Effective plan (falls back to "free" if billing columns are missing) —
+  // used to hide the Upgrade tab for Pro subscribers.
+  const plan = await getUserPlan(user.id);
+
   // Suppress banner once any LMS is connected (user has already onboarded their classes)
   const showOnboardingBanner = !onboarding?.completed && !canvasConn;
 
@@ -45,7 +50,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-dashboard-shell>
-      <Sidebar profile={profile ?? null} />
+      <Sidebar profile={profile ?? null} plan={plan} />
       <div className="min-h-screen md:pl-64">
         <Header title="Conlearn" description="Your courses, notes, practice tests, and study sets — all in one place." />
         <main className="app-container pb-28 pt-16 md:pb-10">
