@@ -5,6 +5,18 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, ChevronDown, X } from "lucide-react";
 import { usePersistentState, clearPersistentState } from "@/frontend/hooks/usePersistentState";
+import { cn } from "@/backend/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
+import { Button } from "@/frontend/components/ui/button";
+import { Input } from "@/frontend/components/ui/input";
+import { Label } from "@/frontend/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/frontend/components/ui/select";
 
 type SavedGuide = {
   id: string;
@@ -64,16 +76,6 @@ type ModuleItem = {
   content_details: { "content-type"?: string; url?: string } | null;
   note_id?: string | null;
   source_file_id?: string | null;
-};
-
-const INPUT_STYLE: React.CSSProperties = {
-  padding: "0.8rem 1rem",
-  background: "rgba(255, 255, 255, 0.12)",
-  border: "1px solid rgba(255, 255, 255, 0.2)",
-  borderRadius: "10px",
-  color: "var(--light)",
-  width: "100%",
-  boxSizing: "border-box",
 };
 
 export default function NotesPage() {
@@ -255,52 +257,53 @@ export default function NotesPage() {
   const totalSelected = Object.values(selectedModuleItems).filter(Boolean).length;
 
   return (
-    <section className="section">
+    <div className="mx-auto max-w-4xl space-y-6 pb-16">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Notes</h1>
 
       {/* ── Viewing a saved guide ── */}
       {viewingGuide ? (
-        <div className="mx-auto max-w-4xl mb-8 rounded-2xl border border-white/10 bg-[rgba(9,12,26,0.78)] shadow-[0_8px_48px_rgba(0,0,0,0.35)] backdrop-blur overflow-hidden">
+        <Card variant="panel" className="overflow-hidden">
           <div className="flex items-center justify-between gap-4 border-b border-white/8 px-6 py-4">
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-0.5">Saved study guide</p>
-              <h3 className="text-base font-semibold text-white">{viewingGuide.title}</h3>
-              <p className="text-xs text-slate-500">{viewingGuide.courseName} · {new Date(viewingGuide.savedAt).toLocaleDateString()}</p>
+              <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Saved study guide</p>
+              <h3 className="text-base font-semibold text-foreground">{viewingGuide.title}</h3>
+              <p className="text-xs text-muted-foreground">{viewingGuide.courseName} · {new Date(viewingGuide.savedAt).toLocaleDateString()}</p>
             </div>
             <button
               type="button"
               onClick={() => setViewingGuide(null)}
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-white/10 hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="px-6 py-5 text-[#cbd5e1] text-sm leading-relaxed" style={{ lineHeight: 1.9 }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{viewingGuide.content}</ReactMarkdown>
+          <div className="px-6 py-5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{viewingGuide.content}</ReactMarkdown>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {/* ── My Study Guides library ── */}
       {savedGuides.length > 0 && !viewingGuide ? (
-        <div className="mx-auto max-w-4xl mb-8">
-          <div className="flex items-center gap-2 mb-3">
+        <div>
+          <div className="mb-3 flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-sky-300" />
-            <h3 className="text-sm font-semibold text-white">My Study Guides</h3>
-            <span className="text-xs text-slate-500">({savedGuides.length})</span>
+            <h3 className="text-sm font-semibold text-foreground">My Study Guides</h3>
+            <span className="text-xs text-muted-foreground">({savedGuides.length})</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {savedGuides.map((guide) => (
               <div
                 key={guide.id}
-                className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/3 px-4 py-3 transition-all hover:border-sky-400/30 hover:bg-sky-400/5 cursor-pointer"
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition-colors duration-150 hover:border-sky-400/30 hover:bg-sky-400/5"
                 onClick={() => setViewingGuide(guide)}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{guide.title}</p>
-                  <p className="text-xs text-slate-500">{guide.courseName} · {guide.style.replace("_", " ")}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{guide.title}</p>
+                  <p className="text-xs text-muted-foreground">{guide.courseName} · {guide.style.replace("_", " ")}</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-600 -rotate-90 group-hover:text-slate-400 transition-colors" />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <ChevronDown className="h-3.5 w-3.5 -rotate-90 text-muted-foreground transition-colors duration-150 group-hover:text-foreground/70" />
                   <button
                     type="button"
                     onClick={(e) => {
@@ -308,7 +311,7 @@ export default function NotesPage() {
                       deleteGuide(guide.id);
                       setSavedGuides(loadSavedGuides());
                     }}
-                    className="rounded p-0.5 text-slate-600 hover:text-red-400 transition-colors"
+                    className="rounded p-0.5 text-muted-foreground transition-colors duration-150 hover:text-rose-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -319,40 +322,41 @@ export default function NotesPage() {
         </div>
       ) : null}
 
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Build a study guide</h3>
-          <form className="contact-form" onSubmit={handleStudyGuide}>
-            <div className="form-field">
-              <label htmlFor="studyGuideCourse">Course</label>
-              <select id="studyGuideCourse" value={courseId} onChange={(e) => setCourseId(e.target.value)} style={INPUT_STYLE}>
-                <option value="">Select a course</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>{course.name}</option>
-                ))}
-              </select>
+      <Card>
+        <CardHeader>
+          <CardTitle>Build a study guide</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleStudyGuide}>
+            <div className="space-y-1.5">
+              <Label htmlFor="studyGuideCourse">Course</Label>
+              <Select value={courseId} onValueChange={setCourseId}>
+                <SelectTrigger id="studyGuideCourse">
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="form-field">
+            <div>
               {/* Mode toggle — only shown when the course has module items */}
               {moduleItems.length > 0 && (
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                <div className="mb-3 flex gap-2">
                   {(["items", "unit"] as const).map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setInputMode(mode)}
-                      style={{
-                        padding: "0.3rem 0.85rem",
-                        borderRadius: "6px",
-                        fontSize: "0.8rem",
-                        fontWeight: 500,
-                        border: "1px solid rgba(255,255,255,0.18)",
-                        cursor: "pointer",
-                        background: inputMode === mode ? "rgba(155,135,245,0.18)" : "rgba(255,255,255,0.06)",
-                        color: inputMode === mode ? "rgba(155,135,245,0.95)" : "var(--gray)",
-                        transition: "background 0.15s, color 0.15s",
-                      }}
+                      className={cn(
+                        "rounded-lg border px-3.5 py-1.5 text-xs font-medium transition-colors duration-150",
+                        inputMode === mode
+                          ? "border-sky-400/30 bg-sky-500/15 text-sky-200"
+                          : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                      )}
                     >
                       {mode === "items" ? "Select lessons" : "Type unit name"}
                     </button>
@@ -362,78 +366,48 @@ export default function NotesPage() {
 
               {/* Unit name input mode */}
               {inputMode === "unit" && (
-                <>
-                  <label>Unit name</label>
-                  <input
+                <div className="space-y-1.5">
+                  <Label htmlFor="unitName">Unit name</Label>
+                  <Input
+                    id="unitName"
                     type="text"
                     placeholder="e.g. Unit 3, Chapter 4, Quadratic Functions…"
                     value={unitName}
                     onChange={(e) => setUnitName(e.target.value)}
-                    style={{ ...INPUT_STYLE, marginTop: "0.4rem" }}
                   />
-                  <p style={{ color: "var(--gray)", fontSize: "0.82rem", marginTop: "0.5rem" }}>
+                  <p className="text-xs text-muted-foreground">
                     Conlearn searches your Canvas pages for this unit and uses vision AI to extract diagrams, formulas, and notes.
                   </p>
-                </>
+                </div>
               )}
 
               {/* Checklist mode */}
               {inputMode === "items" && (
-                <>
-                  <label>
+                <div className="space-y-1.5">
+                  <Label>
                     Lesson content to include
                     {totalSelected > 0 && (
-                      <span style={{ color: "rgba(155,135,245,0.9)", marginLeft: "0.5rem", fontWeight: 500 }}>
-                        ({totalSelected} selected)
-                      </span>
+                      <span className="ml-2 font-medium text-sky-300">({totalSelected} selected)</span>
                     )}
-                  </label>
+                  </Label>
 
                   {/* Filter — also auto-scopes the study guide to matching content */}
-                  <input
+                  <Input
                     type="text"
                     placeholder="Type a module name to scope (e.g. Module 3)…"
                     value={lessonFilter}
                     onChange={(e) => setLessonFilter(e.target.value)}
-                    style={{ ...INPUT_STYLE, marginBottom: "0.6rem", fontSize: "0.875rem", marginTop: "0.4rem" }}
                   />
 
                   {/* Grouped unit list */}
-                  <div
-                    style={{
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      padding: "0.6rem 0.8rem",
-                      maxHeight: "340px",
-                      overflowY: "auto",
-                      background: "rgba(9, 14, 24, 0.6)",
-                    }}
-                  >
+                  <div className="max-h-[340px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
                     {Object.entries(groupedByUnit).map(([groupName, items]) => {
                       const allChecked = items.every((i) => selectedModuleItems[i.itemKey]);
                       const someChecked = items.some((i) => selectedModuleItems[i.itemKey]);
                       return (
-                        <div key={groupName} style={{ marginBottom: "0.75rem" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                              padding: "0.35rem 0",
-                              borderBottom: "1px solid rgba(255,255,255,0.08)",
-                              marginBottom: "0.2rem",
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: "rgba(155,135,245,0.9)",
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                letterSpacing: "0.06em",
-                                textTransform: "uppercase",
-                                flexGrow: 1,
-                              }}
-                            >
+                        <div key={groupName} className="mb-3">
+                          <div className="mb-1 flex items-center gap-2 border-b border-white/8 py-1.5">
+                            <span className="flex-grow text-xs font-bold uppercase tracking-wider text-sky-300">
                               {groupName}
                             </span>
                             <button
@@ -455,16 +429,14 @@ export default function NotesPage() {
                                   });
                                 }
                               }}
-                              style={{
-                                fontSize: "0.68rem",
-                                color: someChecked ? "rgba(155,135,245,0.8)" : "var(--gray)",
-                                background: allChecked ? "rgba(155,135,245,0.1)" : "none",
-                                border: allChecked ? "1px solid rgba(155,135,245,0.3)" : "none",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                                padding: "0.1rem 0.4rem",
-                                flexShrink: 0,
-                              }}
+                              className={cn(
+                                "flex-shrink-0 rounded px-1.5 py-0.5 text-[11px]",
+                                allChecked
+                                  ? "border border-sky-400/30 bg-sky-500/10 text-sky-300"
+                                  : someChecked
+                                    ? "text-sky-300/80"
+                                    : "text-muted-foreground"
+                              )}
                             >
                               {allChecked ? "deselect" : "select only this"}
                             </button>
@@ -472,14 +444,7 @@ export default function NotesPage() {
                           {items.map((item) => (
                             <label
                               key={item.itemKey}
-                              style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "0.6rem",
-                                padding: "0.28rem 0 0.28rem 0.5rem",
-                                color: "var(--light)",
-                                cursor: "pointer",
-                              }}
+                              className="flex cursor-pointer items-start gap-2.5 py-1 pl-2 text-foreground"
                             >
                               <input
                                 type="checkbox"
@@ -487,27 +452,26 @@ export default function NotesPage() {
                                 onChange={(e) =>
                                   setSelectedModuleItems((prev) => ({ ...prev, [item.itemKey]: e.target.checked }))
                                 }
-                                style={{ marginTop: "2px", flexShrink: 0 }}
+                                className="mt-0.5 flex-shrink-0 rounded accent-sky-400"
                               />
-                              <span style={{ fontSize: "0.875rem", lineHeight: 1.4 }}>{item.title}</span>
+                              <span className="text-sm leading-tight">{item.title}</span>
                             </label>
                           ))}
                         </div>
                       );
                     })}
                     {filteredModuleItems.length === 0 && lessonFilter && (
-                      <p style={{ color: "var(--gray)", fontSize: "0.875rem", padding: "0.5rem 0" }}>
+                      <p className="py-2 text-sm text-muted-foreground">
                         No lessons match &quot;{lessonFilter}&quot;
                       </p>
                     )}
                   </div>
 
                   {/* Bulk actions */}
-                  <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.6rem", flexWrap: "wrap" }}>
-                    <button
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    <Button
                       type="button"
-                      className="contact-submit-btn"
-                      style={{ width: "auto", padding: "0.45rem 1.1rem", fontSize: "0.85rem" }}
+                      size="sm"
                       onClick={() => {
                         const next: Record<string, boolean> = {};
                         moduleItems.forEach((item) => { next[item.itemKey] = true; });
@@ -515,129 +479,58 @@ export default function NotesPage() {
                       }}
                     >
                       Select all
-                    </button>
-                    <button
-                      type="button"
-                      className="contact-submit-btn"
-                      style={{ width: "auto", padding: "0.45rem 1.1rem", fontSize: "0.85rem", background: "rgba(255,255,255,0.12)", color: "var(--light)" }}
-                      onClick={() => setSelectedModuleItems({})}
-                    >
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedModuleItems({})}>
                       Clear
-                    </button>
+                    </Button>
                   </div>
 
-                  <p style={{ color: "var(--gray)", marginTop: "0.5rem", fontSize: "0.82rem" }}>
+                  <p className="text-xs text-muted-foreground">
                     {totalSelected > 0
                       ? "Canvas pages with embedded images will be read using vision AI. Google Slides and PowerPoint files are extracted automatically."
                       : "Click \"select only this\" on a module to study that module exclusively."}
                   </p>
-                </>
+                </div>
               )}
             </div>
 
-            <div className="form-field">
-              <label htmlFor="studyGuideStyle">Study guide style</label>
-              <select id="studyGuideStyle" value={studyGuideStyle} onChange={(e) => setStudyGuideStyle(e.target.value)} style={INPUT_STYLE}>
-                {summaryOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <Label htmlFor="studyGuideStyle">Study guide style</Label>
+              <Select value={studyGuideStyle} onValueChange={setStudyGuideStyle}>
+                <SelectTrigger id="studyGuideStyle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {summaryOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <button type="submit" className="contact-submit-btn" disabled={studyGuideLoading}>
-              {studyGuideLoading ? "Generating..." : "Generate study guide"}
-            </button>
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={studyGuideLoading}>
+                {studyGuideLoading ? "Generating..." : "Generate study guide"}
+              </Button>
+            </div>
 
-            {studyGuideError ? (
-              <div className="form-message error" style={{ display: "block" }}>{studyGuideError}</div>
-            ) : null}
-            {studyGuideWarning ? (
-              <div className="form-message" style={{ display: "block", color: "#ffd166" }}>{studyGuideWarning}</div>
-            ) : null}
+            {studyGuideError ? <p className="text-sm text-rose-400">{studyGuideError}</p> : null}
+            {studyGuideWarning ? <p className="text-sm text-amber-400">{studyGuideWarning}</p> : null}
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {studyGuideSummary ? (
-        <div
-          className="animate-on-scroll"
-          style={{
-            maxWidth: "900px",
-            margin: "2rem auto 0",
-            borderRadius: "20px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "rgba(9,12,26,0.78)",
-            padding: "2rem 2.25rem",
-            boxShadow: "0 8px 48px rgba(0,0,0,0.35)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem", paddingBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#7dd3fc", boxShadow: "0 0 10px rgba(125,211,252,0.6)" }} />
-            <h3 style={{ margin: 0, color: "#e2e8f0", fontSize: "1.05rem", fontWeight: 600, letterSpacing: "0.01em" }}>Study Guide</h3>
+        <Card variant="panel" className="p-8">
+          <div className="mb-6 flex items-center gap-3 border-b border-white/8 pb-4">
+            <div className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
+            <h3 className="text-base font-semibold text-foreground">Study Guide</h3>
           </div>
-          <div
-            style={{
-              color: "#cbd5e1",
-              lineHeight: 1.9,
-              fontSize: "1rem",
-              fontFamily: "'Inter', system-ui, sans-serif",
-            }}
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ children }) => (
-                  <h1 style={{ color: "#f1f5f9", marginTop: "1.75rem", marginBottom: "0.65rem", fontSize: "1.4rem", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.3 }}>{children}</h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 style={{ color: "#7dd3fc", marginTop: "1.6rem", marginBottom: "0.55rem", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", opacity: 0.9 }}>{children}</h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 style={{ color: "#e2e8f0", marginTop: "1.2rem", marginBottom: "0.4rem", fontSize: "1.05rem", fontWeight: 600 }}>{children}</h3>
-                ),
-                h4: ({ children }) => (
-                  <h4 style={{ color: "#94a3b8", marginTop: "0.8rem", marginBottom: "0.3rem", fontSize: "0.9rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{children}</h4>
-                ),
-                ul: ({ children }) => (
-                  <ul style={{ paddingLeft: "1.5rem", marginBottom: "0.85rem", marginTop: "0.25rem" }}>{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol style={{ paddingLeft: "1.5rem", marginBottom: "0.85rem", marginTop: "0.25rem" }}>{children}</ol>
-                ),
-                li: ({ children }) => (
-                  <li style={{ marginBottom: "0.45rem", lineHeight: 1.75, color: "#cbd5e1" }}>{children}</li>
-                ),
-                p: ({ children }) => (
-                  <p style={{ marginBottom: "0.85rem", lineHeight: 1.9, color: "#cbd5e1" }}>{children}</p>
-                ),
-                strong: ({ children }) => (
-                  <strong style={{ color: "#f1f5f9", fontWeight: 600 }}>{children}</strong>
-                ),
-                em: ({ children }) => (
-                  <em style={{ color: "#94a3b8", fontStyle: "italic" }}>{children}</em>
-                ),
-                hr: () => (
-                  <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.1)", margin: "1.5rem 0" }} />
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote style={{ borderLeft: "3px solid #7dd3fc", paddingLeft: "1rem", margin: "1rem 0", color: "#94a3b8", fontStyle: "italic" }}>{children}</blockquote>
-                ),
-                code: ({ children }) => (
-                  <code style={{ background: "rgba(125,211,252,0.08)", border: "1px solid rgba(125,211,252,0.15)", padding: "0.15em 0.45em", borderRadius: "5px", fontSize: "0.875em", color: "#7dd3fc", fontFamily: "monospace" }}>{children}</code>
-                ),
-                input: ({ type, checked }) =>
-                  type === "checkbox" ? (
-                    <input type="checkbox" checked={checked} readOnly style={{ marginRight: "0.5em", accentColor: "#7dd3fc" }} />
-                  ) : null,
-              }}
-            >
-              {studyGuideSummary}
-            </ReactMarkdown>
-          </div>
-        </div>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">
+            {studyGuideSummary}
+          </ReactMarkdown>
+        </Card>
       ) : null}
-
-    </section>
+    </div>
   );
 }

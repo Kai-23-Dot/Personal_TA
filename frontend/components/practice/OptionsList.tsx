@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/backend/utils";
+
 type Option = {
   value: string;
   label: string;
@@ -23,9 +25,11 @@ export function OptionsList({
   onSelect,
 }: OptionsListProps) {
   return (
-    <fieldset className="options-fieldset">
-      <legend className="options-legend">Answer choices</legend>
-      <div className="options-grid">
+    <fieldset className="mt-6">
+      <legend className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        Answer choices
+      </legend>
+      <div className="grid gap-2.5">
         {options.map((opt, index) => {
           const isSelected = selected === opt.value;
           const normalizedCorrect = correctAnswer?.trim().toLowerCase();
@@ -35,9 +39,16 @@ export function OptionsList({
           return (
             <label
               key={opt.value}
-              className={`option-card${isSelected ? " option-card--selected" : ""}${
-                isCorrect ? " option-card--correct" : ""
-              }${isWrong ? " option-card--wrong" : ""}`}
+              className={cn(
+                "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors duration-150",
+                isCorrect
+                  ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                  : isWrong
+                    ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                    : isSelected
+                      ? "border-sky-400/40 bg-sky-500/10 text-sky-200"
+                      : "border-white/10 bg-white/[0.03] text-foreground hover:border-white/20 hover:bg-white/[0.05]"
+              )}
             >
               <input
                 type="radio"
@@ -45,9 +56,12 @@ export function OptionsList({
                 value={opt.value}
                 checked={isSelected}
                 onChange={() => onSelect(opt.value)}
+                className="accent-sky-400"
               />
-              <span className="option-letter">{String.fromCharCode(65 + index)}</span>
-              <span className="option-text">{opt.label}</span>
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/15 text-[11px] font-semibold text-muted-foreground">
+                {String.fromCharCode(65 + index)}
+              </span>
+              <span className="flex-1">{opt.label}</span>
             </label>
           );
         })}

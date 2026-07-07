@@ -32,7 +32,10 @@ export function CodeBlock({ code, language = "java" }: { code: string; language?
   const highlighted = useMemo(() => highlightJava(code), [code]);
 
   return (
-    <pre className="code-block" aria-label={`${language} code block`}>
+    <pre
+      className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 font-mono text-sm leading-relaxed"
+      aria-label={`${language} code block`}
+    >
       <code dangerouslySetInnerHTML={{ __html: highlighted }} />
     </pre>
   );

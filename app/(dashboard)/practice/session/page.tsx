@@ -13,6 +13,11 @@ import { OptionsList } from "@/frontend/components/practice/OptionsList";
 import { FeedbackBox } from "@/frontend/components/practice/FeedbackBox";
 import { NavigationControls } from "@/frontend/components/practice/NavigationControls";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
+import { cn } from "@/backend/utils";
+import { Card, CardContent } from "@/frontend/components/ui/card";
+import { Button } from "@/frontend/components/ui/button";
+import { Label } from "@/frontend/components/ui/label";
+import { Textarea } from "@/frontend/components/ui/textarea";
 
 type QuizQuestion = {
   question: string;
@@ -219,22 +224,26 @@ export default function PracticeSessionPage() {
   }
 
   if (loading) {
-    return <section className="section"><p style={{ color: "var(--gray)" }}>Loading practice test...</p></section>;
+    return (
+      <div className="mx-auto max-w-3xl pb-16 pt-6">
+        <p className="text-sm text-muted-foreground">Loading practice test...</p>
+      </div>
+    );
   }
 
   if (error || !session) {
     return (
-      <section className="section">
-        <p style={{ color: "var(--gray)" }}>{error ?? "Session not found"}</p>
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
-          <button className="btn btn-secondary" type="button" onClick={loadSession}>
+      <div className="mx-auto max-w-3xl space-y-3 pb-16 pt-6">
+        <p className="text-sm text-muted-foreground">{error ?? "Session not found"}</p>
+        <div className="flex gap-3">
+          <Button variant="secondary" type="button" onClick={loadSession}>
             Retry
-          </button>
-          <button className="btn btn-secondary" type="button" onClick={() => router.push("/practice")}>
+          </Button>
+          <Button variant="secondary" type="button" onClick={() => router.push("/practice")}>
             Back to practice
-          </button>
+          </Button>
         </div>
-      </section>
+      </div>
     );
   }
 
@@ -251,107 +260,67 @@ export default function PracticeSessionPage() {
   const scorePct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   if (submitted) {
-    const scoreColor =
-      scorePct >= 80 ? "#7dd3fc" : scorePct >= 60 ? "#fbbf24" : "#fda4af";
+    const scoreColorClass =
+      scorePct >= 80 ? "text-sky-300" : scorePct >= 60 ? "text-amber-300" : "text-rose-300";
 
     return (
-      <section className="section">
-        <header className="practice-header">
+      <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h2>Test Results</h2>
-            <p style={{ color: "var(--gray)" }}>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Test Results</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Topic: {session.topic} · Difficulty: {session.difficulty}
             </p>
           </div>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            onClick={() => router.push("/practice")}
-          >
+          <Button variant="secondary" type="button" onClick={() => router.push("/practice")}>
             Back to practice
-          </button>
-        </header>
-
-        <div
-          className="practice-card"
-          style={{ marginBottom: "1.5rem", textAlign: "center", padding: "2rem" }}
-        >
-          <p
-            style={{
-              fontSize: "3.5rem",
-              fontWeight: "700",
-              color: scoreColor,
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {score} / {questions.length}
-          </p>
-          <p style={{ color: "var(--gray)", marginTop: "0.6rem", fontSize: "1rem" }}>
-            {scorePct}% correct · {totalMinutes} min
-          </p>
+          </Button>
         </div>
 
-        <div style={{ display: "grid", gap: "1rem" }}>
+        <Card className="p-8 text-center">
+          <p className={cn("text-5xl font-bold tracking-tight", scoreColorClass)}>
+            {score} / {questions.length}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {scorePct}% correct · {totalMinutes} min
+          </p>
+        </Card>
+
+        <div className="grid gap-4">
           {questions.map((q, idx) => {
             const userAnswer = answers[idx] ?? "";
             const isCorrect =
               q.correct_answer.trim().toLowerCase() === userAnswer.trim().toLowerCase();
             const parsedQ = extractCodeFromQuestion(q.question);
             return (
-              <article
+              <Card
                 key={idx}
-                className="practice-card"
-                style={{
-                  borderLeft: `3px solid ${isCorrect ? "#7dd3fc" : "#fda4af"}`,
-                }}
+                className={cn("border-l-[3px] p-6", isCorrect ? "border-l-sky-400" : "border-l-rose-400")}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "1.1rem",
-                      color: isCorrect ? "#7dd3fc" : "#fda4af",
-                      fontWeight: "700",
-                    }}
-                  >
+                <div className="mb-3 flex items-center gap-2">
+                  <span className={cn("text-base font-bold", isCorrect ? "text-sky-300" : "text-rose-300")}>
                     {isCorrect ? "✓" : "✗"}
                   </span>
-                  <h4
-                    style={{
-                      margin: 0,
-                      color: "var(--light)",
-                      fontSize: "0.85rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    Question {idx + 1}
-                  </h4>
+                  <h4 className="text-sm font-semibold text-foreground">Question {idx + 1}</h4>
                 </div>
-                <div className="practice-prompt" style={{ marginBottom: "0.75rem" }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQ.prompt}</ReactMarkdown>
+                <div className="mb-3">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{parsedQ.prompt}</ReactMarkdown>
                 </div>
                 {parsedQ.code ? <CodeBlock code={parsedQ.code} /> : null}
                 {q.source_title && (
-                  <div style={{ marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                    <span style={{ fontSize: "0.72rem", color: "var(--gray)", opacity: 0.75 }}>From:</span>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground/75">From:</span>
                     {q.source_url ? (
                       <a
                         href={q.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ fontSize: "0.72rem", color: "#7dd3fc", textDecoration: "none", borderBottom: "1px dotted #7dd3fc44" }}
+                        className="text-xs text-sky-400 underline-offset-2 hover:underline"
                       >
                         {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
                       </a>
                     ) : (
-                      <span style={{ fontSize: "0.72rem", color: "var(--gray)" }}>
+                      <span className="text-xs text-muted-foreground">
                         {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
                       </span>
                     )}
@@ -362,101 +331,96 @@ export default function PracticeSessionPage() {
                   correctAnswer={q.correct_answer}
                   explanation={q.explanation}
                 />
-              </article>
+              </Card>
             );
           })}
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="section">
-      <header className="practice-header">
+    <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="animate-on-scroll">Practice Test</h2>
-          <p style={{ color: "var(--gray)" }}>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Practice Test</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Topic: {session.topic} · Difficulty: {session.difficulty}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div className="practice-progress" aria-label="Question progress">
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground" aria-label="Question progress">
             Question {index + 1} · {progressLabel}
           </div>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.9rem" }}
-            onClick={() => router.push("/practice")}
-          >
+          <Button variant="secondary" size="sm" type="button" onClick={() => router.push("/practice")}>
             Exit & resume later
-          </button>
+          </Button>
         </div>
-      </header>
+      </div>
 
       {current ? (
-        <article className="practice-card" aria-labelledby="question-title">
-          <h3 id="question-title" className="practice-question-title">
-            Question {index + 1}
-          </h3>
-          <section className="practice-question">
-            <div className="practice-prompt">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedQuestion.prompt}</ReactMarkdown>
+        <Card aria-labelledby="question-title">
+          <CardContent className="pt-6">
+            <h3 id="question-title" className="text-sm font-semibold text-foreground">
+              Question {index + 1}
+            </h3>
+            <div className="mt-3">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{parsedQuestion.prompt}</ReactMarkdown>
+              {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}
             </div>
-            {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}
-          </section>
 
-          {current.source_title && (
-            <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ fontSize: "0.72rem", color: "var(--gray)", opacity: 0.75 }}>From:</span>
-              {current.source_url ? (
-                <a
-                  href={current.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: "0.72rem", color: "#7dd3fc", textDecoration: "none", borderBottom: "1px dotted #7dd3fc44" }}
-                >
-                  {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
-                </a>
-              ) : (
-                <span style={{ fontSize: "0.72rem", color: "var(--gray)" }}>
-                  {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
-                </span>
-              )}
-            </div>
-          )}
+            {current.source_title && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground/75">From:</span>
+                {current.source_url ? (
+                  <a
+                    href={current.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-sky-400 underline-offset-2 hover:underline"
+                  >
+                    {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
+                  </span>
+                )}
+              </div>
+            )}
 
-          {current.options && current.options.length > 0 ? (
-            <OptionsList
-              name={`question-${index}`}
-              options={options}
-              selected={currentAnswer}
-              correctAnswer={current.correct_answer}
-              showFeedback={false}
-              onSelect={setAnswer}
-            />
-          ) : (
-            <div className="form-field" style={{ marginTop: "1.5rem" }}>
-              <label htmlFor="shortAnswer">Your answer</label>
-              <textarea
-                id="shortAnswer"
-                rows={4}
-                value={currentAnswer ?? ""}
-                onChange={(e) => setAnswer(e.target.value)}
+            {current.options && current.options.length > 0 ? (
+              <OptionsList
+                name={`question-${index}`}
+                options={options}
+                selected={currentAnswer}
+                correctAnswer={current.correct_answer}
+                showFeedback={false}
+                onSelect={setAnswer}
               />
-            </div>
-          )}
+            ) : (
+              <div className="mt-6 space-y-1.5">
+                <Label htmlFor="shortAnswer">Your answer</Label>
+                <Textarea
+                  id="shortAnswer"
+                  rows={4}
+                  value={currentAnswer ?? ""}
+                  onChange={(e) => setAnswer(e.target.value)}
+                />
+              </div>
+            )}
 
-          <NavigationControls
-            onPrev={() => setIndex((i) => Math.max(i - 1, 0))}
-            onNext={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}
-            onSubmit={handleSubmitTest}
-            isFirst={index === 0}
-            isLast={index === questions.length - 1}
-            submitting={submitting}
-          />
-        </article>
+            <NavigationControls
+              onPrev={() => setIndex((i) => Math.max(i - 1, 0))}
+              onNext={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}
+              onSubmit={handleSubmitTest}
+              isFirst={index === 0}
+              isLast={index === questions.length - 1}
+              submitting={submitting}
+            />
+          </CardContent>
+        </Card>
       ) : null}
-    </section>
+    </div>
   );
 }

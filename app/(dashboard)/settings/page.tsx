@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/backend/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
+import { Button } from "@/frontend/components/ui/button";
+import { Input } from "@/frontend/components/ui/input";
+import { Label } from "@/frontend/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/frontend/components/ui/select";
+import { Badge } from "@/frontend/components/ui/badge";
 
 type Profile = {
   full_name: string | null;
@@ -146,32 +159,41 @@ export default function SettingsPage() {
   const otherConnections = connections.filter((c) => c.platform !== "canvas");
 
   return (
-    <section className="section">
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Profile</h3>
-          <form className="contact-form" onSubmit={handleProfileSave}>
-            <div className="form-field">
-              <label htmlFor="fullName">Full name</label>
-              <input
+    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your profile, billing, and connected platforms.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleProfileSave}>
+            <div className="space-y-1.5">
+              <Label htmlFor="fullName">Full name</Label>
+              <Input
                 id="fullName"
                 type="text"
                 value={profile?.full_name ?? ""}
                 onChange={(e) => setProfile((prev) => ({ ...prev!, full_name: e.target.value }))}
               />
             </div>
-            <div className="form-field">
-              <label htmlFor="schoolName">School</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="schoolName">School</Label>
+              <Input
                 id="schoolName"
                 type="text"
                 value={profile?.school_name ?? ""}
                 onChange={(e) => setProfile((prev) => ({ ...prev!, school_name: e.target.value }))}
               />
             </div>
-            <div className="form-field">
-              <label htmlFor="gradeLevel">Grade level</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="gradeLevel">Grade level</Label>
+              <Input
                 id="gradeLevel"
                 type="number"
                 min={6}
@@ -185,23 +207,27 @@ export default function SettingsPage() {
                 }
               />
             </div>
-            <div className="form-field">
-              <label htmlFor="timezone">Time zone</label>
-              <select
-                id="timezone"
+            <div className="space-y-1.5">
+              <Label htmlFor="timezone">Time zone</Label>
+              <Select
                 value={profile?.timezone ?? "America/New_York"}
-                onChange={(e) => setProfile((prev) => ({ ...prev!, timezone: e.target.value }))}
+                onValueChange={(value) => setProfile((prev) => ({ ...prev!, timezone: value }))}
               >
-                {TIMEZONES.map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="timezone">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="form-field">
-              <label htmlFor="subjects">Preferred subjects (comma separated)</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="subjects">Preferred subjects (comma separated)</Label>
+              <Input
                 id="subjects"
                 type="text"
                 value={(profile?.preferred_subjects ?? []).join(", ")}
@@ -216,231 +242,179 @@ export default function SettingsPage() {
                 }
               />
             </div>
-            <div className="form-field">
-              <label htmlFor="role">Role</label>
-              <select
-                id="role"
+            <div className="space-y-1.5">
+              <Label htmlFor="role">Role</Label>
+              <Select
                 value={profile?.role ?? "student"}
-                onChange={(e) => setProfile((prev) => ({ ...prev!, role: e.target.value as "student" | "teacher" }))}
+                onValueChange={(value) =>
+                  setProfile((prev) => ({ ...prev!, role: value as "student" | "teacher" }))
+                }
               >
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-              </select>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <button type="submit" className="contact-submit-btn" disabled={savingProfile}>
-              {savingProfile ? "Saving..." : "Save profile"}
-            </button>
-            {message ? (
-              <div className={`form-message ${messageType ?? "success"}`} style={{ display: "block" }}>
-                {message}
-              </div>
-            ) : null}
+            <div className="flex items-center gap-3 pt-1">
+              <Button type="submit" disabled={savingProfile}>
+                {savingProfile ? "Saving..." : "Save profile"}
+              </Button>
+              {message ? (
+                <p className={cn("text-sm", messageType === "error" ? "text-rose-400" : "text-emerald-400")}>
+                  {message}
+                </p>
+              ) : null}
+            </div>
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Billing</h3>
-          <div className="contact-form" style={{ gap: "1rem" }}>
-            {billing ? (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                    padding: "0.75rem 0.9rem",
-                    borderRadius: "10px",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                  }}
+      <Card>
+        <CardHeader>
+          <CardTitle>Billing</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {billing ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm font-semibold text-foreground">
+                    {billing.plan === "pro" ? "Pro plan" : "Free plan"}
+                  </span>
+                  <Badge variant={billing.plan === "pro" ? "info" : "outline"}>
+                    {billing.plan === "pro" ? "Unlimited access" : "$20/mo for unlimited"}
+                  </Badge>
+                </div>
+                {billing.plan === "pro" ? (
+                  <Button variant="secondary" size="sm" disabled={billingBusy} onClick={() => handleBillingAction("portal")}>
+                    Manage subscription
+                  </Button>
+                ) : (
+                  <Button size="sm" disabled={billingBusy} onClick={() => handleBillingAction("checkout")}>
+                    Upgrade to Pro
+                  </Button>
+                )}
+              </div>
+
+              {billing.limits ? (
+                <ul className="grid gap-1.5">
+                  <li className="text-sm text-muted-foreground">
+                    Practice tests this week: {billing.usage.practiceTests} / {billing.limits.practiceTestsPerWeek}
+                  </li>
+                  <li className="text-sm text-muted-foreground">
+                    Notes this week: {billing.usage.notes} / {billing.limits.notesPerWeek}
+                  </li>
+                  <li className="text-sm text-muted-foreground">
+                    AI tokens today: {billing.usage.tokens.toLocaleString()} / {billing.limits.tokensPerDay.toLocaleString()}
+                  </li>
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  You have unlimited practice tests, notes, and AI usage.
+                </p>
+              )}
+              <Button variant="secondary" size="sm" asChild>
+                <a href="/pricing">View plans</a>
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading billing…</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Canvas accounts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {canvasConnections.length > 0 ? (
+            <ul className="grid gap-2">
+              {canvasConnections.map((conn) => (
+                <li
+                  key={conn.id}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3"
                 >
                   <div>
-                    <span style={{ color: "var(--light)", fontWeight: 600 }}>
-                      {billing.plan === "pro" ? "Pro plan" : "Free plan"}
-                    </span>
-                    <span style={{ color: "var(--gray)", fontSize: "0.8rem", marginLeft: "0.6rem" }}>
-                      {billing.plan === "pro" ? "Unlimited access" : "$20/mo for unlimited"}
-                    </span>
-                  </div>
-                  {billing.plan === "pro" ? (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: "0.85rem", padding: "0.4rem 0.9rem" }}
-                      disabled={billingBusy}
-                      onClick={() => handleBillingAction("portal")}
-                    >
-                      Manage subscription
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ fontSize: "0.85rem", padding: "0.4rem 0.9rem" }}
-                      disabled={billingBusy}
-                      onClick={() => handleBillingAction("checkout")}
-                    >
-                      Upgrade to Pro
-                    </button>
-                  )}
-                </div>
-
-                {billing.limits ? (
-                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.4rem" }}>
-                    <li style={{ color: "var(--gray)", fontSize: "0.85rem" }}>
-                      Practice tests this week: {billing.usage.practiceTests} / {billing.limits.practiceTestsPerWeek}
-                    </li>
-                    <li style={{ color: "var(--gray)", fontSize: "0.85rem" }}>
-                      Notes this week: {billing.usage.notes} / {billing.limits.notesPerWeek}
-                    </li>
-                    <li style={{ color: "var(--gray)", fontSize: "0.85rem" }}>
-                      AI tokens today: {billing.usage.tokens.toLocaleString()} / {billing.limits.tokensPerDay.toLocaleString()}
-                    </li>
-                  </ul>
-                ) : (
-                  <p style={{ color: "var(--gray)", margin: 0, fontSize: "0.85rem" }}>
-                    You have unlimited practice tests, notes, and AI usage.
-                  </p>
-                )}
-                <a className="btn btn-secondary" href="/pricing" style={{ alignSelf: "flex-start", fontSize: "0.85rem", padding: "0.4rem 0.9rem" }}>
-                  View plans
-                </a>
-              </>
-            ) : (
-              <p style={{ color: "var(--gray)", margin: 0 }}>Loading billing…</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Canvas Accounts</h3>
-          <div className="contact-form" style={{ gap: "1.25rem" }}>
-
-            {/* List existing Canvas connections */}
-            {canvasConnections.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.5rem" }}>
-                {canvasConnections.map((conn) => (
-                  <li
-                    key={conn.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      padding: "0.65rem 0.9rem",
-                      borderRadius: "10px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    <div>
-                      <span style={{ color: "var(--light)", fontWeight: 500 }}>
-                        {conn.canvas_domain ?? "Canvas"}
+                    <span className="text-sm font-medium text-foreground">{conn.canvas_domain ?? "Canvas"}</span>
+                    {conn.last_synced_at ? (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        Last sync {new Date(conn.last_synced_at).toLocaleString()}
                       </span>
-                      {conn.last_synced_at ? (
-                        <span style={{ color: "var(--gray)", fontSize: "0.78rem", marginLeft: "0.6rem" }}>
-                          Last sync {new Date(conn.last_synced_at).toLocaleString()}
-                        </span>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.8rem" }}
-                      onClick={() => handleDisconnect(conn.id)}
-                    >
-                      Disconnect
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={{ color: "var(--gray)", margin: 0 }}>No Canvas accounts connected.</p>
-            )}
+                    ) : null}
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => handleDisconnect(conn.id)}>
+                    Disconnect
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No Canvas accounts connected.</p>
+          )}
 
-            {/* Add another Canvas account */}
-            <div className="form-field" style={{ marginTop: "0.25rem" }}>
-              <label htmlFor="canvasDomain">
-                {canvasConnections.length > 0 ? "Add another Canvas account" : "Connect Canvas"}
-              </label>
-              <input
-                id="canvasDomain"
-                type="text"
-                placeholder="school.instructure.com"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-              />
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
-                <a
-                  className="btn btn-primary"
-                  href={domain.trim() ? `/api/lms/canvas?domain=${encodeURIComponent(domain.trim())}` : "#"}
-                >
+          <div className="space-y-1.5">
+            <Label htmlFor="canvasDomain">
+              {canvasConnections.length > 0 ? "Add another Canvas account" : "Connect Canvas"}
+            </Label>
+            <Input
+              id="canvasDomain"
+              type="text"
+              placeholder="school.instructure.com"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+            />
+            <div className="flex gap-3 pt-1.5">
+              <Button asChild>
+                <a href={domain.trim() ? `/api/lms/canvas?domain=${encodeURIComponent(domain.trim())}` : "#"}>
                   Connect via OAuth
                 </a>
-                <a className="btn btn-secondary" href="/settings/setup/canvas">
-                  Use access token
-                </a>
-              </div>
+              </Button>
+              <Button variant="secondary" asChild>
+                <a href="/settings/setup/canvas">Use access token</a>
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Other LMS platforms */}
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Other Connections</h3>
-          <div className="contact-form" style={{ gap: "1rem" }}>
-            {otherConnections.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.5rem" }}>
-                {otherConnections.map((conn) => (
-                  <li
-                    key={conn.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      padding: "0.65rem 0.9rem",
-                      borderRadius: "10px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    <span style={{ color: "var(--light)", fontWeight: 500 }}>
-                      {platformLabel(conn)}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.8rem" }}
-                      onClick={() => handleDisconnect(conn.id)}
-                    >
-                      Disconnect
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={{ color: "var(--gray)", margin: 0 }}>No other platforms connected.</p>
-            )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Other connections</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {otherConnections.length > 0 ? (
+            <ul className="grid gap-2">
+              {otherConnections.map((conn) => (
+                <li
+                  key={conn.id}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                >
+                  <span className="text-sm font-medium text-foreground">{platformLabel(conn)}</span>
+                  <Button variant="secondary" size="sm" onClick={() => handleDisconnect(conn.id)}>
+                    Disconnect
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No other platforms connected.</p>
+          )}
 
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-              <a className="btn btn-secondary" href="/api/lms/google">
-                Connect Google Classroom
-              </a>
-              <a className="btn btn-secondary" href="/api/lms/microsoft">
-                Connect Microsoft Teams
-              </a>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="secondary" asChild>
+              <a href="/api/lms/google">Connect Google Classroom</a>
+            </Button>
+            <Button variant="secondary" asChild>
+              <a href="/api/lms/microsoft">Connect Microsoft Teams</a>
+            </Button>
           </div>
-        </div>
-      </div>
-    </section>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

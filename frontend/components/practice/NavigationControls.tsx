@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/frontend/components/ui/button";
+
 type NavigationControlsProps = {
   onPrev: () => void;
   onNext: () => void;
@@ -18,18 +20,18 @@ export function NavigationControls({
   submitting,
 }: NavigationControlsProps) {
   return (
-    <div className="cta-buttons" style={{ justifyContent: "space-between", marginTop: "2rem" }}>
-      <button className="btn btn-secondary" type="button" onClick={onPrev} disabled={isFirst}>
+    <div className="mt-8 flex items-center justify-between">
+      <Button variant="secondary" type="button" onClick={onPrev} disabled={isFirst}>
         Previous
-      </button>
+      </Button>
       {isLast ? (
-        <button className="btn btn-primary" type="button" onClick={onSubmit} disabled={submitting}>
+        <Button type="button" onClick={onSubmit} disabled={submitting}>
           {submitting ? "Submitting..." : "Submit Test"}
-        </button>
+        </Button>
       ) : (
-        <button className="btn btn-primary" type="button" onClick={onNext}>
+        <Button type="button" onClick={onNext}>
           Next
-        </button>
+        </Button>
       )}
     </div>
   );

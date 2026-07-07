@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
+import { cn } from "@/backend/utils";
+import { Card } from "@/frontend/components/ui/card";
+import { Button } from "@/frontend/components/ui/button";
+import { Badge } from "@/frontend/components/ui/badge";
 
 type BillingStatus = {
   plan: "free" | "pro";
@@ -65,69 +70,51 @@ export default function PricingPage() {
   const isPro = billing?.plan === "pro";
 
   return (
-    <section className="section">
-      <div style={{ maxWidth: "900px", margin: "3rem auto 0", textAlign: "center" }}>
-        <h2 className="contact-form-title pricing-title" style={{ fontSize: "1.9rem" }}>Choose your plan</h2>
-        <p style={{ color: "var(--gray)", marginTop: "0.5rem" }}>
-          Upgrade to Pro for unlimited practice, notes, and AI.
-        </p>
+    <div className="mx-auto max-w-3xl pb-16 pt-12 text-center">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Choose your plan</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Upgrade to Pro for unlimited practice, notes, and AI.
+      </p>
 
-        {error ? (
-          <div className="form-message error" style={{ display: "block", margin: "1rem auto", maxWidth: "500px" }}>
-            {error}
-          </div>
-        ) : null}
+      {error ? (
+        <p className="mx-auto mt-4 max-w-md text-sm text-rose-400">{error}</p>
+      ) : null}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "2rem",
-            textAlign: "left",
-          }}
-        >
-          {/* Free */}
-          <PlanCard
-            name="Free"
-            price="$0"
-            cadence="forever"
-            features={FREE_FEATURES}
-            highlighted={!isPro}
-            action={
-              <button className="btn btn-secondary" style={{ width: "100%" }} disabled>
-                {isPro ? "Included" : "Current plan"}
-              </button>
-            }
-          />
+      <div className="mt-8 grid gap-6 text-left sm:grid-cols-2">
+        <PlanCard
+          name="Free"
+          price="$0"
+          cadence="forever"
+          features={FREE_FEATURES}
+          highlighted={!isPro}
+          action={
+            <Button variant="secondary" className="w-full" disabled>
+              {isPro ? "Included" : "Current plan"}
+            </Button>
+          }
+        />
 
-          {/* Pro */}
-          <PlanCard
-            name="Pro"
-            price="$20"
-            cadence="per month"
-            features={PRO_FEATURES}
-            highlighted={isPro}
-            action={
-              isPro ? (
-                <button className="btn btn-secondary" style={{ width: "100%" }} disabled>
-                  Current plan
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary"
-                  style={{ width: "100%" }}
-                  disabled={busy}
-                  onClick={handleUpgrade}
-                >
-                  {busy ? "Redirecting…" : "Upgrade to Pro"}
-                </button>
-              )
-            }
-          />
-        </div>
+        <PlanCard
+          name="Pro"
+          price="$20"
+          cadence="per month"
+          features={PRO_FEATURES}
+          highlighted={isPro}
+          badge="Most popular"
+          action={
+            isPro ? (
+              <Button variant="secondary" className="w-full" disabled>
+                Current plan
+              </Button>
+            ) : (
+              <Button className="w-full" disabled={busy} onClick={handleUpgrade}>
+                {busy ? "Redirecting…" : "Upgrade to Pro"}
+              </Button>
+            )
+          }
+        />
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -137,6 +124,7 @@ function PlanCard({
   cadence,
   features,
   highlighted,
+  badge,
   action,
 }: {
   name: string;
@@ -144,35 +132,34 @@ function PlanCard({
   cadence: string;
   features: string[];
   highlighted: boolean;
+  badge?: string;
   action: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        padding: "1.75rem",
-        borderRadius: "16px",
-        background: "rgba(255,255,255,0.04)",
-        border: highlighted ? "1px solid var(--primary, #7c5cff)" : "1px solid rgba(255,255,255,0.08)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-      }}
+    <Card
+      className={cn(
+        "flex flex-col gap-4 p-7",
+        highlighted && "border-sky-400/40 shadow-[0_0_0_1px_rgba(56,189,248,0.15),0_20px_60px_rgba(56,189,248,0.08)]"
+      )}
     >
       <div>
-        <h3 style={{ color: "var(--light)", margin: 0, fontSize: "1.25rem" }}>{name}</h3>
-        <div style={{ marginTop: "0.5rem" }}>
-          <span style={{ color: "var(--light)", fontSize: "2rem", fontWeight: 700 }}>{price}</span>
-          <span style={{ color: "var(--gray)", marginLeft: "0.4rem" }}>{cadence}</span>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground">{name}</h3>
+          {badge ? <Badge variant="info">{badge}</Badge> : null}
+        </div>
+        <div className="mt-1.5">
+          <span className="text-3xl font-bold text-foreground">{price}</span>
+          <span className="ml-1.5 text-sm text-muted-foreground">{cadence}</span>
         </div>
       </div>
-      <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.6rem", flex: 1 }}>
+      <ul className="grid flex-1 gap-2.5">
         {features.map((f) => (
-          <li key={f} style={{ color: "var(--gray)", fontSize: "0.9rem", display: "flex", gap: "0.5rem" }}>
-            <span style={{ color: "var(--primary, #7c5cff)" }}>✓</span> {f}
+          <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Check className="h-4 w-4 flex-shrink-0 text-sky-400" /> {f}
           </li>
         ))}
       </ul>
       {action}
-    </div>
+    </Card>
   );
 }

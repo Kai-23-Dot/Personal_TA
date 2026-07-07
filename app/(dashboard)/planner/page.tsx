@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
+import { Button } from "@/frontend/components/ui/button";
+import { Input } from "@/frontend/components/ui/input";
+import { Label } from "@/frontend/components/ui/label";
 
 type Availability = {
   id: string;
@@ -141,67 +145,73 @@ export default function PlannerPage() {
   }
 
   return (
-    <section className="section">
-      <h2 className="animate-on-scroll">Study Planner</h2>
+    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Study Planner</h1>
 
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Weekly availability</h3>
-          <div style={{ display: "grid", gap: "0.6rem" }}>
-            {weekdayLabels.map((label, index) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <strong style={{ color: "var(--light)" }}>{label}</strong>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  {availability.filter((a) => a.day_of_week === index).map((slot) => (
-                    <span key={slot.id} style={{ color: "var(--gray)" }}>
-                      {slot.start_time}–{slot.end_time}
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ marginLeft: "0.5rem" }}
-                        onClick={() => handleRemoveAvailability(slot.id)}
-                      >
-                        Remove
-                      </button>
-                    </span>
-                  ))}
-                  <button className="btn btn-secondary" type="button" onClick={() => handleAddAvailability(index)}>
-                    Add block
-                  </button>
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly availability</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          {weekdayLabels.map((label, index) => (
+            <div key={label} className="flex flex-wrap items-center justify-between gap-2">
+              <strong className="text-sm font-semibold text-foreground">{label}</strong>
+              <div className="flex flex-wrap items-center gap-2">
+                {availability.filter((a) => a.day_of_week === index).map((slot) => (
+                  <span key={slot.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {slot.start_time}–{slot.end_time}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleRemoveAvailability(slot.id)}
+                    >
+                      Remove
+                    </Button>
+                  </span>
+                ))}
+                <Button variant="secondary" size="sm" type="button" onClick={() => handleAddAvailability(index)}>
+                  Add block
+                </Button>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
-      <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "2rem auto 0" }}>
-        <div className="contact-form-column">
-          <h3 className="contact-form-title">Plan for the day</h3>
-          <div className="contact-form">
-            <div className="form-field">
-              <label htmlFor="planDate">Plan date</label>
-              <input id="planDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <button className="contact-submit-btn" type="button" onClick={handleGeneratePlan} disabled={loading}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Plan for the day</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="planDate">Plan date</Label>
+            <Input
+              id="planDate"
+              type="date"
+              className="w-fit"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" onClick={handleGeneratePlan} disabled={loading}>
               {loading ? "Generating..." : "Generate Plan"}
-            </button>
-            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
-              <a className="btn btn-secondary" href={`/api/planner/export?from=${date}T00:00:00Z&to=${date}T23:59:59Z`}>
-                Export iCal
-              </a>
-              <button className="btn btn-secondary" type="button" onClick={() => window.print()}>
-                Export PDF
-              </button>
-            </div>
+            </Button>
+            <Button variant="secondary" asChild>
+              <a href={`/api/planner/export?from=${date}T00:00:00Z&to=${date}T23:59:59Z`}>Export iCal</a>
+            </Button>
+            <Button variant="secondary" type="button" onClick={() => window.print()}>
+              Export PDF
+            </Button>
           </div>
 
           {blocks.length === 0 ? (
-            <p style={{ color: "var(--gray)", marginTop: "1rem" }}>
+            <p className="text-sm text-muted-foreground">
               No study blocks scheduled yet. Generate a plan to populate tasks.
             </p>
           ) : (
-            <div style={{ marginTop: "1rem", display: "grid", gap: "0.75rem" }}>
+            <div className="grid gap-3">
               {blocks.map((block) => (
                 <div
                   key={block.id}
@@ -209,38 +219,33 @@ export default function PlannerPage() {
                   onDragStart={() => handleDragStart(block.id)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => handleDrop(block.id)}
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: "12px",
-                    padding: "0.9rem 1rem",
-                    background: "rgba(9,14,24,0.5)",
-                  }}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 transition-colors duration-150 hover:border-white/15"
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong style={{ color: "var(--light)" }}>{block.title}</strong>
-                    <span style={{ color: "var(--gray)", fontSize: "0.9rem" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <strong className="text-sm font-semibold text-foreground">{block.title}</strong>
+                    <span className="text-xs text-muted-foreground">
                       {new Date(block.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}–{
                         new Date(block.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       }
                     </span>
                   </div>
                   {new Date(block.end_time) < new Date() && block.status !== "completed" ? (
-                    <div style={{ color: "#ff6b6b", marginTop: "0.4rem" }}>Overdue</div>
+                    <div className="mt-1.5 text-xs font-medium text-rose-400">Overdue</div>
                   ) : null}
-                  <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-                    <button className="btn btn-secondary" onClick={() => updateBlock(block.id, { status: "completed" })}>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => updateBlock(block.id, { status: "completed" })}>
                       Mark done
-                    </button>
-                    <button className="btn btn-secondary" onClick={() => rescheduleBlock(block.id)}>
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => rescheduleBlock(block.id)}>
                       Reschedule +1 day
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </section>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
