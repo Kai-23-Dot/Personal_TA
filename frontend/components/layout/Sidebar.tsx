@@ -4,44 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/backend/utils";
-import {
-  LayoutDashboard,
-  BookOpen,
-  Dumbbell,
-  Settings,
-  GraduationCap,
-  LogOut,
-  Layers,
-  ListChecks,
-  ClipboardList,
-  Brain,
-  Users,
-  RotateCcw,
-  Timer,
-  CalendarDays,
-  BarChart3,
-  Sparkles,
-} from "lucide-react";
+import { GraduationCap, LogOut, Sparkles, Settings } from "lucide-react";
 import { createClient } from "@/backend/supabase/client";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
 import type { Profile } from "@/types";
 import { toast } from "sonner";
-
-const navItems = [
-  { href: "/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
-  { href: "/courses",     label: "Courses",     icon: ListChecks },
-  { href: "/assignments", label: "Assignments", icon: ClipboardList },
-  { href: "/study",       label: "Study",       icon: Brain },
-  { href: "/planner",     label: "Planner",     icon: CalendarDays },
-  { href: "/notes",       label: "Notes",       icon: BookOpen },
-  { href: "/practice",    label: "Practice",    icon: Dumbbell },
-  { href: "/flashcards",  label: "Flashcards",  icon: Layers },
-  { href: "/review",      label: "Review",      icon: RotateCcw },
-  { href: "/focus",       label: "Focus",       icon: Timer },
-  { href: "/grades",      label: "Grades",      icon: BarChart3 },
-  { href: "/groups",      label: "Groups",      icon: Users },
-];
+import { workspaceNavItems as navItems } from "@/frontend/lib/nav-items";
 
 interface SidebarProps {
   profile: Profile | null;

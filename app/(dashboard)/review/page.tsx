@@ -201,38 +201,48 @@ export default function ReviewPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [weakRes, trendRes, coursesRes, examsRes, cardsRes] = await Promise.all([
-      fetch("/api/performance/weak"),
-      fetch("/api/performance/trends"),
-      fetch("/api/courses"),
-      fetch("/api/assignments"),
-      fetch("/api/flashcards/list?dueOnly=true"),
-    ]);
-    const weakData    = weakRes.ok    ? await weakRes.json()    : [];
-    const trendData   = trendRes.ok   ? await trendRes.json()   : [];
-    const coursesData = coursesRes.ok ? await coursesRes.json() : [];
-    const examsData   = examsRes.ok   ? await examsRes.json()   : [];
-    const cardsData   = cardsRes.ok   ? await cardsRes.json()   : [];
+    let exams: UpcomingExam[] = [];
+    try {
+      const [weakRes, trendRes, coursesRes, examsRes, cardsRes] = await Promise.all([
+        fetch("/api/performance/weak"),
+        fetch("/api/performance/trends"),
+        fetch("/api/courses"),
+        fetch("/api/assignments"),
+        fetch("/api/flashcards/list?dueOnly=true"),
+      ]);
+      const weakData    = weakRes.ok    ? await weakRes.json()    : [];
+      const trendData   = trendRes.ok   ? await trendRes.json()   : [];
+      const coursesData = coursesRes.ok ? await coursesRes.json() : [];
+      const examsData   = examsRes.ok   ? await examsRes.json()   : [];
+      const cardsData   = cardsRes.ok   ? await cardsRes.json()   : [];
 
-    setWeakTopics(weakData ?? []);
-    setTrends(trendData ?? []);
-    setCourses(coursesData ?? []);
-    const exams = (examsData ?? []).filter((a: UpcomingExam) =>
-      ["exam", "test", "quiz"].includes(a.assignment_type)
-    );
-    setUpcomingExams(exams);
-    setDueCards(cardsData ?? []);
-    if (!courseId && (coursesData?.length ?? 0) > 0) {
-      setCourseId(coursesData[0].id);
+      setWeakTopics(weakData ?? []);
+      setTrends(trendData ?? []);
+      setCourses(coursesData ?? []);
+      exams = (examsData ?? []).filter((a: UpcomingExam) =>
+        ["exam", "test", "quiz"].includes(a.assignment_type)
+      );
+      setUpcomingExams(exams);
+      setDueCards(cardsData ?? []);
+      if (!courseId && (coursesData?.length ?? 0) > 0) {
+        setCourseId(coursesData[0].id);
+      }
+    } catch {
+      // Leave lists empty and fall through to the empty state instead of hanging on the skeleton.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
 
     // Fetch readiness for each upcoming exam (first 3)
     exams.slice(0, 3).forEach(async (exam: UpcomingExam) => {
-      const r = await fetch(`/api/performance/readiness?assignmentId=${exam.id}`);
-      if (r.ok) {
-        const data = await r.json() as ReadinessResult;
-        setReadiness((prev) => ({ ...prev, [exam.id]: data }));
+      try {
+        const r = await fetch(`/api/performance/readiness?assignmentId=${exam.id}`);
+        if (r.ok) {
+          const data = await r.json() as ReadinessResult;
+          setReadiness((prev) => ({ ...prev, [exam.id]: data }));
+        }
+      } catch {
+        // Non-critical secondary fetch — ignore failures.
       }
     });
   }, []);

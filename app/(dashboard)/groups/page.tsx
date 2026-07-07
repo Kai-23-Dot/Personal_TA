@@ -46,10 +46,15 @@ export default function GroupsPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/groups");
-    const data = res.ok ? await res.json() : {};
-    setGroups(data.groups ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/groups");
+      const data = res.ok ? await res.json() : {};
+      setGroups(data.groups ?? []);
+    } catch {
+      // Leave groups empty and fall through to the empty state instead of hanging on the skeleton.
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);

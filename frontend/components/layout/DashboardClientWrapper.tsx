@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { PageContextProvider } from "@/frontend/contexts/page-context";
 import { GlobalAssistant } from "./GlobalAssistant";
+import { AnimatedPage } from "./AnimatedPage";
 
 const AUTOSYNC_KEY = "conlearn_autosync_ts";
 const AUTOSYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -43,7 +44,7 @@ export function DashboardClientWrapper({ children }: { children: ReactNode }) {
 
   return (
     <PageContextProvider>
-      {children}
+      <AnimatedPage>{children}</AnimatedPage>
       <GlobalAssistant />
     </PageContextProvider>
   );

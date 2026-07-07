@@ -34,6 +34,10 @@ export async function GET() {
     return { ...a, course_name: c?.name ?? undefined, course_color: c?.color ?? null };
   });
 
-  const prioritized = await prioritizeAssignments(assignments);
-  return NextResponse.json(prioritized);
+  try {
+    const prioritized = await prioritizeAssignments(assignments);
+    return NextResponse.json(prioritized);
+  } catch {
+    return NextResponse.json([]);
+  }
 }

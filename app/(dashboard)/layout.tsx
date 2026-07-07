@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/backend/supabase/server";
 import { Header } from "@/frontend/components/layout/Header";
 import { Sidebar } from "@/frontend/components/layout/Sidebar";
+import { MobileNav } from "@/frontend/components/layout/MobileNav";
 import { DashboardClientWrapper } from "@/frontend/components/layout/DashboardClientWrapper";
 import { getUserPlan } from "@/backend/billing/limits";
 import type { Profile } from "@/types";
@@ -36,18 +36,6 @@ export default async function DashboardLayout({
   // Suppress banner once any LMS is connected (user has already onboarded their classes)
   const showOnboardingBanner = !onboarding?.completed && !canvasConn;
 
-  const dashboardLinks = [
-    { label: "Dashboard", href: "/dashboard", mobileLabel: "Home" },
-    { label: "Assignments", href: "/assignments", mobileLabel: "Assignments" },
-    { label: "Practice", href: "/practice", mobileLabel: "Practice" },
-    { label: "Notes", href: "/notes", mobileLabel: "Notes" },
-    { label: "Flashcards", href: "/flashcards", mobileLabel: "Flashcards" },
-    { label: "Review", href: "/review", mobileLabel: "Review" },
-    { label: "Focus", href: "/focus", mobileLabel: "Focus" },
-    { label: "Chat", href: "/chat", mobileLabel: "Chat" },
-    { label: "Settings", href: "/settings", mobileLabel: "Settings" },
-  ];
-
   return (
     <div className="min-h-screen bg-background text-foreground" data-dashboard-shell>
       <Sidebar profile={profile ?? null} plan={plan} />
@@ -72,13 +60,7 @@ export default async function DashboardLayout({
         </DashboardClientWrapper>
         </main>
       </div>
-      <div role="navigation" aria-label="Mobile navigation" className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-1 rounded-2xl border border-white/10 bg-[#0b1110]/95 p-2 shadow-2xl backdrop-blur md:hidden">
-        {dashboardLinks.slice(0, 5).map((link) => (
-          <Link key={link.href} href={link.href} className="rounded-xl px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition hover:bg-white/5 hover:text-foreground">
-            {link.mobileLabel}
-          </Link>
-        ))}
-      </div>
+      <MobileNav plan={plan} />
     </div>
   );
 }

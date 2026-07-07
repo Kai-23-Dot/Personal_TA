@@ -118,19 +118,25 @@ export default function StudyPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/study/priorities").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
-      fetch("/api/study/schedule").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
-      fetch("/api/study/heatmap").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
-      fetch("/api/study/grade-impact").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
-    ]).then(([pri, sch, heat, grade]) => {
-      setPriorities(pri.items ?? []);
-      setSchedule(sch.schedule ?? []);
-      setHeatmap(heat.cells ?? []);
-      setGradeItems(grade.items ?? []);
-      setDangerZones(grade.dangerZones ?? []);
-      setLoading(false);
-    });
+    (async () => {
+      try {
+        const [pri, sch, heat, grade] = await Promise.all([
+          fetch("/api/study/priorities").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
+          fetch("/api/study/schedule").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
+          fetch("/api/study/heatmap").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
+          fetch("/api/study/grade-impact").then((r) => (r.ok ? r.json() : {}) as Promise<any>),
+        ]);
+        setPriorities(pri.items ?? []);
+        setSchedule(sch.schedule ?? []);
+        setHeatmap(heat.cells ?? []);
+        setGradeItems(grade.items ?? []);
+        setDangerZones(grade.dangerZones ?? []);
+      } catch {
+        // Leave lists empty and fall through to the empty state instead of hanging on the skeleton.
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   // Group schedule by day
