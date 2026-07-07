@@ -7,6 +7,7 @@ import {
   AlertCircle, BookOpen, CheckCircle2, Clock3, Flame,
   GraduationCap, Link2, RefreshCw, Sparkles, Target, Zap,
 } from "lucide-react";
+import { StatTile } from "@/frontend/components/ui/stat-tile";
 
 type CourseRef = { id: string; name: string; color: string | null } | null;
 type AssignmentRow = {
@@ -33,33 +34,6 @@ type Recommendation = {
 };
 type Notification = { id: string; title: string; body: string | null; read_at: string | null };
 type DashboardLoadState = "loading" | "ready" | "error";
-
-// ── Stat card ──
-function StatCard({ icon, label, value, unit, tone, sub }: {
-  icon: React.ReactNode; label: string; value: number;
-  unit?: string; tone: "sky" | "orange" | "violet" | "emerald"; sub?: string;
-}) {
-  const t = {
-    sky:     { ring: "border-sky-400/20",     bg: "bg-sky-400/8",     icon: "text-sky-300" },
-    orange:  { ring: "border-orange-400/20",  bg: "bg-orange-500/8",  icon: "text-orange-300" },
-    violet:  { ring: "border-violet-400/20",  bg: "bg-violet-500/8",  icon: "text-violet-300" },
-    emerald: { ring: "border-emerald-400/20", bg: "bg-emerald-500/8", icon: "text-emerald-300" },
-  }[tone];
-
-  return (
-    <div className={`group rounded-2xl border ${t.ring} ${t.bg} p-5 backdrop-blur transition-all duration-200 hover:scale-[1.025] hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]`}>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-        <span className={`${t.icon} opacity-70 transition-opacity duration-200 group-hover:opacity-100`}>{icon}</span>
-      </div>
-      <p className="text-3xl font-bold tracking-tight text-white">
-        {value}
-        {unit && <span className="ml-1.5 text-base font-normal text-slate-400">{unit}</span>}
-      </p>
-      {sub && <p className="mt-1.5 text-xs text-slate-500">{sub}</p>}
-    </div>
-  );
-}
 
 // ── Section card ──
 function SectionCard({ title, subtitle, action, children, className = "" }: {
@@ -91,7 +65,7 @@ function QuickAction({ href, icon, label, desc }: { href: string; icon: React.Re
       href={href}
       className="group flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3.5 transition-all duration-200 hover:border-white/15 hover:bg-white/6 hover:scale-[1.015] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] active:scale-[0.99]"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white/8">
         {icon}
       </div>
       <div className="min-w-0 flex-1">
@@ -237,7 +211,7 @@ export default function DashboardPage() {
   const urgentCount = upcomingAssignments.filter((a) => a.due.getTime() - Date.now() < 48 * 3_600_000).length;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 pb-20 pt-6">
+    <div className="mx-auto max-w-[1400px] space-y-6 px-4 pb-20 pt-6">
 
       {/* ── Hero ── */}
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(9,12,26,0.84)] px-7 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.3)] backdrop-blur">
@@ -287,15 +261,15 @@ export default function DashboardPage() {
 
       {/* ── Loading ── */}
       {loadState === "loading" && (
-        <div className="space-y-5" role="status" aria-label="Loading dashboard">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-6" role="status" aria-label="Loading dashboard">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[...Array(4)].map((_, i) => <SkeletonBlock key={i} className="h-[100px]" />)}
           </div>
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-3">
             <SkeletonBlock className="h-72 lg:col-span-2" />
             <SkeletonBlock className="h-72" />
           </div>
-          <div className="grid gap-5 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2">
             <SkeletonBlock className="h-56" />
             <SkeletonBlock className="h-56" />
           </div>
@@ -317,15 +291,20 @@ export default function DashboardPage() {
       {loadState === "ready" && (
         <>
           {/* Stat cards */}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              className="animate-fade-in"
+              style={{ animationDelay: "0ms", animationFillMode: "backwards" }}
               icon={<Clock3 className="h-5 w-5" />}
               label="Due this week"
               value={upcomingAssignments.length}
               tone={urgentCount > 0 ? "orange" : "sky"}
               sub={urgentCount > 0 ? `${urgentCount} due within 48h` : "No urgent deadlines"}
+              gradientBar
             />
-            <StatCard
+            <StatTile
+              className="animate-fade-in"
+              style={{ animationDelay: "60ms", animationFillMode: "backwards" }}
               icon={<Flame className="h-5 w-5" />}
               label="Study streak"
               value={studyStreak}
@@ -333,7 +312,9 @@ export default function DashboardPage() {
               tone="violet"
               sub={studyStreak > 0 ? "Keep the momentum" : "Start a session today"}
             />
-            <StatCard
+            <StatTile
+              className="animate-fade-in"
+              style={{ animationDelay: "120ms", animationFillMode: "backwards" }}
               icon={<BookOpen className="h-5 w-5" />}
               label="Focus hours"
               value={hoursThisWeek}
@@ -341,7 +322,9 @@ export default function DashboardPage() {
               tone="sky"
               sub="Logged this week"
             />
-            <StatCard
+            <StatTile
+              className="animate-fade-in"
+              style={{ animationDelay: "180ms", animationFillMode: "backwards" }}
               icon={<GraduationCap className="h-5 w-5" />}
               label="Content indexed"
               value={notesCount}
@@ -375,7 +358,7 @@ export default function DashboardPage() {
           )}
 
           {/* Due this week + Quick actions */}
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-3">
             <SectionCard
               title="Due this week"
               subtitle={`${upcomingAssignments.length} assignment${upcomingAssignments.length !== 1 ? "s" : ""} coming up`}
@@ -401,9 +384,10 @@ export default function DashboardPage() {
                             : "border-white/8 bg-white/3 hover:border-white/14 hover:bg-white/5"
                         }`}
                       >
-                        <div className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-center ${urgent ? "bg-orange-500/20 text-orange-300" : "bg-white/8 text-slate-300"}`}>
-                          <span className="text-[9px] font-bold uppercase leading-none tracking-wider">{format(a.due, "MMM")}</span>
-                          <span className="text-base font-bold leading-snug">{format(a.due, "d")}</span>
+                        <div className={`flex shrink-0 items-center rounded-full border-l-[3px] py-1.5 pl-2.5 pr-3 text-xs font-semibold ${
+                          urgent ? "border-l-orange-400 bg-orange-500/15 text-orange-200" : "border-l-sky-400 bg-sky-500/12 text-sky-200"
+                        }`}>
+                          {format(a.due, "MMM d")}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-white">{a.title}</p>
@@ -452,7 +436,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Courses + Recommendations */}
-          <div className="grid gap-5 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2">
             <SectionCard
               title="My courses"
               subtitle="Filter dashboard by course"
@@ -531,8 +515,11 @@ export default function DashboardPage() {
               ) : (
                 <ul className="space-y-2">
                   {recommendations.slice(0, 5).map((r, i) => (
-                    <li key={`${r.topic}-${i}`} className="rounded-xl border border-white/6 bg-white/3 px-3 py-3 transition-all duration-150 hover:border-white/12">
+                    <li key={`${r.topic}-${i}`} className="rounded-xl border border-white/6 bg-white/3 px-3 py-3 transition-colors duration-150 hover:border-sky-400/20 hover:bg-sky-500/[0.06]">
                       <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-sky-500/15 text-[11px] font-semibold text-sky-300">
+                          {i + 1}
+                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-white">{r.topic}</p>
                           {r.course_name && (

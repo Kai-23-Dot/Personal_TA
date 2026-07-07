@@ -33,7 +33,7 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
     : profile?.email?.[0]?.toUpperCase() ?? "U";
 
   return (
-    <aside className="fixed left-0 top-0 z-20 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-xl md:flex">
+    <aside className="fixed left-0 top-0 z-20 hidden h-screen w-60 flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-xl md:flex">
       <div className="px-5 py-[18px] border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">

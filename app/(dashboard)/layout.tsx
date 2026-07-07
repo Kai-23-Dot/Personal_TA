@@ -39,7 +39,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-background text-foreground" data-dashboard-shell>
       <Sidebar profile={profile ?? null} plan={plan} />
-      <div className="min-h-screen md:pl-64">
+      <div className="min-h-screen md:pl-60">
         <Header title="Conlearn" description="Your courses, notes, practice tests, and study sets — all in one place." />
         <main className="app-container pb-28 pt-16 md:pb-10">
         <DashboardClientWrapper>

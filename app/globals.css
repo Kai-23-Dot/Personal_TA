@@ -39,6 +39,19 @@
     --sidebar-accent-foreground: 222 24% 90%;
     --sidebar-border: 224 18% 15%;
     --sidebar-ring: 217 92% 76%;
+
+    /* Semantic surface layers — page / card / elevated-hover. Reuses the same
+       hues as --background/--card/--secondary so nothing visually changes;
+       exists so components can opt into a named elevation scale. */
+    --surface-0: 225 35% 4%;
+    --surface-1: 224 28% 8%;
+    --surface-2: 224 24% 11%;
+
+    /* Semantic status colors — single source of truth for success/warning/
+       danger instead of hardcoding Tailwind color names per component. */
+    --success: 158 64% 52%;
+    --warning: 43 96% 56%;
+    --danger: 351 95% 71%;
   }
 
   .dark {
@@ -69,6 +82,56 @@
     --sidebar-accent-foreground: 222 24% 90%;
     --sidebar-border: 224 18% 15%;
     --sidebar-ring: 217 92% 76%;
+    --surface-0: 225 35% 4%;
+    --surface-1: 224 28% 8%;
+    --surface-2: 224 24% 11%;
+    --success: 158 64% 52%;
+    --warning: 43 96% 56%;
+    --danger: 351 95% 71%;
+  }
+
+  /* Light-mode groundwork — not yet surfaced via a UI toggle (the app defaults
+     to dark via next-themes' defaultTheme="dark"), but every token has a real
+     value here so a future toggle can flip `.light` on without redesign work. */
+  .light {
+    --background: 220 25% 98%;
+    --foreground: 224 30% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 30% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 30% 11%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 95%;
+    --secondary-foreground: 224 25% 20%;
+    --muted: 220 20% 95%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 199 89% 94%;
+    --accent-foreground: 199 89% 30%;
+    --destructive: 0 57% 41%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 199 89% 48%;
+    --chart-1: 199 89% 48%;
+    --chart-2: 184 60% 38%;
+    --chart-3: 30 85% 45%;
+    --chart-4: 265 45% 52%;
+    --chart-5: 340 55% 48%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 25% 20%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 199 89% 94%;
+    --sidebar-accent-foreground: 199 89% 30%;
+    --sidebar-border: 220 15% 90%;
+    --sidebar-ring: 199 89% 48%;
+    --surface-0: 220 25% 98%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 220 20% 95%;
+    --success: 161 69% 37%;
+    --warning: 35 78% 41%;
+    --danger: 0 57% 41%;
   }
 }
 

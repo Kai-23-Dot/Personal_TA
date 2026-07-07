@@ -43,7 +43,9 @@ export function StatTile({
   tone = "sky",
   sub,
   animate: animateValue = true,
+  gradientBar = false,
   className,
+  style,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -52,32 +54,39 @@ export function StatTile({
   tone?: StatTileTone;
   sub?: string;
   animate?: boolean;
+  /** Adds a thin accent gradient bar across the top — for the single emphasis tile in a grid. */
+  gradientBar?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const t = TONE_STYLES[tone];
 
   return (
     <motion.div
-      whileHover={{ scale: 1.025 }}
+      whileHover={{ y: -2 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      style={style}
       className={cn(
-        "group rounded-2xl border p-5 backdrop-blur transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]",
+        "group relative overflow-hidden rounded-2xl border p-5 backdrop-blur transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]",
         t.ring,
         t.bg,
         className
       )}
     >
+      {gradientBar && (
+        <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-sky-400 via-cyan-300 to-sky-400" />
+      )}
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
         <span className={cn(t.icon, "opacity-70 transition-opacity duration-200 group-hover:opacity-100")}>
           {icon}
         </span>
       </div>
-      <p className="text-3xl font-bold tracking-tight text-foreground">
+      <p className="text-[28px] font-semibold leading-none tracking-tight text-foreground">
         {animateValue ? <CountUpValue value={value} /> : value.toLocaleString()}
         {unit && <span className="ml-1.5 text-base font-normal text-muted-foreground">{unit}</span>}
       </p>
-      {sub && <p className="mt-1.5 text-xs text-muted-foreground">{sub}</p>}
+      {sub && <p className="mt-2 text-xs text-muted-foreground">{sub}</p>}
     </motion.div>
   );
 }
