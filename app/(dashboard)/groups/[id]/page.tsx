@@ -143,7 +143,7 @@ export default function GroupDetailPage() {
 
   if (error || !group) {
     return (
-      <div className="mx-auto max-w-5xl px-4 pt-10 text-center">
+      <div className="mx-auto max-w-5xl px-4 pt-6 text-center">
         <p className="text-sm text-slate-400 mb-4">{error ?? "Group not found"}</p>
         <button className="btn btn-secondary" onClick={() => router.push("/groups")}>
           ← Back to groups

@@ -46,7 +46,7 @@ export default function OnboardingPage() {
   const stepItems = [
     { key: "connectLms", label: "Connect your LMS in", href: "/settings", linkLabel: "Settings" },
     { key: "uploadNotes", label: "Upload or import notes in", href: "/notes", linkLabel: "Notes" },
-    { key: "generatePlan", label: "Generate your first plan in", href: "/planner", linkLabel: "Planner" },
+    { key: "generatePlan", label: "Generate your first plan in", href: "/study", linkLabel: "Study" },
     { key: "tryPractice", label: "Try a practice session in", href: "/practice", linkLabel: "Practice" },
   ];
 

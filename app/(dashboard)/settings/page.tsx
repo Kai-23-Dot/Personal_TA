@@ -161,7 +161,7 @@ export default function SettingsPage() {
   const otherConnections = connections.filter((c) => c.platform !== "canvas");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+    <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
       <PageHero
         icon={SettingsIcon}
         badgeLabel="Account"

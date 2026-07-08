@@ -244,7 +244,7 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+    <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
       <PageHero
         icon={Dumbbell}
         badgeLabel="Adaptive Testing"

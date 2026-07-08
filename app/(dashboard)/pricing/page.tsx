@@ -70,7 +70,7 @@ export default function PricingPage() {
   const isPro = billing?.plan === "pro";
 
   return (
-    <div className="mx-auto max-w-3xl pb-16 pt-12 text-center">
+    <div className="mx-auto max-w-3xl pb-16 pt-6 text-center">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Choose your plan</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Upgrade to Pro for unlimited practice, notes, and AI.

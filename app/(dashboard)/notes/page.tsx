@@ -258,7 +258,7 @@ export default function NotesPage() {
   const totalSelected = Object.values(selectedModuleItems).filter(Boolean).length;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-16">
+    <div className="mx-auto max-w-4xl space-y-6 pb-16 pt-6">
       <PageHero
         icon={BookOpen}
         badgeLabel="AI Study Guides"

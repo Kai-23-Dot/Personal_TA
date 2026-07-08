@@ -147,7 +147,7 @@ export default function FlashcardsPage() {
   // ── Cards view (focused) ──
   if (view === "cards" && cards.length > 0 && current) {
     return (
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <div className="mx-auto max-w-2xl px-4 pb-20 pt-6">
         {/* Minimal header */}
         <div className="mb-8 flex items-center justify-between">
           <button
@@ -280,7 +280,7 @@ export default function FlashcardsPage() {
 
   // ── Form view ──
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+    <div className="mx-auto max-w-2xl px-4 pb-20 pt-6">
       <PageHero
         className="mb-8"
         icon={Layers3}
