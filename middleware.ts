@@ -27,9 +27,13 @@ export async function middleware(request: NextRequest) {
     // Stripe posts webhooks unauthenticated; signature is verified in the route.
     pathname === "/api/billing/webhook";
   const cookieKeys = request.cookies.getAll().map((cookie) => cookie.name);
+  // Supabase SSR splits large session cookies (common with OAuth providers like
+  // Google, whose tokens carry extra provider claims) into `<name>.0`, `<name>.1`,
+  // etc. once the encoded value exceeds ~3180 bytes — so this must match chunked
+  // names too, not just the exact `-auth-token` suffix.
   const hasAuthCookie = cookieKeys.some(
     (name) =>
-      (name.startsWith("sb-") && name.endsWith("-auth-token")) ||
+      (name.startsWith("sb-") && /-auth-token(\.\d+)?$/.test(name)) ||
       name === "sb-access-token" ||
       name === "supabase-auth-token"
   );
