@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, LogIn, Loader2, X, Check, Copy, Crown } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
+import { Button } from "@/frontend/components/ui/button";
 
 type StudyGroup = {
   id: string;
@@ -116,100 +118,94 @@ export default function GroupsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
 
-      {/* Header */}
-      <section className="mb-6 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
-              <Users className="h-3.5 w-3.5" /> Collaboration
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">Study groups</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300">
-              Collaborate with classmates. Share an invite code to let them join your group.
-            </p>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
+      <PageHero
+        className="mb-6"
+        icon={Users}
+        badgeLabel="Collaboration"
+        title="Study groups"
+        description="Collaborate with classmates. Share an invite code to let them join your group."
+        action={
+          <>
+            <Button
+              variant="secondary"
               onClick={() => { setShowJoin(!showJoin); setShowCreate(false); }}
-              className="flex items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
             >
               <LogIn className="h-4 w-4" /> Join with code
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => { setShowCreate(!showCreate); setShowJoin(false); }}
-              className="flex items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/15 px-3 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-500/25"
             >
               <Plus className="h-4 w-4" /> Create group
+            </Button>
+          </>
+        }
+      />
+
+      {/* Create form */}
+      {showCreate && (
+        <form onSubmit={handleCreate} className="mt-4 mb-6 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-white">Create a new group</p>
+            <button type="button" onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-white">
+              <X className="h-4 w-4" />
             </button>
           </div>
-        </div>
+          <input
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
+            placeholder="Group name *"
+            value={createName}
+            onChange={(e) => setCreateName(e.target.value)}
+            required
+            autoFocus
+          />
+          <input
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
+            placeholder="Description (optional)"
+            value={createDesc}
+            onChange={(e) => setCreateDesc(e.target.value)}
+          />
+          {createError && <p className="text-xs text-rose-400">{createError}</p>}
+          <button
+            type="submit"
+            disabled={creating || !createName.trim()}
+            className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
+          >
+            {creating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Create group
+          </button>
+        </form>
+      )}
 
-        {/* Create form */}
-        {showCreate && (
-          <form onSubmit={handleCreate} className="mt-4 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-white">Create a new group</p>
-              <button type="button" onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <input
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
-              placeholder="Group name *"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              required
-              autoFocus
-            />
-            <input
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
-              placeholder="Description (optional)"
-              value={createDesc}
-              onChange={(e) => setCreateDesc(e.target.value)}
-            />
-            {createError && <p className="text-xs text-rose-400">{createError}</p>}
-            <button
-              type="submit"
-              disabled={creating || !createName.trim()}
-              className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
-            >
-              {creating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Create group
+      {/* Join form */}
+      {showJoin && (
+        <form onSubmit={handleJoin} className="mt-4 mb-6 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-white">Join with invite code</p>
+            <button type="button" onClick={() => { setShowJoin(false); setJoinError(null); setJoinSuccess(null); }} className="text-slate-500 hover:text-white">
+              <X className="h-4 w-4" />
             </button>
-          </form>
-        )}
-
-        {/* Join form */}
-        {showJoin && (
-          <form onSubmit={handleJoin} className="mt-4 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-white">Join with invite code</p>
-              <button type="button" onClick={() => { setShowJoin(false); setJoinError(null); setJoinSuccess(null); }} className="text-slate-500 hover:text-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <input
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50 uppercase tracking-widest"
-              placeholder="e.g. AB12CD34"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
-              maxLength={8}
-              required
-              autoFocus
-            />
-            {joinError   && <p className="text-xs text-rose-400">{joinError}</p>}
-            {joinSuccess && <p className="text-xs text-emerald-400">{joinSuccess}</p>}
-            <button
-              type="submit"
-              disabled={joining || joinCode.length < 4}
-              className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
-            >
-              {joining && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Join group
-            </button>
-          </form>
-        )}
-      </section>
+          </div>
+          <input
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50 uppercase tracking-widest"
+            placeholder="e.g. AB12CD34"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+            maxLength={8}
+            required
+            autoFocus
+          />
+          {joinError   && <p className="text-xs text-rose-400">{joinError}</p>}
+          {joinSuccess && <p className="text-xs text-emerald-400">{joinSuccess}</p>}
+          <button
+            type="submit"
+            disabled={joining || joinCode.length < 4}
+            className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
+          >
+            {joining && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Join group
+          </button>
+        </form>
+      )}
 
       {/* Group list */}
       {loading ? (

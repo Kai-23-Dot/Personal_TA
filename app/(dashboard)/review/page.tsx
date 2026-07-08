@@ -6,6 +6,7 @@ import {
   Brain, CheckCircle2, ChevronRight, Flame, Loader2,
   RefreshCw, RotateCcw, Sparkles, Target, X,
 } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -289,16 +290,12 @@ export default function ReviewPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 space-y-6">
-      {/* Header */}
-      <section className="rounded-3xl border border-violet-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-400/10 px-3 py-1 text-xs font-medium text-violet-100">
-          <Flame className="h-3.5 w-3.5" /> Review &amp; Revision
-        </p>
-        <h2 className="text-3xl font-semibold tracking-tight text-white">Review &amp; Revision</h2>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Spaced repetition flashcards, exam readiness predictions, weak topics, and quick review sessions.
-        </p>
-      </section>
+      <PageHero
+        icon={Flame}
+        badgeLabel="Review & Revision"
+        title="Review & Revision"
+        description="Spaced repetition flashcards, exam readiness predictions, weak topics, and quick review sessions."
+      />
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2">

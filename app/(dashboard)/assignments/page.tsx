@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "ai/react";
 import { format, parseISO } from "date-fns";
 import { CalendarClock, ChevronDown, Zap, X } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 
 type Assignment = {
   id: string;
@@ -224,53 +225,51 @@ export default function AssignmentsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 pb-20 pt-8">
 
-      {/* ── Page header ── */}
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
-            <CalendarClock className="h-3.5 w-3.5" />
-            {selectedCourseId ? "Filtered by course" : "All synced coursework"}
-          </p>
-          <h2 className="text-3xl font-semibold tracking-tight text-white">Assignments</h2>
-          <p className="mt-1.5 text-sm text-slate-400">
-            {selectedCourseId
-              ? `Showing assignments for ${filterLabel}`
-              : `${visibleAssignments.length} assignment${visibleAssignments.length !== 1 ? "s" : ""} across all courses`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status filter */}
-          <div className="flex rounded-xl border border-white/10 bg-white/5 p-0.5">
-            {(["all", "pending", "completed"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
-                  statusFilter === s ? "bg-white/10 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-          </div>
-          {/* Sort */}
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-            className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-300 outline-none cursor-pointer"
-          >
-            <option value="due_asc">Due: earliest</option>
-            <option value="due_desc">Due: latest</option>
-            <option value="title">Title A–Z</option>
-          </select>
-          {selectedCourseId && (
-            <Link href="/assignments" className="btn btn-secondary" style={{ fontSize: "0.75rem", padding: "0.35rem 0.75rem" }}>
-              Clear filter
-            </Link>
-          )}
-        </div>
-      </div>
+      <PageHero
+        className="mb-8"
+        icon={CalendarClock}
+        badgeLabel={selectedCourseId ? "Filtered by course" : "All synced coursework"}
+        title="Assignments"
+        description={
+          selectedCourseId
+            ? `Showing assignments for ${filterLabel}`
+            : `${visibleAssignments.length} assignment${visibleAssignments.length !== 1 ? "s" : ""} across all courses`
+        }
+        action={
+          <>
+            {/* Status filter */}
+            <div className="flex rounded-xl border border-white/10 bg-white/5 p-0.5">
+              {(["all", "pending", "completed"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatusFilter(s)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                    statusFilter === s ? "bg-white/10 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+            {/* Sort */}
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+              className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-300 outline-none cursor-pointer"
+            >
+              <option value="due_asc">Due: earliest</option>
+              <option value="due_desc">Due: latest</option>
+              <option value="title">Title A–Z</option>
+            </select>
+            {selectedCourseId && (
+              <Link href="/assignments" className="btn btn-secondary" style={{ fontSize: "0.75rem", padding: "0.35rem 0.75rem" }}>
+                Clear filter
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* ── Course filter pills ── */}
       {courses.length > 0 ? (

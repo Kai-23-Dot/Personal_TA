@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BookOpen, CalendarDays, RefreshCw, Sparkles } from "lucide-react";
 import { EmptyState } from "@/frontend/components/ui/empty-state";
 import { createClient } from "@/backend/supabase/server";
+import { PageHero } from "@/frontend/components/ui/page-hero";
+import { Button } from "@/frontend/components/ui/button";
 
 type CourseRow = {
   id: string;
@@ -70,30 +72,30 @@ export default async function CoursesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <section className="mb-8 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
-              <Sparkles className="h-3.5 w-3.5" /> Canvas courses
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">Courses</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300">
-              Your active courses pulled from Canvas. Run a sync to keep them up to date.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard" className="btn btn-secondary">Dashboard</Link>
-            <Link href="/settings/setup/canvas" className="btn btn-primary">
-              {canvasConnection ? "Manage Canvas" : "Connect Canvas"}
-            </Link>
-          </div>
-        </div>
+      <PageHero
+        className="mb-2"
+        icon={Sparkles}
+        badgeLabel="Canvas courses"
+        title="Courses"
+        description="Your active courses pulled from Canvas. Run a sync to keep them up to date."
+        action={
+          <>
+            <Button variant="secondary" asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/settings/setup/canvas">{canvasConnection ? "Manage Canvas" : "Connect Canvas"}</Link>
+            </Button>
+          </>
+        }
+      />
+      <div className="mb-8">
         {canvasConnection?.last_synced_at ? (
-          <p className="mt-4 text-xs text-slate-400">
+          <p className="text-xs text-slate-400">
             Last Canvas sync: {new Date(canvasConnection.last_synced_at).toLocaleString()}
           </p>
         ) : null}
-      </section>
+      </div>
 
       {(courses ?? []).length === 0 ? (
         <EmptyState

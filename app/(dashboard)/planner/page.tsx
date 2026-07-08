@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { CalendarDays } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
@@ -146,7 +148,12 @@ export default function PlannerPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Study Planner</h1>
+      <PageHero
+        icon={CalendarDays}
+        badgeLabel="Weekly Scheduling"
+        title="Study Planner"
+        description="Set your weekly availability, generate a daily study plan around it, and export to iCal or PDF."
+      />
 
       <Card>
         <CardHeader>

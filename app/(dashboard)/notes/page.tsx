@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { BookOpen, ChevronDown, X } from "lucide-react";
 import { usePersistentState, clearPersistentState } from "@/frontend/hooks/usePersistentState";
 import { cn } from "@/backend/utils";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
@@ -258,7 +259,12 @@ export default function NotesPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-16">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Notes</h1>
+      <PageHero
+        icon={BookOpen}
+        badgeLabel="AI Study Guides"
+        title="Notes"
+        description="Build AI-generated study guides from your Canvas lessons — pick a course, choose the scope, and pick a style."
+      />
 
       {/* ── Viewing a saved guide ── */}
       {viewingGuide ? (

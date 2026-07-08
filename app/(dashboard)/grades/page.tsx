@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BarChart3, BookOpen, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/frontend/components/ui/empty-state";
 import { createClient } from "@/backend/supabase/server";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 
 type CourseRow = {
   id: string;
@@ -63,15 +64,13 @@ export default async function GradesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <section className="mb-8 rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
-        <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
-          <TrendingUp className="h-3.5 w-3.5" /> Synced performance
-        </p>
-        <h2 className="text-3xl font-semibold tracking-tight text-white">Grade insights</h2>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Grades shown here come from your synced Canvas submissions.
-        </p>
-      </section>
+      <PageHero
+        className="mb-8"
+        icon={TrendingUp}
+        badgeLabel="Synced performance"
+        title="Grade insights"
+        description="Grades shown here come from your synced Canvas submissions."
+      />
 
       {activeCourses.length === 0 ? (
         <EmptyState

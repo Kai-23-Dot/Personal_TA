@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/backend/utils";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
@@ -160,12 +162,12 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your profile, billing, and connected platforms.
-        </p>
-      </div>
+      <PageHero
+        icon={SettingsIcon}
+        badgeLabel="Account"
+        title="Settings"
+        description="Manage your profile, billing, and connected platforms."
+      />
 
       <Card>
         <CardHeader>

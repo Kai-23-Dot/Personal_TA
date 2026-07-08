@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Dumbbell } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
@@ -243,7 +245,12 @@ export default function PracticePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Practice</h1>
+      <PageHero
+        icon={Dumbbell}
+        badgeLabel="Adaptive Testing"
+        title="Practice"
+        description="Generate an AI practice test scoped to a course, topic, assignment, or your own notes."
+      />
 
       {resumable.length > 0 && (
         <div>

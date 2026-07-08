@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Layers3 } from "lucide-react";
+import { PageHero } from "@/frontend/components/ui/page-hero";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 
@@ -280,6 +281,13 @@ export default function FlashcardsPage() {
   // ── Form view ──
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <PageHero
+        className="mb-8"
+        icon={Layers3}
+        badgeLabel="Spaced Repetition"
+        title="Flashcards"
+        description="Generate AI flashcard sets from your notes and courses, then study them with spaced repetition."
+      />
 
       {/* ── Saved sets library ── */}
       {(loadingSets || savedSets.length > 0) && (
