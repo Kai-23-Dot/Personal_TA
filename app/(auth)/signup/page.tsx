@@ -58,10 +58,17 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: trimmedUsername, email, password }),
       });
-      await readAuthResponse(response);
+      const payload = await readAuthResponse(response);
 
-      toast.success("Account created! Check your email to confirm.");
-      router.push("/login");
+      if (payload?.hasSession) {
+        // Email confirmation is off for this project, so signup already returned
+        // an active session — go straight in instead of making them log in again.
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        toast.success("Account created! Check your email to confirm.");
+        router.push("/login");
+      }
     } catch (error) {
       showAuthFailure(error);
     } finally {
@@ -105,7 +112,7 @@ export default function SignupPage() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
-            <h2 className="contact-form-title">Start free during beta</h2>
+            <h2 className="contact-form-title">Sign Up</h2>
 
             {/* Google sign-up — creates the account automatically on first use */}
             <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>

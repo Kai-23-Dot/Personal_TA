@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { error } = await authClient.supabase.auth.signUp({
+    const { data, error } = await authClient.supabase.auth.signUp({
       email,
       password,
       options: {
@@ -35,7 +35,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return authClient.applyCookies(NextResponse.json({ ok: true }));
+    // Supabase only returns an active session immediately when email confirmation
+    // is disabled for the project; otherwise `data.session` is null until the user
+    // clicks the confirmation link. Tell the frontend which case this is so it can
+    // skip the redundant login step when a session already exists.
+    return authClient.applyCookies(
+      NextResponse.json({ ok: true, hasSession: Boolean(data.session) })
+    );
   } catch (error) {
     return authUnavailableResponse(error);
   }
