@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, LogIn, Loader2, X, Check, Copy, Crown } from "lucide-react";
+import { format } from "date-fns";
+import { Users, Plus, LogIn, Loader2, X, Check, Copy, Crown, Target } from "lucide-react";
+import { cn } from "@/backend/utils";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Button } from "@/frontend/components/ui/button";
+import { Progress } from "@/frontend/components/ui/progress";
 import { CreateGroupForm } from "@/frontend/components/groups/create-group-form";
+import { HealthBadge, type HealthLike } from "@/frontend/components/groups/health-badge";
+import { CheckinButton } from "@/frontend/components/groups/checkin-button";
+
+type GoalStatus = "no_goal" | "active" | "completed" | "ended_incomplete";
 
 type StudyGroup = {
   id: string;
@@ -17,12 +24,56 @@ type StudyGroup = {
   member_count: number;
   my_role: "owner" | "member";
   course: { name: string } | null;
+  course_id: string | null;
+  goal: string | null;
+  target_end_date: string | null;
+  goal_completed_at: string | null;
+  progress_pct: number;
+  health: HealthLike;
+  goal_status: GoalStatus;
+  next_meeting_at: string | null;
+  checked_in_today: boolean;
 };
 
 function courseName(course: StudyGroup["course"]) {
   if (!course) return null;
   if (Array.isArray(course)) return (course as { name: string }[])[0]?.name ?? null;
   return course.name ?? null;
+}
+
+/** "23 days left" / "Ends tomorrow" / "Ends today" / "Ended Mar 4". */
+function goalCountdown(group: StudyGroup): { label: string; ended: boolean } | null {
+  if (!group.target_end_date || group.goal_status === "completed") return null;
+  const end = new Date(`${group.target_end_date}T00:00:00Z`);
+  const today = new Date();
+  const days = Math.ceil(
+    (end.getTime() - Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())) / 86_400_000
+  );
+  if (days < 0) return { label: `Ended ${format(end, "MMM d")}`, ended: true };
+  if (days === 0) return { label: "Ends today", ended: false };
+  if (days === 1) return { label: "Ends tomorrow", ended: false };
+  return { label: `${days} days left`, ended: false };
+}
+
+const STATUS_FILTERS: { value: "all" | GoalStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Completed" },
+  { value: "ended_incomplete", label: "Ended" },
+  { value: "no_goal", label: "No goal" },
+];
+
+const HEALTH_FILTERS = [
+  { value: "all", label: "Any health" },
+  { value: "thriving", label: "Thriving" },
+  { value: "steady", label: "Steady" },
+  { value: "at-risk", label: "At risk" },
+  { value: "critical", label: "Critical" },
+  { value: "new", label: "New" },
+] as const;
+
+function healthKey(h: HealthLike): string {
+  return h.state === "scored" ? h.tier : h.state;
 }
 
 export default function GroupsPage() {
@@ -42,6 +93,41 @@ export default function GroupsPage() {
   const [joining,   setJoining]   = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState<string | null>(null);
+
+  // Browse filters (client-side — the endpoint only returns the user's groups)
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | GoalStatus>("all");
+  const [healthFilter, setHealthFilter] = useState<(typeof HEALTH_FILTERS)[number]["value"]>("all");
+
+  const courseOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const g of groups) {
+      const name = courseName(g.course);
+      if (g.course_id && name) seen.set(g.course_id, name);
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  }, [groups]);
+
+  const filteredGroups = useMemo(
+    () =>
+      groups.filter(
+        (g) =>
+          (courseFilter === "all" || g.course_id === courseFilter) &&
+          (statusFilter === "all" || g.goal_status === statusFilter) &&
+          (healthFilter === "all" || healthKey(g.health) === healthFilter)
+      ),
+    [groups, courseFilter, statusFilter, healthFilter]
+  );
+
+  const filtersActive = courseFilter !== "all" || statusFilter !== "all" || healthFilter !== "all";
+
+  function applyCheckinResult(groupId: string, health: unknown) {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId ? { ...g, checked_in_today: true, health: health as HealthLike } : g
+      )
+    );
+  }
 
   async function load() {
     setLoading(true);
@@ -153,12 +239,78 @@ export default function GroupsPage() {
         </form>
       )}
 
+      {/* Filter row */}
+      {!loading && groups.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setStatusFilter(f.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
+                  statusFilter === f.value
+                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
+                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden h-4 w-px bg-white/10 sm:block" />
+          <div className="flex flex-wrap gap-1.5">
+            {HEALTH_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setHealthFilter(f.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
+                  healthFilter === f.value
+                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
+                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {courseOptions.length > 0 && (
+            <select
+              aria-label="Filter by course"
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="ml-auto h-8 rounded-full border border-white/10 bg-white/5 px-3 text-xs text-slate-300 outline-none transition-colors duration-150 hover:bg-white/10"
+            >
+              <option value="all">All courses</option>
+              {courseOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {/* Group list */}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="skeleton-shimmer h-52 rounded-2xl" />
+            <div key={i} className="skeleton-shimmer h-64 rounded-2xl" />
           ))}
+        </div>
+      ) : groups.length > 0 && filteredGroups.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-20 text-center">
+          <Target className="h-8 w-8 text-slate-600" />
+          <p className="text-sm text-slate-400">No groups match these filters.</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { setCourseFilter("all"); setStatusFilter("all"); setHealthFilter("all"); }}
+          >
+            Clear filters
+          </Button>
         </div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-24 text-center">
@@ -186,18 +338,19 @@ export default function GroupsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <div
               key={group.id}
               onClick={() => router.push(`/groups/${group.id}`)}
               className="group relative cursor-pointer rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:border-sky-400/25 hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]"
             >
-              {/* Avatar + member count */}
+              {/* Avatar + health + member count */}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-300/25 bg-sky-400/10 text-sm font-semibold text-sky-100 select-none">
                   {group.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <HealthBadge health={group.health} />
                   {group.my_role === "owner" && (
                     <span className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 text-xs text-amber-300">
                       <Crown className="h-2.5 w-2.5" /> Owner
@@ -213,8 +366,42 @@ export default function GroupsPage() {
               <p className="mt-0.5 text-xs text-slate-500">
                 {courseName(group.course) ?? "No course linked"}
               </p>
-              {group.description && (
-                <p className="mt-2 text-sm text-slate-400 line-clamp-2">{group.description}</p>
+
+              {/* Goal + countdown + progress */}
+              {group.goal ? (
+                <div className="mt-2 space-y-2">
+                  <p className="flex items-center gap-1.5 text-sm text-slate-400 line-clamp-1">
+                    <Target className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
+                    <span className="truncate">{group.goal}</span>
+                  </p>
+                  {(() => {
+                    const countdown = goalCountdown(group);
+                    return countdown ? (
+                      <p className={cn("text-xs font-medium", countdown.ended ? "text-rose-400" : "text-slate-500")}>
+                        {countdown.label}
+                      </p>
+                    ) : null;
+                  })()}
+                  {group.goal_status !== "completed" && (
+                    <Progress value={group.progress_pct} className="h-1.5" />
+                  )}
+                </div>
+              ) : (
+                group.description && (
+                  <p className="mt-2 text-sm text-slate-400 line-clamp-2">{group.description}</p>
+                )
+              )}
+
+              {/* Check-in — one tap, feeds the health signal */}
+              {group.goal_status === "active" && (
+                <div className="mt-3">
+                  <CheckinButton
+                    groupId={group.id}
+                    checkedIn={group.checked_in_today}
+                    size="sm"
+                    onCheckedIn={({ health }) => applyCheckinResult(group.id, health)}
+                  />
+                </div>
               )}
 
               {/* Invite code row */}

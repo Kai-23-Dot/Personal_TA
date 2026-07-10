@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
-  ArrowLeft, Check, Copy, Crown, Send, Trash2, Users, LogOut,
+  ArrowLeft, CalendarDays, Check, CheckCircle2, Copy, Crown, Flame,
+  Send, Target, Trash2, Users, LogOut,
 } from "lucide-react";
+import { Button } from "@/frontend/components/ui/button";
+import { Progress } from "@/frontend/components/ui/progress";
+import { HealthBadge, type HealthLike } from "@/frontend/components/groups/health-badge";
+import { CheckinButton } from "@/frontend/components/groups/checkin-button";
 
 type Member = {
   user_id: string;
@@ -29,7 +35,40 @@ type GroupDetail = {
   invite_code: string;
   max_members: number;
   course: { id: string; name: string } | null;
+  goal: string | null;
+  target_end_date: string | null;
+  goal_completed_at: string | null;
+  progress_pct: number;
 };
+
+type Meeting = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  frequency: "weekly" | "biweekly";
+};
+
+type GoalStatus = "no_goal" | "active" | "completed" | "ended_incomplete";
+
+const DAY_LABELS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+
+function formatSlotTime(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h ?? 0, m ?? 0, 0, 0);
+  return format(d, "h:mm a");
+}
+
+function untilLabel(iso: string): string {
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return "now";
+  const totalHours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (totalHours > 0) return `${totalHours}h`;
+  return `${Math.max(1, Math.floor(diff / 60_000))}m`;
+}
 
 function initials(name: string | null | undefined) {
   if (!name) return "?";
@@ -62,6 +101,18 @@ export default function GroupDetailPage() {
   const [sending,     setSending]     = useState(false);
   const [codeCopied,  setCodeCopied]  = useState(false);
 
+  // Goal-bound signals
+  const [meetings,       setMeetings]       = useState<Meeting[]>([]);
+  const [health,         setHealth]         = useState<HealthLike>({ state: "unscored" });
+  const [goalStatus,     setGoalStatus]     = useState<GoalStatus>("no_goal");
+  const [nextMeetingAt,  setNextMeetingAt]  = useState<string | null>(null);
+  const [checkedInToday, setCheckedInToday] = useState(false);
+  const [checkinsToday,  setCheckinsToday]  = useState<string[]>([]);
+  const [memberStreaks,  setMemberStreaks]  = useState<Record<string, number>>({});
+  const [progressDraft,  setProgressDraft]  = useState(0);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const [completing,     setCompleting]     = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadDetail = useCallback(async () => {
@@ -78,6 +129,14 @@ export default function GroupDetailPage() {
     setGroup(d.group);
     setMembers(d.members ?? []);
     setMyRole(d.myRole ?? "member");
+    setMeetings(d.meetings ?? []);
+    setHealth(d.health ?? { state: "unscored" });
+    setGoalStatus(d.goalStatus ?? "no_goal");
+    setNextMeetingAt(d.nextMeetingAt ?? null);
+    setCheckedInToday(Boolean(d.checkedInToday));
+    setCheckinsToday(d.checkinsToday ?? []);
+    setMemberStreaks(d.memberStreaks ?? {});
+    setProgressDraft(d.group?.progress_pct ?? 0);
     setLoading(false);
   }, [id]);
 
@@ -132,10 +191,47 @@ export default function GroupDetailPage() {
     router.push("/groups");
   }
 
+  async function saveProgress() {
+    setSavingProgress(true);
+    const res = await fetch(`/api/groups/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progressPct: progressDraft }),
+    });
+    const d = await res.json().catch(() => null);
+    if (res.ok && d?.group) {
+      setGroup(d.group);
+      setHealth(d.health ?? health);
+      setGoalStatus(d.goalStatus ?? goalStatus);
+    }
+    setSavingProgress(false);
+  }
+
+  async function markGoalComplete() {
+    if (!confirm("Mark this group's goal as complete? This records the outcome for the group.")) return;
+    setCompleting(true);
+    const res = await fetch(`/api/groups/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markComplete: true }),
+    });
+    const d = await res.json().catch(() => null);
+    if (res.ok && d?.group) {
+      setGroup(d.group);
+      setHealth(d.health ?? health);
+      setGoalStatus(d.goalStatus ?? "completed");
+    }
+    setCompleting(false);
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 pt-6 space-y-4">
         <div className="skeleton-shimmer h-32 rounded-2xl" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="skeleton-shimmer h-48 rounded-2xl" />
+          <div className="skeleton-shimmer h-48 rounded-2xl" />
+        </div>
         <div className="skeleton-shimmer h-64 rounded-2xl" />
       </div>
     );
@@ -168,7 +264,8 @@ export default function GroupDetailPage() {
 
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <HealthBadge health={health} showScore />
               {myRole === "owner" && (
                 <span className="flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 text-xs font-medium text-amber-300">
                   <Crown className="h-3 w-3" /> Owner
@@ -222,6 +319,153 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
+      {/* Goal & Health + Schedule & Check-in — only for goal-bound groups */}
+      {group.goal && (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {/* Goal & Health */}
+          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-slate-500" />
+                <h2 className="text-sm font-semibold text-white">Goal & health</h2>
+              </div>
+              <HealthBadge health={health} showScore />
+            </div>
+
+            <p className="text-sm text-slate-300">{group.goal}</p>
+            {group.target_end_date && (
+              <p className="mt-1.5 text-xs text-slate-500">
+                Target: {format(new Date(`${group.target_end_date}T00:00:00`), "MMMM d, yyyy")}
+                {goalStatus === "ended_incomplete" && (
+                  <span className="ml-2 font-medium text-rose-400">Ended without completion</span>
+                )}
+              </p>
+            )}
+
+            {goalStatus === "completed" ? (
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                <p className="text-sm text-emerald-200">
+                  Goal completed
+                  {group.goal_completed_at &&
+                    ` on ${format(new Date(group.goal_completed_at), "MMMM d, yyyy")}`}
+                  . Nice work!
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-4">
+                  <div className="mb-1.5 flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Progress toward goal</span>
+                    <span className="font-semibold text-slate-300">{group.progress_pct}%</span>
+                  </div>
+                  <Progress value={group.progress_pct} className="h-2" />
+                </div>
+
+                {health.state === "scored" && (
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        ["Attendance", health.components?.attendance ?? 0, 50],
+                        ["Streak", health.components?.streak ?? 0, 20],
+                        ["Progress", health.components?.progress ?? 0, 30],
+                      ] as const
+                    ).map(([label, value, max]) => (
+                      <div key={label} className="rounded-xl border border-white/8 bg-white/3 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
+                        <p className="mt-0.5 text-sm font-semibold text-white">
+                          {value}<span className="text-xs font-normal text-slate-500">/{max}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {myRole === "owner" && (
+                  <div className="mt-4 space-y-3 border-t border-white/6 pt-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={progressDraft}
+                        onChange={(e) => setProgressDraft(Number(e.target.value))}
+                        className="flex-1 accent-sky-400"
+                        aria-label="Goal progress percentage"
+                      />
+                      <span className="w-10 text-right text-xs font-semibold text-slate-300">{progressDraft}%</span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={savingProgress || progressDraft === group.progress_pct}
+                        onClick={saveProgress}
+                      >
+                        {savingProgress ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                    <Button size="sm" onClick={markGoalComplete} disabled={completing}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {completing ? "Marking…" : "Mark goal complete"}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Schedule & Check-in */}
+          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-white">Schedule & check-in</h2>
+            </div>
+
+            {meetings.length > 0 ? (
+              <ul className="space-y-2">
+                {meetings.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm">
+                    <span className="text-slate-200">
+                      {DAY_LABELS[m.day_of_week]} · {formatSlotTime(m.start_time)}
+                    </span>
+                    <span className="text-xs text-slate-500 capitalize">
+                      {m.frequency === "biweekly" ? "Every 2 weeks" : "Weekly"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">No recurring meetings set.</p>
+            )}
+
+            {nextMeetingAt && goalStatus === "active" && (
+              <p className="mt-3 text-xs text-slate-400">
+                Next session in <span className="font-semibold text-sky-300">{untilLabel(nextMeetingAt)}</span>
+                <span className="text-slate-600"> · {format(new Date(nextMeetingAt), "EEE, MMM d 'at' h:mm a")}</span>
+              </p>
+            )}
+
+            {goalStatus === "active" && (
+              <div className="mt-4 space-y-2">
+                <CheckinButton
+                  groupId={group.id}
+                  checkedIn={checkedInToday}
+                  onCheckedIn={({ health: h, streak, userId, checkinsToday: roster }) => {
+                    setCheckedInToday(true);
+                    setHealth(h as HealthLike);
+                    setCheckinsToday(roster);
+                    setMemberStreaks((prev) => ({ ...prev, [userId]: streak }));
+                  }}
+                />
+                <p className="text-center text-xs text-slate-500">
+                  {checkinsToday.length} of {members.length} member{members.length !== 1 ? "s" : ""} checked in today
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-3">
 
         {/* Members */}
@@ -246,6 +490,14 @@ export default function GroupDetailPage() {
                       Joined {new Date(m.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                   </div>
+                  {(memberStreaks[m.user_id] ?? 0) > 0 && (
+                    <span
+                      className="flex shrink-0 items-center gap-0.5 rounded-full border border-orange-400/25 bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-orange-300"
+                      title={`${memberStreaks[m.user_id]}-day check-in streak`}
+                    >
+                      <Flame className="h-3 w-3" /> {memberStreaks[m.user_id]}
+                    </span>
+                  )}
                   {m.role === "owner" && (
                     <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-label="Owner" />
                   )}

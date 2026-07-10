@@ -72,6 +72,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     success: true,
     alreadyCheckedIn,
     health,
+    userId: user.id,
     streak: streaks[user.id] ?? 1,
     checkinsToday: checkins.filter((c) => c.checkin_date === today).map((c) => c.user_id),
   });
