@@ -12,6 +12,13 @@ out
 .env
 .env.local
 .env.*.local
+.env.test
+
+# Testing
+coverage
+playwright/.auth
+playwright-report
+test-results
 
 # Vercel
 .vercel
