@@ -38,11 +38,33 @@ export interface StudyGroup {
   invite_code: string;
   is_public: boolean;
   max_members: number;
+  // Goal-bound fields (nullable: legacy groups predate goals; required for new groups at the API layer)
+  goal: string | null;
+  target_end_date: string | null; // YYYY-MM-DD
+  goal_completed_at: string | null;
+  progress_pct: number;
   created_at: string;
   updated_at: string;
   // Joined
   course?: { name: string };
   member_count?: number;
+}
+
+export interface GroupMeeting {
+  id: string;
+  group_id: string;
+  day_of_week: number; // 0 = Sunday … 6 = Saturday
+  start_time: string; // HH:MM:SS
+  frequency: "weekly" | "biweekly";
+  created_at: string;
+}
+
+export interface GroupCheckin {
+  id: string;
+  group_id: string;
+  user_id: string;
+  checkin_date: string; // YYYY-MM-DD
+  created_at: string;
 }
 
 export interface GroupMember {
