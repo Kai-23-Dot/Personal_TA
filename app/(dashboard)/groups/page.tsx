@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, Plus, LogIn, Loader2, X, Check, Copy, Crown } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Button } from "@/frontend/components/ui/button";
+import { CreateGroupForm } from "@/frontend/components/groups/create-group-form";
 
 type StudyGroup = {
   id: string;
@@ -33,11 +34,7 @@ export default function GroupsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Create form
-  const [showCreate,  setShowCreate]  = useState(false);
-  const [createName,  setCreateName]  = useState("");
-  const [createDesc,  setCreateDesc]  = useState("");
-  const [creating,    setCreating]    = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   // Join form
   const [showJoin,  setShowJoin]  = useState(false);
@@ -60,25 +57,6 @@ export default function GroupsPage() {
   }
 
   useEffect(() => { load(); }, []);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!createName.trim()) return;
-    setCreating(true);
-    setCreateError(null);
-    const res = await fetch("/api/groups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: createName.trim(), description: createDesc.trim() || undefined }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setCreateError(data.error ?? "Failed to create group"); setCreating(false); return; }
-    setShowCreate(false);
-    setCreateName("");
-    setCreateDesc("");
-    setCreating(false);
-    await load();
-  }
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
@@ -141,40 +119,8 @@ export default function GroupsPage() {
         }
       />
 
-      {/* Create form */}
-      {showCreate && (
-        <form onSubmit={handleCreate} className="mt-4 mb-6 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Create a new group</p>
-            <button type="button" onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-white">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <input
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
-            placeholder="Group name *"
-            value={createName}
-            onChange={(e) => setCreateName(e.target.value)}
-            required
-            autoFocus
-          />
-          <input
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50"
-            placeholder="Description (optional)"
-            value={createDesc}
-            onChange={(e) => setCreateDesc(e.target.value)}
-          />
-          {createError && <p className="text-xs text-rose-400">{createError}</p>}
-          <button
-            type="submit"
-            disabled={creating || !createName.trim()}
-            className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
-          >
-            {creating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Create group
-          </button>
-        </form>
-      )}
+      {/* Create form — goal, target date, and ≥1 meeting slot are required */}
+      {showCreate && <CreateGroupForm onCreated={load} onClose={() => setShowCreate(false)} />}
 
       {/* Join form */}
       {showJoin && (
