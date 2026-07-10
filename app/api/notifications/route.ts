@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/backend/supabase/server";
+import { format } from "date-fns";
+import { createClient, createServiceClient } from "@/backend/supabase/server";
+import { nextOccurrence } from "@/backend/groups/schedule";
+import { toMeetingSlots } from "@/backend/groups/mappers";
 
 export async function GET() {
   const supabase = await createClient();
@@ -83,6 +86,54 @@ export async function GET() {
       });
     }
   });
+
+  // ── Group session reminders ──
+  // Groups the user belongs to that have a recurring meeting within 24h.
+  // Service client sidesteps the group_members RLS quirk (same pattern as the
+  // group routes). The session time in the title keeps multiple weekly slots
+  // from deduping each other inside the 7-day window. A future push-style
+  // cron can reuse nextOccurrence() the same way.
+  try {
+    const admin = createServiceClient();
+    const { data: gmemberships } = await admin
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", user.id);
+    const groupIds = (gmemberships ?? []).map((m) => m.group_id);
+    if (groupIds.length > 0) {
+      const [{ data: groupRows }, { data: meetingRows }] = await Promise.all([
+        admin.from("study_groups").select("id, name").in("id", groupIds),
+        admin
+          .from("group_meetings")
+          .select("group_id, day_of_week, start_time, frequency, created_at")
+          .in("group_id", groupIds),
+      ]);
+      const nameById = new Map((groupRows ?? []).map((g) => [g.id, g.name]));
+      const meetingsByGroup = new Map<string, typeof meetingRows>();
+      (meetingRows ?? []).forEach((m) => {
+        const list = meetingsByGroup.get(m.group_id) ?? [];
+        list.push(m);
+        meetingsByGroup.set(m.group_id, list);
+      });
+      for (const [groupId, rows] of meetingsByGroup) {
+        const next = nextOccurrence(toMeetingSlots(rows ?? []), now);
+        if (!next || next.getTime() - now.getTime() > 24 * 3_600_000) continue;
+        const name = nameById.get(groupId) ?? "Study group";
+        const title = `Group session: ${name} (${format(next, "EEE h:mm a")})`;
+        if (!existingTitles.has(title)) {
+          inserts.push({
+            user_id: user.id,
+            title,
+            body: `${name} meets ${format(next, "EEEE 'at' h:mm a")}`,
+            type: "reminder",
+            scheduled_at: next.toISOString(),
+          });
+        }
+      }
+    }
+  } catch {
+    // Reminders are best-effort — never fail the notifications feed over them.
+  }
 
   if (inserts.length > 0) {
     await supabase.from("notifications").insert(inserts);
