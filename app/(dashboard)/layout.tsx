@@ -41,7 +41,10 @@ export default async function DashboardLayout({
       <Sidebar profile={profile ?? null} plan={plan} />
       <div className="min-h-screen md:pl-60">
         <Header title="Conlearn" description="Your courses, notes, practice tests, and study sets — all in one place." />
-        <main className="app-container pb-28 pt-16 md:pb-10">
+        {/* Legacy .app-container (chain-summit.css) is deliberately NOT used here:
+            its `padding` shorthand zeroed the top padding and capped width at
+            1200px, silently overriding these utilities. */}
+        <main className="w-full px-5 pb-28 pt-10 md:px-8 md:pb-10">
         <DashboardClientWrapper>
           {showOnboardingBanner ? (
             <div className="mb-5 rounded-2xl border border-sky-400/20 bg-sky-500/10 p-4">
