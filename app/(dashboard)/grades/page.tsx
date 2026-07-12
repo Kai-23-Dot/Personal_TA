@@ -3,6 +3,7 @@ import { BarChart3, BookOpen, TrendingUp } from "lucide-react";
 import { EmptyState } from "@/frontend/components/ui/empty-state";
 import { createClient } from "@/backend/supabase/server";
 import { PageHero } from "@/frontend/components/ui/page-hero";
+import { GradesAutoSync } from "@/frontend/components/grades/grades-auto-sync";
 
 type CourseRow = {
   id: string;
@@ -70,6 +71,7 @@ export default async function GradesPage() {
         badgeLabel="Synced performance"
         title="Grade insights"
         description="Grades shown here come from your synced Canvas submissions."
+        action={<GradesAutoSync />}
       />
 
       {activeCourses.length === 0 ? (
