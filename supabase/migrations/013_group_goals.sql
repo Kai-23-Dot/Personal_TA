@@ -47,6 +47,24 @@ CREATE INDEX IF NOT EXISTS idx_group_checkins_user  ON public.group_checkins(use
 -- 4. RLS — same style as 011 (my_group_ids() SECURITY DEFINER helper).
 --    API routes use the service client after explicit membership checks;
 --    these policies are defense-in-depth consistent with sibling tables.
+--
+-- The helper is (re)defined here with CREATE OR REPLACE so this migration is
+-- self-contained: it works whether or not 011 was applied to this database
+-- (some environments built the groups feature without it, since the routes
+-- bypass RLS via the service client). If 011 did run, this is a harmless
+-- redefinition of the identical function.
+CREATE OR REPLACE FUNCTION public.my_group_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT group_id
+  FROM public.group_members
+  WHERE user_id = auth.uid();
+$$;
+
 ALTER TABLE public.group_meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_checkins ENABLE ROW LEVEL SECURITY;
 
