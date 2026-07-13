@@ -50,6 +50,14 @@ CREATE INDEX IF NOT EXISTS idx_group_checkins_user  ON public.group_checkins(use
 ALTER TABLE public.group_meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_checkins ENABLE ROW LEVEL SECURITY;
 
+-- DROP-then-CREATE so this migration is safe to run (or re-run) even if a
+-- prior partial apply already created some of these policies — Postgres has
+-- no CREATE POLICY IF NOT EXISTS.
+DROP POLICY IF EXISTS "Members read meetings"       ON public.group_meetings;
+DROP POLICY IF EXISTS "Owner manages meetings"      ON public.group_meetings;
+DROP POLICY IF EXISTS "Members read checkins"       ON public.group_checkins;
+DROP POLICY IF EXISTS "Members insert own checkin"  ON public.group_checkins;
+
 CREATE POLICY "Members read meetings" ON public.group_meetings
   FOR SELECT USING (group_id IN (SELECT public.my_group_ids()));
 
