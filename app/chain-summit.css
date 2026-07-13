@@ -1975,6 +1975,39 @@ footer p a:hover {
 	animation-delay: calc(var(--stagger) * 0.1s);
 }
 
+/* Fancy scroll reveal for premium landing cards — fade + rise + blur,
+   staggered so a grid resolves in a smooth wave as it enters the viewport.
+   Hidden state only applies once JS marks the reveal as ready, so no-JS
+   users still see the content. */
+.js-reveal .premium-reveal {
+	opacity: 0;
+	transform: translateY(30px) scale(0.985);
+	filter: blur(6px);
+}
+
+.js-reveal .premium-reveal.animated {
+	animation: premiumReveal 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.premium-feature-grid .premium-reveal:nth-child(2).animated { animation-delay: 0.08s; }
+.premium-feature-grid .premium-reveal:nth-child(3).animated { animation-delay: 0.16s; }
+.premium-feature-grid .premium-reveal:nth-child(4).animated { animation-delay: 0.24s; }
+.premium-feature-grid .premium-reveal:nth-child(5).animated { animation-delay: 0.12s; }
+.premium-feature-grid .premium-reveal:nth-child(6).animated { animation-delay: 0.2s; }
+
+@keyframes premiumReveal {
+	from {
+		opacity: 0;
+		transform: translateY(30px) scale(0.985);
+		filter: blur(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+		filter: blur(0);
+	}
+}
+
 @keyframes fadeInUp {
 	from {
 		opacity: 0;
@@ -3198,12 +3231,16 @@ body {
 	border-radius: 28px;
 	padding: 1.2rem;
 	min-height: 250px;
-	transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+	transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+		border-color 0.22s ease, box-shadow 0.28s ease;
 }
 
 .premium-feature-card:hover {
 	transform: translateY(-5px);
-	border-color: rgba(255, 255, 255, 0.18) !important;
+	/* Cyan lift to match the workflow section (matched !important on the
+	   shared glass-card rule that would otherwise override this) */
+	border-color: rgba(0, 255, 255, 0.32) !important;
+	box-shadow: 0 18px 46px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 255, 255, 0.12);
 }
 
 .premium-feature-icon {
@@ -3212,9 +3249,16 @@ body {
 	width: 42px;
 	height: 42px;
 	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.07);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	color: rgba(237, 237, 237, 0.72);
+	background: rgba(0, 255, 255, 0.08);
+	border: 1px solid rgba(0, 255, 255, 0.16);
+	color: rgba(0, 255, 255, 0.78);
+	transition: background 0.28s ease, color 0.28s ease, box-shadow 0.28s ease;
+}
+
+.premium-feature-card:hover .premium-feature-icon {
+	background: rgba(0, 255, 255, 0.14);
+	color: #a8fbff;
+	box-shadow: 0 0 18px rgba(0, 255, 255, 0.25);
 }
 
 .premium-feature-card h3 {
@@ -3492,6 +3536,17 @@ body {
 	.btn,
 	.contact-submit-btn {
 		transition: none !important;
+	}
+
+	/* Never leave reveal content hidden when motion is reduced */
+	.js-reveal .premium-reveal {
+		opacity: 1 !important;
+		transform: none !important;
+		filter: none !important;
+	}
+
+	.js-reveal .premium-reveal.animated {
+		animation: none !important;
 	}
 }
 

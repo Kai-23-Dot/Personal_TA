@@ -251,7 +251,7 @@ export default function HomePage() {
             {features.map((feature) => {
               const Icon = feature.icon;
               return (
-                <article key={feature.title} className="premium-feature-card liquid-glass">
+                <article key={feature.title} className="premium-feature-card liquid-glass premium-reveal animate-on-scroll">
                   <div className="premium-feature-icon">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>

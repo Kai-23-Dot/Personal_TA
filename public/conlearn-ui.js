@@ -218,6 +218,10 @@ const observer = new IntersectionObserver((entries) => {
 }, observerOptions);
 
 function initScrollAnimations() {
+  // Enable the JS-gated hidden reveal state only now that the observer is
+  // running — no-JS users keep seeing content.
+  document.documentElement.classList.add('js-reveal');
+
   document.querySelectorAll('.animate-on-scroll').forEach((el) => {
     if (el.closest('[data-dashboard-shell]')) return;
     observer.observe(el);
@@ -228,6 +232,20 @@ function initScrollAnimations() {
     item.style.setProperty('--stagger', String(index + 1));
     item.classList.add('stagger-animation');
   });
+
+  // Safety net: the reveal hidden-state fails closed (invisible) if the
+  // observer never fires — e.g. a card parked in the bottom rootMargin band
+  // on a very short viewport. Reveal any still-hidden element that's already
+  // within view so nothing can get stuck invisible; off-screen ones still
+  // reveal normally on scroll.
+  setTimeout(() => {
+    document.querySelectorAll('.premium-reveal:not(.animated)').forEach((el) => {
+      if (el.closest('[data-dashboard-shell]')) return;
+      if (el.getBoundingClientRect().top < window.innerHeight) {
+        el.classList.add('animated');
+      }
+    });
+  }, 1400);
 }
 
 function addHexDecorations() {
