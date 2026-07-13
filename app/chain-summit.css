@@ -2956,10 +2956,10 @@ body {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.45rem;
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(0, 255, 255, 0.22);
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.05);
-	color: rgba(237, 237, 237, 0.65);
+	background: rgba(0, 255, 255, 0.06);
+	color: rgba(178, 245, 255, 0.85);
 	padding: 0.38rem 0.75rem;
 	font-size: 0.7rem;
 	font-weight: 500;
@@ -3181,6 +3181,11 @@ body {
 	font-size: clamp(2rem, 5vw, 4.4rem);
 	line-height: 1;
 	letter-spacing: -0.05em;
+	/* Subtle white→cyan sweep keeps headings engaging without shouting */
+	background: linear-gradient(120deg, #ffffff 55%, var(--cs-primary) 130%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 }
 
 .premium-feature-grid {
@@ -3242,6 +3247,10 @@ body {
 .premium-steps {
 	border-radius: 30px;
 	padding: 1rem;
+	/* !important matches the shared glass-card rule above that would
+	   otherwise override this section's cyan tint */
+	border: 1px solid rgba(0, 255, 255, 0.14) !important;
+	background: linear-gradient(165deg, rgba(0, 255, 255, 0.05), rgba(15, 18, 30, 0.65) 45%) !important;
 }
 
 .premium-step {
@@ -3250,12 +3259,14 @@ body {
 	align-items: start;
 	gap: 1rem;
 	border-bottom: 1px solid rgba(255,255,255,0.08);
+	border-left: 2px solid transparent;
 	padding: 1.15rem 0.8rem;
-	transition: background 0.2s ease, transform 0.2s ease;
+	transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .premium-step:hover {
-	background: rgba(255,255,255,0.035);
+	background: rgba(0, 255, 255, 0.045);
+	border-left-color: rgba(0, 255, 255, 0.55);
 	transform: translateX(3px);
 }
 
@@ -3264,7 +3275,7 @@ body {
 }
 
 .premium-step span {
-	color: rgba(255, 255, 255, 0.45);
+	color: rgba(0, 255, 255, 0.75);
 	font-weight: 600;
 	font-family: 'JetBrains Mono', monospace;
 	font-size: 0.9rem;
@@ -3277,13 +3288,15 @@ body {
 }
 
 .premium-step-copy svg {
-	color: rgba(255, 255, 255, 0.5);
+	color: rgba(0, 255, 255, 0.65);
+	filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.25));
 }
 
 .premium-step-copy strong {
 	color: #fff;
 	font-size: 1.06rem;
 	letter-spacing: -0.035em;
+	font-family: 'Sora', sans-serif;
 }
 
 .premium-step p,

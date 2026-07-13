@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
 import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   function showAuthFailure(error: unknown) {
     const message =
@@ -44,13 +46,17 @@ export default function LoginPage() {
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error("Please complete the human verification first.");
+      return;
+    }
     setLoading(true);
 
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, captchaToken }),
       });
       await readAuthResponse(response);
 
@@ -181,7 +187,12 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <button type="submit" className="contact-submit-btn" disabled={loading}>
+              <TurnstileWidget onToken={setCaptchaToken} />
+              <button
+                type="submit"
+                className="contact-submit-btn"
+                disabled={loading || (Boolean(TURNSTILE_SITE_KEY) && !captchaToken)}
+              >
                 {loading ? "Signing in..." : "Sign In"}
               </button>
               <p style={{ color: "var(--gray)", fontSize: "0.95rem" }}>

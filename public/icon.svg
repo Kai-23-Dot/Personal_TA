@@ -1,16 +1,12 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="ptaGradient" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#00e5ff"/>
-      <stop offset="100%" stop-color="#ff4dff"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="128" fill="#0b0b12"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Subtle teal-blue rounded bg -->
+  <rect width="32" height="32" rx="8" fill="rgba(14,165,233,0.14)"/>
+  <!-- C arc: stroke only, ~270° sweep, open on the right -->
   <path
-    d="M256 88C171.2 88 112 147.2 112 232C112 298.4 150.4 350.4 208 376V424L256 392L304 424V376C361.6 350.4 400 298.4 400 232C400 147.2 340.8 88 256 88Z"
-    fill="url(#ptaGradient)"
+    d="M22.5 9.5 C22.5 9.5 18 7 13 9 C8 11 7 16 7 16 C7 16 8 21 13 23 C18 25 22.5 22.5 22.5 22.5"
+    stroke="#7dd3fc"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    fill="none"
   />
-  <circle cx="208" cy="224" r="22" fill="#0b0b12"/>
-  <circle cx="304" cy="224" r="22" fill="#0b0b12"/>
-  <path d="M200 280C220 300 236 312 256 312C276 312 292 300 312 280" stroke="#0b0b12" stroke-width="18" stroke-linecap="round"/>
 </svg>

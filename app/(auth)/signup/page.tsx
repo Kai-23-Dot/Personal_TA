@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
 import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   function showAuthFailure(error: unknown) {
     const message =
@@ -50,13 +52,18 @@ export default function SignupPage() {
       return;
     }
 
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error("Please complete the human verification first.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmedUsername, email, password }),
+        body: JSON.stringify({ username: trimmedUsername, email, password, captchaToken }),
       });
       const payload = await readAuthResponse(response);
 
@@ -208,7 +215,12 @@ export default function SignupPage() {
                   required
                 />
               </div>
-              <button type="submit" className="contact-submit-btn" disabled={loading}>
+              <TurnstileWidget onToken={setCaptchaToken} />
+              <button
+                type="submit"
+                className="contact-submit-btn"
+                disabled={loading || (Boolean(TURNSTILE_SITE_KEY) && !captchaToken)}
+              >
                 {loading ? "Creating account..." : "Create Account"}
               </button>
               <p style={{ color: "var(--gray)", fontSize: "0.95rem" }}>
