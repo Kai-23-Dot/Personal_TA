@@ -78,36 +78,72 @@ const features = [
     title: "Canvas sync that stays organized",
     description:
       "Pull courses, modules, assignments, files, pages, and due dates into one calm workspace.",
+    details: [
+      "Auto-imports every active course",
+      "Assignments with live due dates",
+      "Modules, pages & files in one place",
+      "Re-syncs so nothing goes stale",
+    ],
   },
   {
     icon: FileSearch,
     title: "Course material extraction",
     description:
       "Turn slides, PDFs, notes, and Canvas pages into clean study context for every class.",
+    details: [
+      "Reads slides, PDFs & docs",
+      "Pulls text from Canvas pages",
+      "Vision AI for diagrams & formulas",
+      "Clean study context per class",
+    ],
   },
   {
     icon: Brain,
     title: "Source-grounded practice tests",
     description:
       "Generate quizzes from the exact content your teacher shared, not generic internet summaries.",
+    details: [
+      "Questions from your real materials",
+      "Adaptive difficulty as you go",
+      "Quiz, flashcard & mixed modes",
+      "Instant explanations for every answer",
+    ],
   },
   {
     icon: CalendarCheck2,
     title: "Study flow for busy weeks",
     description:
       "See what matters next, filter by course, and build focused review sessions faster.",
+    details: [
+      "AI-ranked what-to-study-next",
+      "Filter everything by course",
+      "Grade-impact prioritization",
+      "Weekly plan built around you",
+    ],
   },
   {
     icon: BookOpenCheck,
     title: "AI-powered review",
     description:
       "Turn weak spots into targeted review sessions, flashcards, and study guides.",
+    details: [
+      "Pinpoints your weak topics",
+      "Spaced-repetition flashcards",
+      "Auto-generated study guides",
+      "Exam-readiness predictions",
+    ],
   },
   {
     icon: Sparkles,
     title: "Personalized studying",
     description:
       "Study from the courses, assignments, and materials that matter to your schedule.",
+    details: [
+      "Scoped to your own courses",
+      "Adapts to your progress",
+      "A focus timer for deep work",
+      "Your materials, not the internet's",
+    ],
   },
 ];
 
@@ -257,6 +293,11 @@ export default function HomePage() {
                   </div>
                   <h3>{feature.title}</h3>
                   <p>{feature.description}</p>
+                  <ul className="premium-feature-details">
+                    {feature.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
                 </article>
               );
             })}
