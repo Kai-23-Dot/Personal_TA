@@ -9,12 +9,12 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_SUPABASE_URL",
   "OPENAI_API_KEY",
-  "SARVAM_API_KEY",
   "STRIPE_PRO_PRICE_ID",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
+const optional = ["SARVAM_API_KEY"];
 const paired = [
   ["CANVAS_CLIENT_ID", "CANVAS_CLIENT_SECRET"],
   ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
@@ -30,6 +30,13 @@ for (const name of required) {
   const value = process.env[name]?.trim();
   if (!value || placeholderPattern.test(value)) {
     (strict ? errors : warnings).push(`${name} is not configured`);
+  }
+}
+
+for (const name of optional) {
+  const value = process.env[name]?.trim();
+  if (!value || placeholderPattern.test(value)) {
+    warnings.push(`${name} is not configured; its related feature will be unavailable`);
   }
 }
 
