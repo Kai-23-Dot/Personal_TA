@@ -341,6 +341,10 @@ export interface QuizQuestion {
   explanation: string;
   topic: string;
   difficulty: Difficulty;
+  source_idx?: number;
+  source_title?: string | null;
+  source_module?: string | null;
+  source_url?: string | null;
   user_answer?: string;
   is_correct?: boolean;
   time_taken_seconds?: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
@@ -190,18 +190,6 @@ export default function StudyPage() {
     return () => { mounted = false; };
   }, [date]);
 
-  useEffect(() => {
-    if (blocks.length === 0) return;
-    blocks.forEach((block) => {
-      if (autoAdjusted[block.id]) return;
-      if (new Date(block.end_time) < new Date() && block.status === "scheduled") {
-        setAutoAdjusted((prev) => ({ ...prev, [block.id]: true }));
-        updateBlock(block.id, { status: "missed" });
-        rescheduleBlock(block.id);
-      }
-    });
-  }, [blocks, autoAdjusted]);
-
   async function handleGeneratePlan() {
     setPlanLoading(true);
     try {
@@ -241,7 +229,7 @@ export default function StudyPage() {
     setAvailability((prev) => prev.filter((a) => a.id !== id));
   }
 
-  async function updateBlock(id: string, updates: Partial<PlannerBlock>) {
+  const updateBlock = useCallback(async (id: string, updates: Partial<PlannerBlock>) => {
     const res = await fetch("/api/study/blocks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -249,11 +237,10 @@ export default function StudyPage() {
     });
     const data = await res.json();
     if (data?.block) setBlocks((prev) => prev.map((b) => (b.id === id ? data.block : b)));
-  }
+  }, []);
 
-  async function rescheduleBlock(id: string) {
-    const block = blocks.find((b) => b.id === id);
-    if (!block) return;
+  const rescheduleBlock = useCallback(async (block: PlannerBlock) => {
+    const id = block.id;
     const nextStart = new Date(new Date(block.start_time).getTime() + 86400000);
     const nextEnd   = new Date(new Date(block.end_time).getTime()   + 86400000);
     await fetch("/api/study/blocks", {
@@ -262,7 +249,19 @@ export default function StudyPage() {
       body: JSON.stringify({ id, start_time: nextStart.toISOString(), end_time: nextEnd.toISOString(), status: "rescheduled" }),
     });
     setBlocks((prev) => prev.filter((b) => b.id !== id));
-  }
+  }, []);
+
+  useEffect(() => {
+    if (blocks.length === 0) return;
+    blocks.forEach((block) => {
+      if (autoAdjusted[block.id]) return;
+      if (new Date(block.end_time) < new Date() && block.status === "scheduled") {
+        setAutoAdjusted((prev) => ({ ...prev, [block.id]: true }));
+        void updateBlock(block.id, { status: "missed" });
+        void rescheduleBlock(block);
+      }
+    });
+  }, [blocks, autoAdjusted, rescheduleBlock, updateBlock]);
 
   function handleDragStart(id: string) { setDraggingId(id); }
 
@@ -528,7 +527,7 @@ export default function StudyPage() {
                           <Button variant="secondary" size="sm" onClick={() => updateBlock(block.id, { status: "completed" })}>
                             Mark done
                           </Button>
-                          <Button variant="secondary" size="sm" onClick={() => rescheduleBlock(block.id)}>
+                          <Button variant="secondary" size="sm" onClick={() => rescheduleBlock(block)}>
                             Reschedule +1 day
                           </Button>
                         </div>

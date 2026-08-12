@@ -5,8 +5,11 @@
  * GET /api/lms/google/callback → Handle OAuth callback, store tokens
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { createOAuthNonce, verifyOAuthNonce } from "@/backend/security/oauthState";
+
+const GOOGLE_STATE_COOKIE = "conlearn_google_oauth_state";
 
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",
@@ -16,13 +19,21 @@ const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
 ].join(" ");
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   // ---- OAuth Callback ----
   if (code) {
+    if (!verifyOAuthNonce(state, req.cookies.get(GOOGLE_STATE_COOKIE)?.value)) {
+      const response = NextResponse.redirect(
+        new URL("/settings?error=google_oauth_state_invalid", req.url)
+      );
+      response.cookies.delete(GOOGLE_STATE_COOKIE);
+      return response;
+    }
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.redirect(new URL("/login", req.url));
@@ -38,18 +49,27 @@ export async function GET(req: Request) {
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/google`,
         grant_type: "authorization_code",
       }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!tokenRes.ok) {
-      console.error("Google token exchange failed:", await tokenRes.text());
+      console.error("Google token exchange failed with status:", tokenRes.status);
       return NextResponse.redirect(new URL("/settings?error=google_auth_failed", req.url));
     }
 
-    const tokens = await tokenRes.json();
+    const tokens = await tokenRes.json() as {
+      access_token?: string;
+      expires_in?: number;
+      refresh_token?: string;
+    };
+    if (!tokens.access_token) {
+      return NextResponse.redirect(new URL("/settings?error=google_auth_failed", req.url));
+    }
 
     // Fetch user info
     const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(15_000),
     });
     const userInfo = userInfoRes.ok ? await userInfoRes.json() : {};
 
@@ -73,10 +93,13 @@ export async function GET(req: Request) {
 
     if (dbError) {
       console.error("DB error saving Google connection:", dbError);
+      return NextResponse.redirect(new URL("/settings?error=google_save_failed", req.url));
     }
 
     const syncParam = conn?.id ? `&sync_id=${conn.id}` : "";
-    return NextResponse.redirect(new URL(`/settings?connected=google_classroom${syncParam}`, req.url));
+    const response = NextResponse.redirect(new URL(`/settings?connected=google_classroom${syncParam}`, req.url));
+    response.cookies.delete(GOOGLE_STATE_COOKIE);
+    return response;
   }
 
   // ---- Auth redirect (initiate flow) ----
@@ -97,6 +120,16 @@ export async function GET(req: Request) {
   authUrl.searchParams.set("scope", GOOGLE_SCOPES);
   authUrl.searchParams.set("access_type", "offline");
   authUrl.searchParams.set("prompt", "consent");
+  const oauthState = createOAuthNonce();
+  authUrl.searchParams.set("state", oauthState);
 
-  return NextResponse.redirect(authUrl.toString());
+  const response = NextResponse.redirect(authUrl.toString());
+  response.cookies.set(GOOGLE_STATE_COOKIE, oauthState, {
+    httpOnly: true,
+    maxAge: 10 * 60,
+    path: "/api/lms/google",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }

@@ -5,11 +5,31 @@ import type { QuizSource } from "@/backend/ai/generateQuiz";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
-import { assertWithinLimit } from "@/backend/billing/limits";
+import { assertWithinLimits } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { z } from "zod";
 
 export const maxDuration = 60;
 const lowTokenMode = process.env.LOW_TOKEN_TEST_MODE === "true";
+const generatePracticeSchema = z.object({
+  topic: z.string().trim().min(1).max(200),
+  courseId: z.string().uuid(),
+  difficulty: z.enum(["easy", "medium", "hard", "adaptive"]).default("adaptive"),
+  questionCount: z.number().int().min(1).max(20).default(5),
+  noteIds: z.array(z.string().uuid()).max(30).optional(),
+  pdfContext: z.string().trim().max(20_000).optional(),
+  assignmentId: z.string().uuid().nullable().optional(),
+}).strict();
+
+const submitPracticeSchema = z.object({
+  sessionId: z.string().uuid(),
+  durationSeconds: z.number().int().min(0).max(86_400).nullable().optional(),
+  attempts: z.array(z.object({
+    question_index: z.number().int().min(0).max(99),
+    user_answer: z.string().max(10_000),
+    time_taken_seconds: z.number().int().min(0).max(86_400).default(0),
+  }).strict()).min(1).max(50),
+}).strict();
 
 /**
  * Infers the required programming language from a course name.
@@ -37,47 +57,66 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     // Plan limits: block Free users who've hit the weekly test cap or daily token cap.
-    for (const feature of ["practice_test", "tokens"] as const) {
-      const check = await assertWithinLimit(user.id, feature);
-      if (!check.ok) {
-        return NextResponse.json(
-          { success: false, error: check.reason, code: "LIMIT_REACHED", feature: check.feature, limit: check.limit, used: check.used },
-          { status: 402 }
-        );
-      }
+    const limitCheck = await assertWithinLimits(user.id, [
+      "practice_test",
+      "tokens",
+    ]);
+    if (!limitCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: limitCheck.reason, code: "LIMIT_REACHED", feature: limitCheck.feature, limit: limitCheck.limit, used: limitCheck.used },
+        { status: 402 }
+      );
     }
 
-    const body = await req.json();
-    const { topic, courseId, difficulty = "adaptive", questionCount = 5, noteIds, pdfContext, assignmentId } = body as {
-      topic: string;
-      courseId: string | null;
-      difficulty: Difficulty;
-      questionCount?: number;
-      noteIds?: string[];
-      pdfContext?: string;
-      assignmentId?: string | null;
-    };
-
-    if (!topic) {
-      return NextResponse.json({ success: false, error: "topic is required" }, { status: 400 });
+    const parsedBody = generatePracticeSchema.safeParse(
+      await req.json().catch(() => null)
+    );
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { success: false, error: "Invalid practice test request." },
+        { status: 400 }
+      );
     }
-    if (!courseId) {
-      return NextResponse.json({ success: false, error: "courseId is required for Canvas-aligned practice tests" }, { status: 400 });
-    }
+    const {
+      topic,
+      courseId,
+      difficulty,
+      questionCount,
+      noteIds,
+      pdfContext,
+      assignmentId,
+    } = parsedBody.data;
 
     // Fetch course name (needed for AP detection and language detection)
-    let courseName: string | undefined;
-    let courseNotes: string | undefined;
-    let styleHintContext: string | undefined;
-    let isAP = false;
-    let courseLanguage: string | undefined;
-    let quizSources: QuizSource[] = [];
-    if (courseId) {
-      const { data: course } = await supabase.from("courses").select("name").eq("id", courseId).single();
-      courseName = course?.name;
-      isAP = /^AP\s|^Advanced Placement\s|\bAP\b/i.test(courseName ?? "");
-      courseLanguage = detectCourseLanguage(courseName ?? "");
+    const quizSources: QuizSource[] = [];
+    const sourceBlocks: string[] = [];
+    const addSource = (
+      title: string,
+      content: string,
+      metadata: Pick<QuizSource, "moduleName" | "sourceUrl"> = {}
+    ) => {
+      const idx = quizSources.length;
+      quizSources.push({ idx, title, ...metadata });
+      sourceBlocks.push(
+        `### [${idx}] ${title}${metadata.moduleName ? ` (${metadata.moduleName})` : ""}\n${content}`
+      );
+    };
+
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("name")
+      .eq("id", courseId)
+      .eq("user_id", user.id)
+      .single();
+    if (courseError || !course) {
+      return NextResponse.json(
+        { success: false, error: "Course not found." },
+        { status: 404 }
+      );
     }
+    const courseName = course.name;
+    const isAP = /^AP\s|^Advanced Placement\s|\bAP\b/i.test(courseName ?? "");
+    const courseLanguage = detectCourseLanguage(courseName ?? "");
 
     // CS courses need more chars per note to preserve full code examples
     const charsPerNote = lowTokenMode
@@ -90,18 +129,20 @@ export async function POST(req: Request) {
 
     if (noteIds && noteIds.length > 0) {
       // Use client-selected specific notes (overrides auto-fetch)
-      const { data: selectedNotes } = await supabase
+      const { data: selectedNotes, error: notesError } = await supabase
         .from("notes")
         .select("title, content")
         .eq("user_id", user.id)
+        .eq("course_id", courseId)
         .in("id", noteIds)
         .not("content", "is", null);
-      if (selectedNotes && selectedNotes.length > 0) {
-        courseNotes = selectedNotes
-          .map((n) => `### ${n.title}\n${(n.content as string).slice(0, charsPerNote)}`)
-          .join("\n\n---\n\n");
+      if (notesError) {
+        throw new Error("Failed to load selected course notes.");
       }
-    } else if (courseId) {
+      for (const note of selectedNotes ?? []) {
+        addSource(note.title, (note.content as string).slice(0, charsPerNote));
+      }
+    } else {
       const retrieval = await canvasDeepFetch({
         userId: user.id,
         courseId,
@@ -113,42 +154,49 @@ export async function POST(req: Request) {
       const directSources = retrieval.ranked.filter((r) => r.confidence >= 0.3);
       if (directSources.length > 0) {
         const capped = directSources.slice(0, lowTokenMode ? 5 : 12);
-        courseNotes = capped
-          .map(
-            (r, idx) =>
-              `### [${idx}] ${r.chunk.title}${r.chunk.moduleName ? ` (${r.chunk.moduleName})` : ""}\n${r.chunk.text.slice(0, charsPerNote)}`
-          )
-          .join("\n\n---\n\n");
-        quizSources = capped.map((r, idx) => ({
-          idx,
-          title: r.chunk.title,
-          moduleName: r.chunk.moduleName,
-          sourceUrl: r.chunk.sourceUrl,
-        }));
-      } else if (retrieval.styleHint) {
-        // No direct notes for topic — use style hint so questions match the class style
-        styleHintContext = retrieval.styleHint;
+        for (const result of capped) {
+          addSource(
+            result.chunk.title,
+            result.chunk.text.slice(0, charsPerNote),
+            {
+              moduleName: result.chunk.moduleName,
+              sourceUrl: result.chunk.sourceUrl,
+            }
+          );
+        }
       }
     }
 
     if (assignmentId) {
-      const { data: assignment } = await supabase
+      const { data: assignment, error: assignmentError } = await supabase
         .from("assignments")
         .select("title, description")
         .eq("user_id", user.id)
+        .eq("course_id", courseId)
         .eq("id", assignmentId)
         .single();
+      if (assignmentError) {
+        return NextResponse.json(
+          { success: false, error: "Selected assignment was not found in this course." },
+          { status: 400 }
+        );
+      }
       if (assignment?.description) {
-      const assignmentBlock = `### Selected Assignment\n**${assignment.title}**\n${assignment.description.slice(0, lowTokenMode ? 500 : 1200)}`;
-      courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${assignmentBlock}` : assignmentBlock;
-    }
+        addSource(
+          `Selected Assignment: ${assignment.title}`,
+          assignment.description.slice(0, lowTokenMode ? 500 : 1200)
+        );
+      }
     }
 
     // Append or use uploaded PDF/DOCX context
     if (pdfContext) {
-      const pdfSection = `### Uploaded Material\n${pdfContext.slice(0, lowTokenMode ? 1800 : 6000)}`;
-      courseNotes = courseNotes ? `${courseNotes}\n\n---\n\n${pdfSection}` : pdfSection;
+      addSource(
+        "Uploaded Material",
+        pdfContext.slice(0, lowTokenMode ? 1800 : 6000)
+      );
     }
+    const courseNotes = sourceBlocks.join("\n\n---\n\n") || undefined;
 
     // Fetch recent weak topics for adaptive targeting
     const { data: metrics } = await supabase
@@ -183,7 +231,7 @@ export async function POST(req: Request) {
     }
 
     // If we still have no course context, block generation to avoid off-topic content
-    if (!courseNotes && !styleHintContext) {
+    if (!courseNotes) {
       return NextResponse.json(
         {
           success: false,
@@ -198,9 +246,8 @@ export async function POST(req: Request) {
       generateQuiz({
         topic,
         difficulty: effectiveDifficulty,
-        questionCount: Math.min(Math.max(questionCount, 1), lowTokenMode ? 12 : 50),
+        questionCount: Math.min(questionCount, lowTokenMode ? 12 : 20),
         courseNotes,
-        styleHint: styleHintContext,
         isAP,
         recentMistakes,
         courseName,
@@ -212,8 +259,9 @@ export async function POST(req: Request) {
 
     // Attach citation metadata to each question using source_idx
     const questions = rawQuestions.map((q) => {
-      if (typeof (q as any).source_idx === "number" && quizSources[(q as any).source_idx]) {
-        const src = quizSources[(q as any).source_idx];
+      const sourceIndex = (q as typeof q & { source_idx?: number }).source_idx;
+      if (typeof sourceIndex === "number" && quizSources[sourceIndex]) {
+        const src = quizSources[sourceIndex];
         return { ...q, source_title: src.title, source_module: src.moduleName ?? null, source_url: src.sourceUrl ?? null };
       }
       return q;
@@ -238,12 +286,19 @@ export async function POST(req: Request) {
 
     if (sessionError) {
       console.error("[practice/generate] Session insert error:", sessionError);
+      return NextResponse.json(
+        { success: false, error: "Failed to save the generated practice session." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, sessionId, questions });
   } catch (err) {
     console.error("[/api/practice/generate] Error:", err);
-    return NextResponse.json({ success: false, error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Practice test generation failed. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -254,57 +309,36 @@ export async function PATCH(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const { sessionId, correct, total, topic, courseId, durationSeconds, attempts } = await req.json();
-
-    const { error } = await supabase
-      .from("practice_sessions")
-      .update({
-        correct_count: correct,
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        duration_seconds: durationSeconds ?? null,
-      })
-      .eq("id", sessionId)
-      .eq("user_id", user.id);
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    // Record per-question attempts (best effort)
-    if (Array.isArray(attempts) && attempts.length > 0) {
-      await supabase.from("quiz_attempts").insert(
-        attempts.map((a: { question_index: number; user_answer: string; is_correct: boolean; time_taken_seconds: number }) => ({
-          user_id: user.id,
-          session_id: sessionId,
-          question_index: a.question_index,
-          user_answer: a.user_answer,
-          is_correct: a.is_correct,
-          time_taken_seconds: a.time_taken_seconds ?? 0,
-        }))
+    const parsedBody = submitPracticeSchema.safeParse(
+      await req.json().catch(() => null)
+    );
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { success: false, error: "Invalid practice submission." },
+        { status: 400 }
       );
     }
 
-    // Upsert performance metrics
-    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const mastery = accuracy >= 85 ? "mastered" : accuracy >= 65 ? "practicing" : "learning";
+    const { data, error } = await supabase.rpc("submit_practice_session", {
+      submit_user_id: user.id,
+      submit_session_id: parsedBody.data.sessionId,
+      submitted_attempts: parsedBody.data.attempts,
+      submitted_duration_seconds: parsedBody.data.durationSeconds ?? null,
+    });
+    if (error) {
+      console.error("[practice/generate] Submission failed:", error);
+      return NextResponse.json(
+        { success: false, error: "Failed to save practice results." },
+        { status: 500 }
+      );
+    }
 
-    await supabase.from("performance_metrics").upsert(
-      {
-        user_id: user.id,
-        course_id: courseId ?? null,
-        topic,
-        attempts: total,
-        correct,
-        accuracy_pct: accuracy,
-        last_practiced: new Date().toISOString(),
-        mastery_level: mastery,
-      },
-      { onConflict: "user_id,topic" }
-    );
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, result: data });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+    console.error("[practice/generate] Submission error:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to save practice results." },
+      { status: 500 }
+    );
   }
 }

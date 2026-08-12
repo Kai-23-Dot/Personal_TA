@@ -104,7 +104,7 @@ export default async function CoursesPage() {
           description={
             canvasConnection
               ? "Canvas is connected, but no active courses were imported. Run a sync from the dashboard to pull the latest Canvas classes."
-              : "Once Canvas is connected, this page will show your real courses instead of placeholder content."
+              : "Connect your school’s Canvas account to import its active courses here."
           }
           action={
             <Link href={canvasConnection ? "/dashboard" : "/settings/setup/canvas"} className="btn btn-primary">

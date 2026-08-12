@@ -16,15 +16,25 @@
  * - Token expiry detection
  */
 
+import {
+  assertCanvasUrl,
+  normalizeCanvasDomain,
+} from "@/backend/security/canvas";
+
 // ── Rate Limiting & Retry Configuration ──────────────────────────────────────
 
-const RATE_LIMIT_DELAY_MS = 100; // 10ms between requests (safe for 700/min limit)
+const RATE_LIMIT_DELAY_MS = 100;
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 10000;
+const REQUEST_TIMEOUT_MS = 15000;
+const MAX_QUEUE_SIZE = 500;
+const MAX_PAGES = 100;
+const MAX_PAGINATED_ITEMS = 5000;
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 // Request queue for rate limiting
-let requestQueue: Array<{
+const requestQueue: Array<{
   execute: () => Promise<Response>;
   resolve: (response: Response) => void;
   reject: (error: Error) => void;
@@ -64,21 +74,40 @@ async function rateLimitedFetch(
   domain: string,
   accessToken: string
 ): Promise<Response> {
+  const safeUrl = assertCanvasUrl(url, domain).toString();
+  if (requestQueue.length >= MAX_QUEUE_SIZE) {
+    throw new Error("Canvas request queue is full. Try again shortly.");
+  }
+
   return new Promise((resolve, reject) => {
     requestQueue.push({
       execute: async () => {
-        return fetch(url, {
-          ...options,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            ...options.headers,
-          },
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const abortFromCaller = () => controller.abort(options.signal?.reason);
+        options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+        try {
+          return await fetch(safeUrl, {
+            ...options,
+            redirect: "error",
+            signal: controller.signal,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              ...options.headers,
+            },
+          });
+        } finally {
+          clearTimeout(timeout);
+          options.signal?.removeEventListener("abort", abortFromCaller);
+        }
       },
       resolve,
       reject,
     });
-    processQueue().catch(reject);
+    void processQueue().catch((error: unknown) => {
+      reject(error instanceof Error ? error : new Error("Canvas request failed."));
+    });
   });
 }
 
@@ -94,31 +123,29 @@ async function fetchWithRetry(
 ): Promise<Response> {
   try {
     const response = await rateLimitedFetch(url, options, domain, accessToken);
-    
-    // Handle rate limiting (429)
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const delay = retryAfter 
-        ? parseInt(retryAfter) * 1000 
-        : Math.min(BASE_RETRY_DELAY_MS * Math.pow(2, retryCount), MAX_RETRY_DELAY_MS);
-      
-      console.warn(`[Canvas] Rate limited. Retrying after ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      if (retryCount < MAX_RETRIES) {
-        return fetchWithRetry(url, options, domain, accessToken, retryCount + 1);
-      }
-      
-      throw new Error(`Canvas rate limit exceeded after ${MAX_RETRIES} retries`);
+    if (RETRYABLE_STATUSES.has(response.status) && retryCount < MAX_RETRIES) {
+      const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+      const delay = Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0
+        ? Math.min(retryAfterSeconds * 1000, MAX_RETRY_DELAY_MS)
+        : Math.min(
+            BASE_RETRY_DELAY_MS * Math.pow(2, retryCount),
+            MAX_RETRY_DELAY_MS
+          );
+      console.warn(
+        `[Canvas] Request returned ${response.status}; retrying after ${delay}ms`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, domain, accessToken, retryCount + 1);
     }
-    
     return response;
   } catch (error) {
-    // Network errors - retry with backoff
-    if (retryCount < MAX_RETRIES && (error as NodeJS.ErrnoException).code === 'ECONNRESET') {
-      const delay = Math.min(BASE_RETRY_DELAY_MS * Math.pow(2, retryCount), MAX_RETRY_DELAY_MS);
-      console.warn(`[Canvas] Network error. Retrying after ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+    if (retryCount < MAX_RETRIES) {
+      const delay = Math.min(
+        BASE_RETRY_DELAY_MS * Math.pow(2, retryCount),
+        MAX_RETRY_DELAY_MS
+      );
+      console.warn(`[Canvas] Request failed; retrying after ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
       return fetchWithRetry(url, options, domain, accessToken, retryCount + 1);
     }
     throw error;
@@ -323,6 +350,106 @@ export interface CanvasFolder {
   updated_at?: string;
 }
 
+export type CanvasDownload = {
+  buffer: Buffer;
+  contentType: string;
+};
+
+function assertSafeDownloadUrl(urlInput: string | URL): URL {
+  const url = new URL(urlInput);
+  normalizeCanvasDomain(url.hostname);
+  if (
+    url.protocol !== "https:" ||
+    (url.port && url.port !== "443") ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error("Canvas returned an unsafe file download URL.");
+  }
+  return url;
+}
+
+async function readBoundedBuffer(
+  response: Response,
+  maxBytes: number
+): Promise<Buffer> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new Error("Canvas file exceeds the download size limit.");
+  }
+  if (!response.body) return Buffer.alloc(0);
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > maxBytes) {
+        await reader.cancel();
+        throw new Error("Canvas file exceeds the download size limit.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), received);
+}
+
+/**
+ * Download a Canvas file without forwarding the Canvas bearer token to a
+ * cross-origin storage redirect. Response bytes are streamed with a hard cap.
+ */
+export async function downloadCanvasFile(
+  domain: string,
+  accessToken: string,
+  downloadUrl: string,
+  maxBytes = 10 * 1024 * 1024
+): Promise<CanvasDownload> {
+  const canvasDomain = normalizeCanvasDomain(domain);
+  let currentUrl = assertCanvasUrl(downloadUrl, canvasDomain);
+
+  for (let redirectCount = 0; redirectCount <= 5; redirectCount++) {
+    const isCanvasOrigin = currentUrl.hostname.toLowerCase() === canvasDomain;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, {
+        redirect: "manual",
+        signal: controller.signal,
+        headers: isCanvasOrigin
+          ? { Authorization: `Bearer ${accessToken}` }
+          : undefined,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) throw new Error("Canvas file redirect is missing a location.");
+      currentUrl = assertSafeDownloadUrl(new URL(location, currentUrl));
+      continue;
+    }
+    if (!response.ok) {
+      throw new Error(`Canvas file download failed with status ${response.status}.`);
+    }
+
+    return {
+      buffer: await readBoundedBuffer(response, maxBytes),
+      contentType:
+        response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ??
+        "",
+    };
+  }
+
+  throw new Error("Canvas file download redirected too many times.");
+}
+
 // ── Enhanced HTML to Text Conversion ────────────────────────────────────────
 
 /**
@@ -454,14 +581,22 @@ function parseLinkHeader(linkHeader: string | null): { next?: string; prev?: str
 async function fetchAllPages<T>(
   domain: string,
   accessToken: string,
-  baseUrl: string,
-  perPage = 50
+  baseUrl: string
 ): Promise<T[]> {
   const allResults: T[] = [];
   let currentPage: string | null = baseUrl;
+  const visited = new Set<string>();
+  let pageCount = 0;
   
-  while (currentPage) {
-    const res = await fetchWithRetry(currentPage, {}, domain, accessToken);
+  while (currentPage && pageCount < MAX_PAGES) {
+    const safePage = assertCanvasUrl(currentPage, domain).toString();
+    if (visited.has(safePage)) {
+      throw new Error("Canvas returned a pagination loop.");
+    }
+    visited.add(safePage);
+    pageCount++;
+
+    const res = await fetchWithRetry(safePage, {}, domain, accessToken);
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -474,19 +609,25 @@ async function fetchAllPages<T>(
       throw new Error(`Canvas API error ${res.status}: ${await res.text().catch(() => 'Unknown error')}`);
     }
     
-    const data: T[] = await res.json();
+    const data = await res.json() as unknown;
+    if (!Array.isArray(data)) {
+      throw new Error("Canvas returned an invalid paginated response.");
+    }
     allResults.push(...data);
+    if (allResults.length >= MAX_PAGINATED_ITEMS) {
+      console.warn(`[Canvas] Reached pagination item limit (${MAX_PAGINATED_ITEMS})`);
+      return allResults.slice(0, MAX_PAGINATED_ITEMS);
+    }
     
     // Check for next page
     const linkHeader = res.headers.get('Link');
     const links = parseLinkHeader(linkHeader);
     currentPage = links.next || null;
     
-    // Safety check - don't fetch more than 100 pages
-    if (allResults.length > perPage * 100) {
-      console.warn('[Canvas] Reached maximum pagination limit (5000 items)');
-      break;
-    }
+  }
+
+  if (currentPage && pageCount >= MAX_PAGES) {
+    console.warn(`[Canvas] Reached pagination page limit (${MAX_PAGES})`);
   }
   
   return allResults;
@@ -519,12 +660,7 @@ export async function fetchCanvasAssignments(
 ): Promise<CanvasAssignment[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments?per_page=50&order_by=due_at&include[]=all_dates&include[]=submission`;
   
-  try {
-    return await fetchAllPages<CanvasAssignment>(domain, accessToken, url);
-  } catch (error) {
-    console.error(`[Canvas] Failed to fetch assignments for course ${courseId}:`, (error as Error).message);
-    return [];
-  }
+  return fetchAllPages<CanvasAssignment>(domain, accessToken, url);
 }
 
 /**
@@ -557,11 +693,7 @@ export async function fetchCanvasCourseSubmissions(
 ): Promise<CanvasCourseSubmission[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/students/submissions?student_ids[]=self&per_page=100&include[]=submission`;
   
-  try {
-    return await fetchAllPages<CanvasCourseSubmission>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasCourseSubmission>(domain, accessToken, url);
 }
 
 /**
@@ -574,11 +706,7 @@ export async function fetchCanvasPages(
 ): Promise<CanvasPage[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/pages?per_page=50&sort=updated_at&order=desc`;
   
-  try {
-    return await fetchAllPages<CanvasPage>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasPage>(domain, accessToken, url);
 }
 
 /**
@@ -632,11 +760,7 @@ export async function fetchCanvasModules(
 ): Promise<CanvasModule[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/modules?per_page=50`;
   
-  try {
-    return await fetchAllPages<CanvasModule>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasModule>(domain, accessToken, url);
 }
 
 /**
@@ -650,11 +774,7 @@ export async function fetchCanvasModuleItems(
 ): Promise<CanvasModuleItem[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/modules/${moduleId}/items?per_page=100&include[]=content_details`;
   
-  try {
-    return await fetchAllPages<CanvasModuleItem>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasModuleItem>(domain, accessToken, url);
 }
 
 /**
@@ -668,14 +788,15 @@ export async function fetchCanvasFiles(
 ): Promise<CanvasFile[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/files?per_page=${maxFiles}&sort=updated_at&order=desc&content_types[]=application/pdf&content_types[]=application/vnd.openxmlformats-officedocument.wordprocessingml.document&content_types[]=application/vnd.openxmlformats-officedocument.presentationml.presentation&content_types[]=text/plain`;
   
-  try {
-    const res = await fetchWithRetry(url, {}, domain, accessToken);
-    if (!res.ok) return [];
-    const files: CanvasFile[] = await res.json();
-    return files.slice(0, maxFiles);
-  } catch {
-    return [];
+  const res = await fetchWithRetry(url, {}, domain, accessToken);
+  if (!res.ok) {
+    throw new Error(`Canvas files API error ${res.status}.`);
   }
+  const files = await res.json() as unknown;
+  if (!Array.isArray(files)) {
+    throw new Error("Canvas returned an invalid files response.");
+  }
+  return (files as CanvasFile[]).slice(0, maxFiles);
 }
 
 /**
@@ -688,12 +809,8 @@ export async function fetchCanvasFilesWide(
   maxFiles = 100
 ): Promise<CanvasFile[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/files?per_page=${maxFiles}&sort=updated_at&order=desc`;
-  try {
-    const results = await fetchAllPages<CanvasFile>(domain, accessToken, url);
-    return results.slice(0, maxFiles);
-  } catch {
-    return [];
-  }
+  const results = await fetchAllPages<CanvasFile>(domain, accessToken, url);
+  return results.slice(0, maxFiles);
 }
 
 /**
@@ -727,11 +844,7 @@ export async function fetchCanvasQuizzes(
 ): Promise<CanvasQuiz[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/quizzes?per_page=50`;
   
-  try {
-    return await fetchAllPages<CanvasQuiz>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasQuiz>(domain, accessToken, url);
 }
 
 /**
@@ -744,11 +857,7 @@ export async function fetchCanvasDiscussionTopics(
 ): Promise<CanvasDiscussionTopic[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/discussion_topics?per_page=50`;
   
-  try {
-    return await fetchAllPages<CanvasDiscussionTopic>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasDiscussionTopic>(domain, accessToken, url);
 }
 
 /**
@@ -760,11 +869,7 @@ export async function fetchCanvasAnnouncements(
   courseId: number
 ): Promise<CanvasAnnouncement[]> {
   const url = `https://${domain}/api/v1/announcements?context_codes[]=course_${courseId}&per_page=50&active_only=true`;
-  try {
-    return await fetchAllPages<CanvasAnnouncement>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasAnnouncement>(domain, accessToken, url);
 }
 
 /**
@@ -776,11 +881,7 @@ export async function fetchCanvasCalendarEvents(
   courseId: number
 ): Promise<CanvasCalendarEvent[]> {
   const url = `https://${domain}/api/v1/calendar_events?context_codes[]=course_${courseId}&all_events=true&per_page=100`;
-  try {
-    return await fetchAllPages<CanvasCalendarEvent>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasCalendarEvent>(domain, accessToken, url);
 }
 
 /**
@@ -792,11 +893,7 @@ export async function fetchCanvasFolders(
   courseId: number
 ): Promise<CanvasFolder[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/folders?per_page=100`;
-  try {
-    return await fetchAllPages<CanvasFolder>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasFolder>(domain, accessToken, url);
 }
 
 /**
@@ -859,11 +956,7 @@ export async function fetchCanvasAssignmentSubmissions(
 ): Promise<CanvasSubmission[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/assignments/${assignmentId}/submissions?per_page=50&include[]=submission`;
   
-  try {
-    return await fetchAllPages<CanvasSubmission>(domain, accessToken, url);
-  } catch {
-    return [];
-  }
+  return fetchAllPages<CanvasSubmission>(domain, accessToken, url);
 }
 
 /**
@@ -876,19 +969,15 @@ export async function fetchCanvasCourseGrades(
 ): Promise<{ assignment_id: number; score: number; grade: string; submitted_at: string }[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/students/submissions?student_ids[]=self&per_page=100&include[]=grades`;
   
-  try {
-    const submissions = await fetchAllPages<CanvasCourseSubmission>(domain, accessToken, url);
-    return submissions
-      .filter(sub => sub.score !== null && sub.submitted_at !== null)
-      .map(sub => ({
-        assignment_id: sub.assignment_id,
-        score: sub.score as number,
-        grade: sub.grade || String(sub.score),
-        submitted_at: sub.submitted_at as string,
-      }));
-  } catch {
-    return [];
-  }
+  const submissions = await fetchAllPages<CanvasCourseSubmission>(domain, accessToken, url);
+  return submissions
+    .filter(sub => sub.score !== null && sub.submitted_at !== null)
+    .map(sub => ({
+      assignment_id: sub.assignment_id,
+      score: sub.score as number,
+      grade: sub.grade || String(sub.score),
+      submitted_at: sub.submitted_at as string,
+    }));
 }
 
 /**
@@ -901,13 +990,15 @@ export async function fetchCanvasCourseEnrollments(
 ): Promise<Array<{ type: string; role: string; user_id: number }>> {
   const url = `https://${domain}/api/v1/courses/${courseId}/enrollments?user_id=self`;
   
-  try {
-    const res = await fetchWithRetry(url, {}, domain, accessToken);
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
+  const res = await fetchWithRetry(url, {}, domain, accessToken);
+  if (!res.ok) {
+    throw new Error(`Canvas enrollments API error ${res.status}.`);
   }
+  const enrollments = await res.json() as unknown;
+  if (!Array.isArray(enrollments)) {
+    throw new Error("Canvas returned an invalid enrollments response.");
+  }
+  return enrollments as Array<{ type: string; role: string; user_id: number }>;
 }
 
 /**

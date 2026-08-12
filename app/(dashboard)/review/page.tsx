@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Brain, CheckCircle2, ChevronRight, Flame, Loader2,
-  RefreshCw, RotateCcw, Sparkles, Target, X,
+  Brain, CheckCircle2, Flame, Loader2,
+  Sparkles, Target, X,
 } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 
@@ -225,8 +225,8 @@ export default function ReviewPage() {
       );
       setUpcomingExams(exams);
       setDueCards(cardsData ?? []);
-      if (!courseId && (coursesData?.length ?? 0) > 0) {
-        setCourseId(coursesData[0].id);
+      if ((coursesData?.length ?? 0) > 0) {
+        setCourseId((currentCourseId) => currentCourseId || coursesData[0].id);
       }
     } catch {
       // Leave lists empty and fall through to the empty state instead of hanging on the skeleton.

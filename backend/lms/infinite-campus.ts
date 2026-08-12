@@ -17,6 +17,8 @@
  * and falls back silently so other data still syncs if one endpoint is unavailable.
  */
 
+import { normalizeInfiniteCampusDomain } from "@/backend/security/infiniteCampus";
+
 export interface ICStudent {
   personID: number;
   firstName: string;
@@ -65,10 +67,7 @@ export interface ICGrade {
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function icBase(domain: string) {
-  // Normalize: accept "district.infinitecampus.org/campus" or "district.infinitecampus.org"
-  const d = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  // If the domain already ends with /campus, use it; otherwise append
-  return d.endsWith("/campus") ? `https://${d}` : `https://${d}/campus`;
+  return `https://${normalizeInfiniteCampusDomain(domain)}/campus`;
 }
 
 async function icGet<T>(
@@ -83,6 +82,8 @@ async function icGet<T>(
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) return null;
     return res.json() as Promise<T>;

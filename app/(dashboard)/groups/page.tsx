@@ -119,8 +119,6 @@ export default function GroupsPage() {
     [groups, courseFilter, statusFilter, healthFilter]
   );
 
-  const filtersActive = courseFilter !== "all" || statusFilter !== "all" || healthFilter !== "all";
-
   function applyCheckinResult(groupId: string, health: unknown) {
     setGroups((prev) =>
       prev.map((g) =>

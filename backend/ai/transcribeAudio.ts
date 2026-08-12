@@ -26,6 +26,10 @@ export async function transcribeAudio(
   fileName: string,
   courseName?: string
 ): Promise<TranscriptionResult> {
+  const sarvamApiKey = process.env.SARVAM_API_KEY;
+  if (!sarvamApiKey) {
+    throw new Error("Audio transcription provider is not configured.");
+  }
   const mimeType = getAudioMimeType(fileName);
 
   // Step 1: Raw transcription via Sarvam Saaras v3 ASR
@@ -37,17 +41,21 @@ export async function transcribeAudio(
   const asr = await fetch("https://api.sarvam.ai/speech-to-text", {
     method: "POST",
     headers: {
-      "api-subscription-key": process.env.SARVAM_API_KEY ?? "",
+      "api-subscription-key": sarvamApiKey,
     },
     body: formData,
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!asr.ok) {
-    throw new Error(`Sarvam ASR error ${asr.status}: ${await asr.text()}`);
+    throw new Error(`Audio transcription failed with status ${asr.status}.`);
   }
 
   const asrData = await asr.json() as { transcript?: string; language_code?: string };
   const rawTranscript = asrData.transcript ?? "";
+  if (!rawTranscript.trim()) {
+    throw new Error("The transcription provider returned an empty transcript.");
+  }
 
   // Step 2: Structure the transcript into organized lecture notes
   const { text: structuredNotes } = await generateText({

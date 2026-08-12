@@ -18,10 +18,10 @@ const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY ?? "",
 });
 
-function report(userId: string | null, totalTokens: number | undefined) {
+async function report(userId: string | null, totalTokens: number | undefined) {
   if (!userId || !totalTokens || totalTokens <= 0) return;
-  // Fire-and-forget; recordUsage swallows its own errors.
-  void recordUsage(userId, "tokens", totalTokens);
+  // Await the insert so serverless runtimes cannot stop before metering is saved.
+  await recordUsage(userId, "tokens", totalTokens);
 }
 
 const meteringMiddleware: LanguageModelV1Middleware = {
@@ -30,7 +30,10 @@ const meteringMiddleware: LanguageModelV1Middleware = {
     const userId = getUsageUserId();
     const result = await doGenerate();
     const usage = result.usage;
-    report(userId, (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0));
+    await report(
+      userId,
+      (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0)
+    );
     return result;
   },
   async wrapStream({ doStream }) {
@@ -39,10 +42,13 @@ const meteringMiddleware: LanguageModelV1Middleware = {
     const userId = getUsageUserId();
     const { stream, ...rest } = await doStream();
     const tap = new TransformStream({
-      transform(chunk, controller) {
+      async transform(chunk, controller) {
         if (chunk.type === "finish") {
           const usage = chunk.usage;
-          report(userId, (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0));
+          await report(
+            userId,
+            (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0)
+          );
         }
         controller.enqueue(chunk);
       },

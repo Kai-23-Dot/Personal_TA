@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/backend/supabase/server";
 import { summarizeNotes } from "@/backend/ai/summarizeNotes";
 import { extractTextFromImage, type ImageMediaType } from "@/backend/ai/ocrImage";
 import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
-import { fetchCanvasAssignments, fetchCanvasFilesWide, fetchCanvasModuleItems, fetchCanvasModules, fetchCanvasPages, htmlToPlainText } from "@/backend/lms/canvas";
+import {
+  downloadCanvasFile,
+  fetchCanvasAssignments,
+  fetchCanvasFileById,
+  fetchCanvasFilesWide,
+  fetchCanvasModuleItems,
+  fetchCanvasModules,
+  fetchCanvasPageDetail,
+  fetchCanvasPages,
+  htmlToPlainText,
+} from "@/backend/lms/canvas";
+import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { extractFromGoogleLink } from "@/backend/canvas-intelligence/contentExtractor";
 import type { SummaryType } from "@/types";
 
@@ -17,19 +29,12 @@ const IMAGE_TYPES: Record<string, ImageMediaType> = {
 };
 /** Max images to OCR per Canvas page (prevents runaway cost on image-heavy pages) */
 const MAX_IMAGES_PER_PAGE = 5;
+const MAX_SELECTED_LESSONS = 100;
+const MAX_MODULES_TO_INSPECT = 60;
+const MAX_STUDY_SOURCE_CHARS = 240_000;
 
 const STUDY_GUIDE_INSTRUCTION =
   "Use only the selected Canvas lesson content below, prioritizing Google Slides text when present. Do not invent topics that are not in the selected content. Include a complete Study Checklist and do not stop mid-section. When content comes from multiple Canvas modules/units (indicated by '# Lesson Content: Unit Name —' prefixes in the source), organize the output with a '## Unit: [Name]' header for each module before listing its topics.";
-
-type SelectedLessonItem = {
-  itemKey?: string;
-  itemId?: number;
-  type?: string;
-  pageUrl?: string | null;
-  externalUrl?: string | null;
-  contentId?: number | null;
-  noteId?: string | null;
-};
 
 type PendingSyncedNoteSource = {
   title: string;
@@ -37,9 +42,39 @@ type PendingSyncedNoteSource = {
   fallbackContent: string;
 };
 
-function extractGoogleSlidesId(url: string): string | null {
-  const match = url.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
+const lessonItemSchema = z.object({
+  itemKey: z.string().trim().max(200).optional(),
+  itemId: z.number().int().positive().optional(),
+  type: z.string().trim().max(64).optional(),
+  pageUrl: z.string().max(2048).nullable().optional(),
+  externalUrl: z.string().max(2048).nullable().optional(),
+  contentId: z.number().int().positive().nullable().optional(),
+  noteId: z.string().uuid().nullable().optional(),
+});
+
+const studyGuideSchema = z.object({
+  summaryStyle: z
+    .enum(["bullet_points", "outline", "detailed", "unit_aggregate"])
+    .default("bullet_points"),
+  courseId: z.string().uuid(),
+  lessonItemIds: z.array(z.number().int().positive()).max(MAX_SELECTED_LESSONS).optional(),
+  lessonItems: z.array(lessonItemSchema).max(MAX_SELECTED_LESSONS).optional(),
+  unitName: z.string().trim().min(1).max(120).optional(),
+}).strict().superRefine((value, context) => {
+  if (
+    !value.unitName &&
+    (value.lessonItems?.length ?? 0) === 0 &&
+    (value.lessonItemIds?.length ?? 0) === 0
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select at least one lesson source or enter a unit name.",
+    });
+  }
+});
+
+function boundedStudyContent(blocks: string[]): string {
+  return blocks.join("\n\n").slice(0, MAX_STUDY_SOURCE_CHARS);
 }
 
 function extractGoogleSlidesUrls(value: string | null | undefined): string[] {
@@ -55,50 +90,11 @@ function extractGoogleSlidesUrls(value: string | null | undefined): string[] {
   return [...urls];
 }
 
-async function fetchGoogleSlidesText(url: string, oauthAccessToken?: string | null): Promise<string | null> {
-  const slideId = extractGoogleSlidesId(url);
-  if (!slideId) return null;
-  const authHeaders = oauthAccessToken ? { Authorization: `Bearer ${oauthAccessToken}` } : undefined;
-
-  const exportUrls = [
-    `https://docs.google.com/presentation/d/${slideId}/export/txt`,
-    `https://docs.google.com/presentation/d/${slideId}/export?format=txt`,
-  ];
-
-  for (const exportUrl of exportUrls) {
-    const res = await fetch(exportUrl, { headers: authHeaders });
-    if (res.ok) {
-      const text = (await res.text()).replace(/\s+/g, " ").trim();
-      if (text) return text;
-    }
-  }
-
-  return null;
-}
-
-async function fetchGoogleSlidesAsPptxText(url: string, oauthAccessToken?: string | null): Promise<string | null> {
-  const slideId = extractGoogleSlidesId(url);
-  if (!slideId) return null;
-  const exportUrl = `https://docs.google.com/presentation/d/${slideId}/export/pptx`;
-  const res = await fetch(exportUrl, {
-    headers: oauthAccessToken ? { Authorization: `Bearer ${oauthAccessToken}` } : undefined,
-  });
-  if (!res.ok) return null;
-  const buffer = Buffer.from(await res.arrayBuffer());
-  return extractFileText(buffer, "pptx");
-}
-
 async function extractGoogleSlidesLessonText(params: {
   url: string;
   googleApiKey?: string;
   oauthAccessToken?: string | null;
 }): Promise<string | null> {
-  const direct = await fetchGoogleSlidesText(params.url, params.oauthAccessToken);
-  if (direct) return direct;
-
-  const viaPptx = await fetchGoogleSlidesAsPptxText(params.url, params.oauthAccessToken);
-  if (viaPptx) return viaPptx;
-
   return extractFromGoogleLink({
     url: params.url,
     googleApiKey: params.googleApiKey,
@@ -132,21 +128,20 @@ function extractCanvasImageUrls(html: string, domain: string): string[] {
  */
 async function ocrCanvasImage(
   url: string,
+  domain: string,
   accessToken: string,
   context: string
 ): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      redirect: "follow",
-    });
-    if (!res.ok) return null;
-    const ct = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    const { buffer, contentType: ct } = await downloadCanvasFile(
+      domain,
+      accessToken,
+      url,
+      5 * 1024 * 1024
+    );
     const imgType = IMAGE_TYPES[ct];
     if (!imgType) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > 5 * 1024 * 1024) return null; // skip images > 5 MB
-    const ocr = await extractTextFromImage(buf, imgType, context);
+    const ocr = await extractTextFromImage(buffer, imgType, context);
     return ocr.structuredContent || ocr.extractedText || null;
   } catch {
     return null;
@@ -159,30 +154,20 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const body = await req.json();
-    const { summaryStyle = "bullet_points", courseId, lessonItemIds, lessonItems, unitName } = body as {
-      summaryStyle?: SummaryType;
-      courseId?: string;
-      lessonItemIds?: number[];
-      lessonItems?: SelectedLessonItem[];
-      unitName?: string;
-    };
-    let lessonContentIncluded = false;
-    const isUnitMode = Boolean(unitName?.trim());
-
-    if (!courseId) {
-      return NextResponse.json({ success: false, error: "courseId is required" }, { status: 400 });
-    }
-
-    if (!isUnitMode && (!Array.isArray(lessonItems) || lessonItems.length === 0) && (!Array.isArray(lessonItemIds) || lessonItemIds.length === 0)) {
+    const parsed = studyGuideSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Select at least one lesson source or enter a unit name." },
+        {
+          success: false,
+          error: parsed.error.issues[0]?.message ?? "Invalid study-guide request.",
+        },
         { status: 400 }
       );
     }
-
-    const allowedStyles: SummaryType[] = ["bullet_points", "outline", "detailed", "unit_aggregate"];
-    const safeStyle = allowedStyles.includes(summaryStyle) ? summaryStyle : "bullet_points";
+    const { summaryStyle, courseId, lessonItemIds, lessonItems, unitName } = parsed.data;
+    let lessonContentIncluded = false;
+    const isUnitMode = Boolean(unitName?.trim());
+    const safeStyle: SummaryType = summaryStyle;
     const googleApiKey = process.env.GOOGLE_DRIVE_API_KEY;
 
     const { data: course } = await supabase
@@ -271,7 +256,7 @@ export async function POST(req: Request) {
 
     if (!hasNonNoteSelection && lessonBlocks.length > 0 && pendingSyncedNoteSources.length === 0) {
       const { summary } = await summarizeNotes({
-        content: lessonBlocks.join("\n\n"),
+        content: boundedStudyContent(lessonBlocks),
         title: "Study Guide",
         summaryType: "unit_aggregate",
         customInstruction: `${STUDY_GUIDE_INSTRUCTION} Output style: ${safeStyle.replace("_", " ")}. Keep it student-friendly.`,
@@ -289,13 +274,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: connection } = await supabase
-      .from("lms_connections")
-      .select("access_token, canvas_domain")
-      .eq("user_id", user.id)
-      .eq("platform", "canvas")
-      .eq("is_active", true)
-      .single();
+    const canvasContext = await getCanvasCourseContext(
+      supabase,
+      user.id,
+      courseId
+    );
+    const connection = canvasContext?.connection;
 
     if (!connection?.access_token || !connection.canvas_domain) {
       if (lessonBlocks.length === 0 && pendingSyncedNoteSources.length > 0) {
@@ -306,7 +290,7 @@ export async function POST(req: Request) {
       }
       if (lessonBlocks.length > 0) {
         const { summary } = await summarizeNotes({
-          content: lessonBlocks.join("\n\n"),
+          content: boundedStudyContent(lessonBlocks),
           title: "Study Guide",
           summaryType: "unit_aggregate",
           customInstruction: `${STUDY_GUIDE_INSTRUCTION} Output style: ${safeStyle.replace("_", " ")}. Keep it student-friendly.`,
@@ -337,19 +321,20 @@ export async function POST(req: Request) {
           : null;
 
         if (pageMatch) {
-          const pageRes = await fetch(
-            `https://${connection.canvas_domain}/api/v1/courses/${canvasCourseId}/pages/${encodeURIComponent(decodeURIComponent(pageMatch[1]))}`,
-            { headers: { Authorization: `Bearer ${connection.access_token}` } }
+          const page = await fetchCanvasPageDetail(
+            connection.canvas_domain,
+            connection.access_token,
+            canvasCourseId,
+            decodeURIComponent(pageMatch[1])
           );
-          if (pageRes.ok) {
-            const page = await pageRes.json();
-            sourceHtml = page?.body ?? null;
-          }
+          sourceHtml = page?.body ?? null;
         } else if (sourceUrl.hostname === connection.canvas_domain) {
           const sourceRes = await fetch(note.sourceUrl, {
             headers: { Authorization: `Bearer ${connection.access_token}` },
+            redirect: "error",
+            signal: AbortSignal.timeout(15_000),
           });
-          if (sourceRes.ok) sourceHtml = await sourceRes.text();
+          if (sourceRes.ok) sourceHtml = (await sourceRes.text()).slice(0, 250_000);
         }
 
         for (const slideUrl of extractGoogleSlidesUrls(sourceHtml)) {
@@ -373,7 +358,13 @@ export async function POST(req: Request) {
       lessonContentIncluded = true;
     }
 
-    const allModules = await fetchCanvasModules(connection.canvas_domain, connection.access_token, canvasCourseId);
+    const allModules = (
+      await fetchCanvasModules(
+        connection.canvas_domain,
+        connection.access_token,
+        canvasCourseId
+      )
+    ).slice(0, MAX_MODULES_TO_INSPECT);
 
     let combinedItems: Array<{
       id: number;
@@ -390,7 +381,9 @@ export async function POST(req: Request) {
     if (isUnitMode && unitName) {
       // ── Unit-name mode: find modules whose name contains the typed unit ──
       const needle = unitName.trim().toLowerCase();
-      const matchedModules = allModules.filter((m) => m.name.toLowerCase().includes(needle));
+      const matchedModules = allModules
+        .filter((m) => m.name.toLowerCase().includes(needle))
+        .slice(0, MAX_MODULES_TO_INSPECT);
 
       if (matchedModules.length === 0) {
         return NextResponse.json(
@@ -422,7 +415,7 @@ export async function POST(req: Request) {
             }));
           })
         )
-      ).flat();
+      ).flat().slice(0, MAX_SELECTED_LESSONS);
 
       if (combinedItems.length === 0) {
         return NextResponse.json(
@@ -502,19 +495,25 @@ export async function POST(req: Request) {
           content_id: a.id,
         }));
 
-      combinedItems = [...chosenItems, ...fallbackFileItems, ...fallbackPageItems, ...fallbackAssignmentItems];
+      combinedItems = [
+        ...chosenItems,
+        ...fallbackFileItems,
+        ...fallbackPageItems,
+        ...fallbackAssignmentItems,
+      ].slice(0, MAX_SELECTED_LESSONS);
     }
 
     for (const item of combinedItems) {
       let lessonText: string | null = null;
 
       if (item.type === "Page" && item.page_url) {
-        const pageRes = await fetch(
-          `https://${connection.canvas_domain}/api/v1/courses/${canvasCourseId}/pages/${encodeURIComponent(item.page_url)}`,
-          { headers: { Authorization: `Bearer ${connection.access_token}` } }
+        const page = await fetchCanvasPageDetail(
+          connection.canvas_domain,
+          connection.access_token,
+          canvasCourseId,
+          item.page_url
         );
-        if (pageRes.ok) {
-          const page = await pageRes.json();
+        if (page) {
           const html = page?.body ?? "";
 
           // 1. Google Slides (highest quality when present)
@@ -543,7 +542,12 @@ export async function POST(req: Request) {
           if (imageUrls.length > 0) {
             const ocrTexts = await Promise.all(
               imageUrls.map((imgUrl) =>
-                ocrCanvasImage(imgUrl, connection.access_token, `${courseName ?? "class"} notes`)
+                ocrCanvasImage(
+                  imgUrl,
+                  connection.canvas_domain,
+                  connection.access_token,
+                  `${courseName ?? "class"} notes`
+                )
               )
             );
             const imageContent = ocrTexts.filter(Boolean).join("\n\n---\n\n");
@@ -572,32 +576,37 @@ export async function POST(req: Request) {
       }
 
       if (!lessonText && item.type === "File" && item.content_id) {
-        const fileRes = await fetch(
-          `https://${connection.canvas_domain}/api/v1/files/${item.content_id}`,
-          { headers: { Authorization: `Bearer ${connection.access_token}` } }
+        const fileData = await fetchCanvasFileById(
+          connection.canvas_domain,
+          connection.access_token,
+          canvasCourseId,
+          item.content_id
         );
-        if (fileRes.ok) {
-          const fileData = await fileRes.json();
+        if (fileData) {
           const downloadUrl = fileData?.url;
           const contentType = fileData?.["content-type"] || fileData?.content_type || "";
           const fileType = detectFileType(contentType, fileData?.filename || fileData?.display_name || item.title);
           if (downloadUrl && fileType) {
-            const downloadRes = await fetch(downloadUrl, {
-              headers: { Authorization: `Bearer ${connection.access_token}` },
-            });
-            if (downloadRes.ok) {
-              const buffer = Buffer.from(await downloadRes.arrayBuffer());
+            if (!fileData.size || fileData.size <= 20 * 1024 * 1024) {
+              const { buffer } = await downloadCanvasFile(
+                connection.canvas_domain,
+                connection.access_token,
+                downloadUrl,
+                20 * 1024 * 1024
+              );
               lessonText = await extractFileText(buffer, fileType);
             }
           }
           if (downloadUrl && !lessonText) {
             const imgType = IMAGE_TYPES[(contentType ?? "").toLowerCase()];
             if (imgType) {
-              const downloadRes = await fetch(downloadUrl, {
-                headers: { Authorization: `Bearer ${connection.access_token}` },
-              });
-              if (downloadRes.ok) {
-                const buffer = Buffer.from(await downloadRes.arrayBuffer());
+              if (!fileData.size || fileData.size <= 5 * 1024 * 1024) {
+                const { buffer } = await downloadCanvasFile(
+                  connection.canvas_domain,
+                  connection.access_token,
+                  downloadUrl,
+                  5 * 1024 * 1024
+                );
                 const ocr = await extractTextFromImage(buffer, imgType, `${course.name} class notes`);
                 lessonText = ocr.structuredContent || ocr.extractedText || null;
               }
@@ -619,7 +628,7 @@ export async function POST(req: Request) {
       }
     }
 
-    let combinedContent = lessonBlocks.join("\n\n");
+    let combinedContent = boundedStudyContent(lessonBlocks);
 
     if (!combinedContent) {
       // Final fallback: selected "Synced Notes" pseudo-items (from module-items endpoint)
@@ -643,7 +652,7 @@ export async function POST(req: Request) {
         lessonBlocks.push(...selectedNoteBlocks);
         lessonContentIncluded = true;
       }
-      combinedContent = lessonBlocks.join("\n\n");
+      combinedContent = boundedStudyContent(lessonBlocks);
     }
 
     if (!combinedContent) {
@@ -666,7 +675,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[/api/notes/study-guide] Error:", err);
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : String(err) },
+      { success: false, error: "Could not generate the study guide." },
       { status: 500 }
     );
   }

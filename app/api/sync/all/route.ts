@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, courses: 0, assignments: 0, notes: 0, errors: [] });
   }
 
-  let totals = { courses: 0, assignments: 0, notes: 0 };
+  const totals = { courses: 0, assignments: 0, notes: 0 };
   const errors: string[] = [];
 
   for (const conn of connections) {
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       })
     );
     const data = await res.json();
-    if (!res.ok || data?.success === false) {
+    if (!res.ok) {
       errors.push(data?.error || "Sync failed");
       continue;
     }
@@ -41,5 +41,10 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ success: true, ...totals, errors });
+  return NextResponse.json({
+    success: errors.length === 0,
+    partial: errors.length > 0,
+    ...totals,
+    errors,
+  });
 }

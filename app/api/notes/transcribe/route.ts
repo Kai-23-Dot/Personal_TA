@@ -9,27 +9,25 @@ import { NextResponse } from "next/server";
 import { transcribeAudio } from "@/backend/ai/transcribeAudio";
 import { generateEmbedding } from "@/backend/utils/embeddings";
 import { v4 as uuidv4 } from "uuid";
+import { assertWithinLimits } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { validateNoteUpload } from "@/backend/utils/uploadValidation";
+import { z } from "zod";
 
 export const maxDuration = 120; // Audio processing can take a while
-
-const SUPPORTED_AUDIO_TYPES = [
-  "audio/mpeg",
-  "audio/mp3",
-  "audio/mp4",
-  "audio/m4a",
-  "audio/wav",
-  "audio/wave",
-  "audio/webm",
-  "audio/ogg",
-];
-
-const MAX_AUDIO_SIZE = 20 * 1024 * 1024; // 20 MB (Gemini inline limit)
 
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const limitCheck = await assertWithinLimits(user.id, ["note", "tokens"]);
+    if (!limitCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: limitCheck.reason, code: "LIMIT_REACHED" },
+        { status: 402 }
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -39,48 +37,71 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
 
-    if (!SUPPORTED_AUDIO_TYPES.some((t) => file.type.includes(t.split("/")[1]))) {
+    let safeFileName: string;
+    try {
+      safeFileName = validateNoteUpload(file, new Set(["audio"])).safeFileName;
+    } catch (validationError) {
       return NextResponse.json(
-        { success: false, error: `Unsupported format. Use: MP3, M4A, WAV, WebM, OGG` },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_AUDIO_SIZE) {
-      return NextResponse.json(
-        { success: false, error: "Audio file must be under 20 MB" },
+        {
+          success: false,
+          error: validationError instanceof Error
+            ? validationError.message
+            : "Invalid audio file.",
+        },
         { status: 400 }
       );
     }
 
     // Fetch course name for context
     let courseName: string | undefined;
+    let verifiedCourseId: string | null = null;
     if (courseId) {
-      const { data: course } = await supabase
-        .from("courses")
-        .select("name")
-        .eq("id", courseId)
-        .single();
+      const parsedCourseId = z.string().uuid().safeParse(courseId);
+      const { data: course } = parsedCourseId.success
+        ? await supabase
+            .from("courses")
+            .select("id, name")
+            .eq("id", parsedCourseId.data)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : { data: null };
+      if (!course) {
+        return NextResponse.json(
+          { success: false, error: "Course not found." },
+          { status: 404 }
+        );
+      }
       courseName = course?.name;
+      verifiedCourseId = course.id;
     }
 
     const audioBuffer = Buffer.from(await file.arrayBuffer());
 
-    const { rawTranscript, structuredNotes } = await transcribeAudio(
-      audioBuffer,
-      file.name,
-      courseName
+    const { rawTranscript, structuredNotes } = await runWithUsageContext(
+      user.id,
+      () => transcribeAudio(
+        audioBuffer,
+        safeFileName,
+        courseName
+      )
     );
 
     const noteId = uuidv4();
-    const title = file.name.replace(/\.[^/.]+$/, "") || "Lecture Recording";
+    const title = safeFileName.replace(/\.[^/.]+$/, "") || "Lecture Recording";
     const wordCount = structuredNotes.split(/\s+/).filter(Boolean).length;
 
     // Store original audio in Supabase Storage
-    const storagePath = `${user.id}/audio/${noteId}/${file.name}`;
-    await supabase.storage
+    const storagePath = `${user.id}/audio/${noteId}/${safeFileName}`;
+    const { error: storageError } = await supabase.storage
       .from("notes")
       .upload(storagePath, audioBuffer, { contentType: file.type });
+    if (storageError) {
+      console.error("[notes/transcribe] Storage upload failed:", storageError);
+      return NextResponse.json(
+        { success: false, error: "Failed to store the audio file." },
+        { status: 500 }
+      );
+    }
 
     // Generate embedding
     let embedding: number[] | null = null;
@@ -95,11 +116,11 @@ export async function POST(req: Request) {
       .insert({
         id: noteId,
         user_id: user.id,
-        course_id: courseId ?? null,
+        course_id: verifiedCourseId,
         title,
         content: structuredNotes,
         source_type: "upload",
-        file_name: file.name,
+        file_name: safeFileName,
         file_type: "other",
         file_size_bytes: file.size,
         storage_path: storagePath,
@@ -112,7 +133,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      await supabase.storage.from("notes").remove([storagePath]);
+      console.error("[notes/transcribe] Note insert failed:", error);
+      return NextResponse.json(
+        { success: false, error: "Failed to save the transcript." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -126,7 +152,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[/api/notes/transcribe] Error:", err);
-    const msg = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Audio transcription failed." }, { status: 500 });
   }
 }

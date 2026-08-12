@@ -22,7 +22,6 @@ type Course = { id: string; name: string; color: string | null };
 type Profile = { full_name: string | null };
 type FocusSession = { duration_minutes: number | null; started_at: string };
 type PracticeActivity = { created_at: string };
-type WeakMetric = { topic: string; accuracy_pct: number };
 type Recommendation = {
   topic: string;
   course_name: string | null;
@@ -84,7 +83,6 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>([]);
   const [practiceActivity, setPracticeActivity] = useState<PracticeActivity[]>([]);
-  const [metrics, setMetrics] = useState<WeakMetric[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notesCount, setNotesCount] = useState(0);
@@ -96,25 +94,23 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoadState("loading");
     try {
-      const [aR, cR, crR, pR, fR, prR, mR, nR, ntsR, recR] = await Promise.all([
+      const [aR, cR, crR, pR, fR, prR, nR, ntsR, recR] = await Promise.all([
         fetch("/api/assignments"),
         fetch("/api/lms/connections"),
         fetch("/api/courses"),
         fetch("/api/profile"),
         fetch("/api/focus/history"),
         fetch("/api/practice/history"),
-        fetch("/api/performance/weak"),
         fetch("/api/notifications"),
         fetch("/api/notes/list"),
         fetch("/api/study/recommendations"),
       ]);
       if (!aR.ok || !cR.ok || !crR.ok) throw new Error("Could not load dashboard data.");
-      const [aD, cD, crD, pD, fD, prD, mD, nD, ntsD, recD] = await Promise.all([
+      const [aD, cD, crD, pD, fD, prD, nD, ntsD, recD] = await Promise.all([
         aR.json(), cR.json(), crR.json(),
         pR.ok ? pR.json() : null,
         fR.ok ? fR.json() : [],
         prR.ok ? prR.json() : [],
-        mR.ok ? mR.json() : [],
         nR.ok ? nR.json() : [],
         ntsR.ok ? ntsR.json() : [],
         recR.ok ? recR.json() : [],
@@ -125,7 +121,6 @@ export default function DashboardPage() {
       setProfile(pD);
       setFocusSessions(fD ?? []);
       setPracticeActivity(prD ?? []);
-      setMetrics(mD ?? []);
       setRecommendations(Array.isArray(recD) ? recD : []);
       setNotifications(nD ?? []);
       setNotesCount(Array.isArray(ntsD) ? ntsD.length : 0);
@@ -346,7 +341,7 @@ export default function DashboardPage() {
                 </p>
                 <div className="mt-3 flex gap-2.5">
                   {emptyNoConnection ? (
-                    <a href="/settings/setup/canvas" className="btn btn-primary">Connect Canvas</a>
+                    <Link href="/settings/setup/canvas" className="btn btn-primary">Connect Canvas</Link>
                   ) : (
                     <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
                       {syncing ? "Syncing…" : "Run first sync"}

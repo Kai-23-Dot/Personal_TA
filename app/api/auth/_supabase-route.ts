@@ -13,8 +13,9 @@ type AuthRouteClient =
 function missingSupabaseResponse() {
   return NextResponse.json(
     {
-      error:
-        "Authentication is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server.",
+      error: process.env.NODE_ENV === "production"
+        ? "Authentication service is unavailable."
+        : "Authentication is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server.",
     },
     { status: 500 }
   );
@@ -58,12 +59,10 @@ export function createAuthRouteClient(request: NextRequest): AuthRouteClient {
 }
 
 export function authUnavailableResponse(error: unknown) {
-  const message =
-    error instanceof Error && error.message !== "Failed to fetch"
-      ? error.message
-      : "Authentication server is unreachable. Confirm your Supabase project URL is live, then restart the dev server.";
-
   console.error("[Auth] Supabase request failed:", error);
 
-  return NextResponse.json({ error: message }, { status: 503 });
+  return NextResponse.json(
+    { error: "Authentication service is temporarily unavailable." },
+    { status: 503 }
+  );
 }

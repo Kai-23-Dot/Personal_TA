@@ -10,9 +10,21 @@
  * Multiple Canvas accounts are supported — one connection per (user, canvas_domain).
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { fetchCanvasUserProfile } from "@/backend/lms/canvas";
+import {
+  createCanvasOAuthState,
+  normalizeCanvasDomain,
+  verifyCanvasOAuthState,
+} from "@/backend/security/canvas";
+import { z } from "zod";
+
+const CANVAS_STATE_COOKIE = "conlearn_canvas_oauth_nonce";
+const canvasTokenSchema = z.object({
+  access_token: z.string().trim().min(1).max(4096),
+  domain: z.string().trim().min(1).max(300),
+}).strict();
 
 /** Upsert a Canvas connection keyed by (user_id, canvas_domain). */
 async function upsertCanvasConnection(
@@ -30,30 +42,33 @@ async function upsertCanvasConnection(
   const { canvas_domain, access_token, refresh_token, platform_user_id, platform_email, scopes } = fields;
 
   // Check for an existing connection with this domain
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("lms_connections")
     .select("id")
     .eq("user_id", userId)
     .eq("platform", "canvas")
     .eq("canvas_domain", canvas_domain)
     .maybeSingle();
+  if (lookupError) throw lookupError;
 
   if (existing?.id) {
-    await supabase
+    const { error: updateError } = await supabase
       .from("lms_connections")
       .update({
         access_token,
         refresh_token: refresh_token ?? null,
         platform_user_id: platform_user_id ?? null,
         platform_email: platform_email ?? null,
+        scopes: scopes ?? null,
         is_active: true,
         updated_at: new Date().toISOString(),
       })
       .eq("id", existing.id);
+    if (updateError) throw updateError;
     return existing.id;
   }
 
-  const { data: newConn } = await supabase
+  const { data: newConn, error: insertError } = await supabase
     .from("lms_connections")
     .insert({
       user_id: userId,
@@ -68,14 +83,15 @@ async function upsertCanvasConnection(
     })
     .select("id")
     .single();
+  if (insertError) throw insertError;
 
   return newConn?.id ?? null;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state"); // contains canvas domain
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   // ---- OAuth Callback ----
@@ -84,7 +100,20 @@ export async function GET(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.redirect(new URL("/login", req.url));
 
-    const canvasDomain = decodeURIComponent(state);
+    let canvasDomain: string;
+    try {
+      canvasDomain = verifyCanvasOAuthState(
+        state,
+        req.cookies.get(CANVAS_STATE_COOKIE)?.value
+      ).domain;
+    } catch (stateError) {
+      console.warn("[Canvas OAuth] State verification failed:", stateError);
+      const response = NextResponse.redirect(
+        new URL("/settings?error=canvas_oauth_state_invalid", req.url)
+      );
+      response.cookies.delete(CANVAS_STATE_COOKIE);
+      return response;
+    }
 
     // Exchange code for token
     const tokenRes = await fetch(`https://${canvasDomain}/login/oauth2/token`, {
@@ -97,18 +126,26 @@ export async function GET(req: Request) {
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/canvas`,
         code,
       }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!tokenRes.ok) {
-      console.error("Canvas token exchange failed:", await tokenRes.text());
+      console.error("Canvas token exchange failed with status:", tokenRes.status);
       return NextResponse.redirect(new URL("/settings?error=canvas_auth_failed", req.url));
     }
 
-    const tokens = await tokenRes.json();
+    const tokens = await tokenRes.json() as {
+      access_token?: string;
+      refresh_token?: string;
+    };
+    if (!tokens.access_token) {
+      return NextResponse.redirect(new URL("/settings?error=canvas_auth_failed", req.url));
+    }
 
     // Get Canvas user profile
     const profileRes = await fetch(`https://${canvasDomain}/api/v1/users/self/profile`, {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(15_000),
     });
     const profile = profileRes.ok ? await profileRes.json() : {};
 
@@ -122,7 +159,11 @@ export async function GET(req: Request) {
 
     // Pass the connection ID so the settings page can auto-trigger sync
     const syncParam = connId ? `&sync_id=${connId}` : "";
-    return NextResponse.redirect(new URL(`/settings?connected=canvas${syncParam}`, req.url));
+    const response = NextResponse.redirect(
+      new URL(`/settings?connected=canvas${syncParam}`, req.url)
+    );
+    response.cookies.delete(CANVAS_STATE_COOKIE);
+    return response;
   }
 
   if (error) {
@@ -134,13 +175,17 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/settings?error=canvas_not_configured", req.url));
   }
 
-  const domain = searchParams.get("domain");
-  if (!domain || !domain.includes(".")) {
+  const rawDomain = searchParams.get("domain");
+  let domain: string;
+  try {
+    domain = normalizeCanvasDomain(rawDomain ?? "", { forOAuth: true });
+  } catch {
     return NextResponse.redirect(
-      new URL("/settings?error=canvas_domain_required", req.url)
+      new URL("/settings?error=canvas_domain_invalid", req.url)
     );
   }
 
+  const { state: oauthState, cookieNonce } = createCanvasOAuthState(domain);
   const authUrl = new URL(`https://${domain}/login/oauth2/auth`);
   authUrl.searchParams.set("client_id", process.env.CANVAS_CLIENT_ID);
   authUrl.searchParams.set(
@@ -148,10 +193,18 @@ export async function GET(req: Request) {
     `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/canvas`
   );
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("state", encodeURIComponent(domain));
+  authUrl.searchParams.set("state", oauthState);
   // Omitting "scope" requests all permissions granted to the developer key
 
-  return NextResponse.redirect(authUrl.toString());
+  const response = NextResponse.redirect(authUrl.toString());
+  response.cookies.set(CANVAS_STATE_COOKIE, cookieNonce, {
+    httpOnly: true,
+    maxAge: 10 * 60,
+    path: "/api/lms/canvas",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }
 
 /**
@@ -165,16 +218,25 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = await req.json() as { domain?: string; access_token?: string };
-    const domain = (body.domain ?? "").trim().toLowerCase();
-    const accessToken = (body.access_token ?? "").trim();
-
-    if (!domain || !domain.includes(".")) {
-      return NextResponse.json({ error: "Valid Canvas domain is required (e.g. school.instructure.com)." }, { status: 400 });
+    const parsedBody = canvasTokenSchema.safeParse(
+      await req.json().catch(() => null)
+    );
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "A valid Canvas domain and access token are required." },
+        { status: 400 }
+      );
     }
-    if (!accessToken) {
-      return NextResponse.json({ error: "Canvas access token is required." }, { status: 400 });
+    let domain: string;
+    try {
+      domain = normalizeCanvasDomain(parsedBody.data.domain, { forOAuth: true });
+    } catch (domainError) {
+      return NextResponse.json(
+        { error: domainError instanceof Error ? domainError.message : "Invalid Canvas domain." },
+        { status: 400 }
+      );
     }
+    const accessToken = parsedBody.data.access_token;
 
     // Validate token by fetching user profile from Canvas.
     const profile = await fetchCanvasUserProfile(domain, accessToken);
@@ -193,6 +255,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, connectionId: connId });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to connect Canvas" }, { status: 500 });
+    console.error("[Canvas] Connection failed:", err);
+    return NextResponse.json({ error: "Failed to connect Canvas." }, { status: 500 });
   }
 }

@@ -10,7 +10,9 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const summary = await getUsageSummary(user.id);
-    return NextResponse.json(summary);
+    return NextResponse.json(summary, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (err) {
     console.error("[billing/status] error:", err);
     return NextResponse.json({ error: "Failed to load billing status" }, { status: 500 });

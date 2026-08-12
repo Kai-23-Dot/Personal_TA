@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Pause, Play, RotateCcw, CheckCircle2 } from "lucide-react";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 
@@ -153,7 +153,7 @@ export default function FocusPage() {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [running, modeIdx]);
+  }, [running, modeIdx, setSessionCount]);
 
   // Save completed focus session
   useEffect(() => {

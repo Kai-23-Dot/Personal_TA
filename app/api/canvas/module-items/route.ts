@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { fetchCanvasModules, fetchCanvasModuleItems, fetchCanvasFilesWide, fetchCanvasPages, fetchCanvasAssignments } from "@/backend/lms/canvas";
+import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -11,16 +12,11 @@ export async function GET(req: Request) {
   const courseId = searchParams.get("courseId");
   if (!courseId) return NextResponse.json({ error: "courseId required" }, { status: 400 });
 
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id, platform, platform_id")
-    .eq("id", courseId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!course || course.platform !== "canvas" || !course.platform_id) {
+  const context = await getCanvasCourseContext(supabase, user.id, courseId);
+  if (!context) {
     return NextResponse.json({ error: "Course not linked to Canvas" }, { status: 400 });
   }
+  const { course, connection } = context;
 
   const { data: syncedNotes } = await supabase
     .from("notes")
@@ -45,18 +41,6 @@ export async function GET(req: Request) {
     note_id: n.id,
     source_file_id: n.source_file_id ?? null,
   }));
-
-  const { data: connection } = await supabase
-    .from("lms_connections")
-    .select("access_token, canvas_domain")
-    .eq("user_id", user.id)
-    .eq("platform", "canvas")
-    .eq("is_active", true)
-    .single();
-
-  if (!connection?.access_token || !connection?.canvas_domain) {
-    return NextResponse.json(noteBackfill);
-  }
 
   const canvasCourseId = Number(course.platform_id);
   if (!Number.isFinite(canvasCourseId)) {

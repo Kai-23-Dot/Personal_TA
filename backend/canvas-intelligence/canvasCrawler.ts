@@ -13,7 +13,9 @@ import {
   fetchCanvasPageDetail,
   fetchCanvasPages,
   fetchCanvasQuizzes,
+  downloadCanvasFile,
 } from "@/backend/lms/canvas";
+import { normalizeCanvasDomain } from "@/backend/security/canvas";
 import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
 import { normalizeDocumentText, stripBoilerplate } from "./documentNormalizer";
 import type { CanvasContentItem, CanvasItemType, ContentEdge } from "./types";
@@ -58,10 +60,6 @@ const LOW_VALUE_TERMS = /\b(rubric|permission|policy|calendar|schedule|attendanc
 
 function checksum(value: string): string {
   return createHash("sha256").update(value).digest("hex");
-}
-
-function normalizeCanvasDomain(domain: string): string {
-  return domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
 function absoluteUrl(raw: string, baseUrl: string): string | null {
@@ -234,25 +232,26 @@ function qualityScore(params: {
 }
 
 async function downloadAndExtractFile(params: {
+  domain: string;
   url?: string | null;
   accessToken: string;
   mimeType?: string | null;
   fileName?: string | null;
   size?: number | null;
 }): Promise<{ text: string | null; status: CanvasContentItem["extractionStatus"]; error: string | null }> {
-  const { url, accessToken, mimeType, fileName, size } = params;
+  const { domain, url, accessToken, mimeType, fileName, size } = params;
   const fileType = detectFileType(mimeType ?? "", fileName);
   if (!fileType) return { text: null, status: "unsupported", error: "Unsupported file type" };
   if (!url) return { text: null, status: "inaccessible", error: "Missing file download URL" };
   if (size && size > MAX_FILE_DOWNLOAD_BYTES) return { text: null, status: "metadata_only", error: "File exceeds extraction size limit" };
 
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      redirect: "follow",
-    });
-    if (!res.ok) return { text: null, status: "inaccessible", error: `Download failed with ${res.status}` };
-    const buffer = Buffer.from(await res.arrayBuffer());
+    const { buffer } = await downloadCanvasFile(
+      domain,
+      accessToken,
+      url,
+      MAX_FILE_DOWNLOAD_BYTES
+    );
     const text = await extractFileText(buffer, fileType);
     if (!text) return { text: null, status: "failed", error: "No readable text extracted" };
     return { text: normalizeDocumentText(stripBoilerplate(text)), status: "extracted", error: null };
@@ -448,6 +447,7 @@ export async function crawlCanvasCourseContent(params: {
     const mimeType = file["content-type"] ?? file.content_type ?? "";
     const fileName = file.filename ?? file.display_name;
     const extraction = await downloadAndExtractFile({
+      domain,
       url: file.url,
       accessToken,
       mimeType,
@@ -483,29 +483,34 @@ export async function crawlCanvasCourseContent(params: {
     });
   }
 
-  for (const module of modules) {
-    const moduleId = `module_${module.id}`;
+  for (const canvasModule of modules) {
+    const moduleId = `module_${canvasModule.id}`;
     addItem({
       id: moduleId,
       courseId: localCourseId,
       canvasCourseId,
       sourceType: "module",
       type: "module",
-      title: module.name,
-      textContent: module.name,
+      title: canvasModule.name,
+      textContent: canvasModule.name,
       sourceUrl: `${courseBaseUrl}/modules`,
       url: `${courseBaseUrl}/modules`,
-      moduleName: module.name,
-      modulePosition: module.position,
+      moduleName: canvasModule.name,
+      modulePosition: canvasModule.position,
       linkedFromModule: true,
       linkedFrom: null,
-      contentId: module.id,
+      contentId: canvasModule.id,
       extractionStatus: "metadata_only",
       confidenceScore: 0.65,
-      metadata: { moduleId: module.id, itemsCount: module.items_count },
+      metadata: { moduleId: canvasModule.id, itemsCount: canvasModule.items_count },
     });
 
-    const moduleItems = await fetchCanvasModuleItems(domain, accessToken, canvasCourseId, module.id);
+    const moduleItems = await fetchCanvasModuleItems(
+      domain,
+      accessToken,
+      canvasCourseId,
+      canvasModule.id
+    );
     for (const moduleItem of moduleItems) {
       let moduleItemText: string | null = null;
       let extractionStatus: CanvasContentItem["extractionStatus"] = "metadata_only";
@@ -516,7 +521,7 @@ export async function crawlCanvasCourseContent(params: {
         const detail = await fetchCanvasPageDetail(domain, accessToken, canvasCourseId, moduleItem.page_url);
         moduleItemText = detail?.body ?? null;
         extractionStatus = moduleItemText ? "extracted" : "metadata_only";
-        if (detail?.body) enqueueLinks(itemId, detail.body, `${courseBaseUrl}/pages/${moduleItem.page_url}`, 1, module.name, module.position);
+        if (detail?.body) enqueueLinks(itemId, detail.body, `${courseBaseUrl}/pages/${moduleItem.page_url}`, 1, canvasModule.name, canvasModule.position);
       }
 
       if (moduleItem.type === "File" && moduleItem.content_id) {
@@ -524,6 +529,7 @@ export async function crawlCanvasCourseContent(params: {
         const mimeType = moduleItem.content_details?.["content-type"] ?? fileMeta?.["content-type"] ?? fileMeta?.content_type ?? "";
         const fileName = fileMeta?.filename ?? fileMeta?.display_name ?? moduleItem.title;
         const extraction = await downloadAndExtractFile({
+          domain,
           url: moduleItem.content_details?.url ?? fileMeta?.url,
           accessToken,
           mimeType,
@@ -539,7 +545,7 @@ export async function crawlCanvasCourseContent(params: {
       if (!moduleItemText && moduleItem.external_url) {
         const link = classifyLink(moduleItem.external_url, domain);
         extractionStatus = link.kind === "video" ? "metadata_only" : "pending";
-        queue.push({ url: moduleItem.external_url, title: moduleItem.title, fromId: itemId, depth: 1, moduleName: module.name, modulePosition: module.position });
+        queue.push({ url: moduleItem.external_url, title: moduleItem.title, fromId: itemId, depth: 1, moduleName: canvasModule.name, modulePosition: canvasModule.position });
       }
 
       addItem({
@@ -555,8 +561,8 @@ export async function crawlCanvasCourseContent(params: {
         bodyText: moduleItemText,
         textContent: moduleItemText,
         fileText: moduleItemText,
-        moduleName: module.name,
-        modulePosition: module.position,
+        moduleName: canvasModule.name,
+        modulePosition: canvasModule.position,
         itemPosition: moduleItem.position,
         linkedFromModule: true,
         linkedFrom: moduleId,

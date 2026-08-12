@@ -4,8 +4,11 @@ import { generateEmbedding } from "@/backend/utils/embeddings";
 import { generateText } from "ai";
 import { visionModel } from "@/backend/ai/provider";
 import { v4 as uuidv4 } from "uuid";
-import { assertWithinLimit } from "@/backend/billing/limits";
+import { assertWithinLimits } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { extractFileText } from "@/backend/utils/extractFileText";
+import { validateNoteUpload } from "@/backend/utils/uploadValidation";
+import { z } from "zod";
 
 export const maxDuration = 60;
 
@@ -15,35 +18,27 @@ const IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
   "image/gif",
-  "image/heic",
-  "image/heif",
 ]);
 
-async function extractTextFromFile(file: File): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
+async function extractTextFromFile(file: File, buffer: Buffer): Promise<string> {
   const fileName = file.name.toLowerCase();
   const mimeType = file.type;
 
   if (fileName.endsWith(".txt") || fileName.endsWith(".md")) {
-    return buffer.toString("utf-8");
+    return (await extractFileText(buffer, "txt")) ?? "";
   }
 
   if (fileName.endsWith(".pdf")) {
-    const pdfParse = (await import("pdf-parse")).default;
-    const result = await pdfParse(buffer);
-    return result.text;
+    return (await extractFileText(buffer, "pdf")) ?? "";
   }
 
   if (fileName.endsWith(".pptx")) {
-    const { extractFileText } = await import("@/backend/utils/extractFileText");
     const text = await extractFileText(buffer, "pptx");
     if (text) return text;
   }
 
   if (fileName.endsWith(".docx")) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+    return (await extractFileText(buffer, "docx")) ?? "";
   }
 
   if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a")) {
@@ -53,7 +48,7 @@ async function extractTextFromFile(file: File): Promise<string> {
   }
 
   // Handwritten or typed image notes — use Gemini Vision
-  if (IMAGE_MIME_TYPES.has(mimeType) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(fileName)) {
+  if (IMAGE_MIME_TYPES.has(mimeType) || /\.(jpe?g|png|webp|gif)$/i.test(fileName)) {
     const resolvedMime = IMAGE_MIME_TYPES.has(mimeType) ? mimeType : "image/jpeg";
     const { text } = await generateText({
       model: visionModel,
@@ -89,20 +84,6 @@ Rules:
   throw new Error(`Unsupported file type: ${fileName}`);
 }
 
-function getFileType(file: File): string {
-  const fileName = file.name.toLowerCase();
-  const mimeType = file.type;
-  const ext = fileName.split(".").pop() ?? "";
-
-  if (IMAGE_MIME_TYPES.has(mimeType) || /^(jpe?g|png|webp|gif|heic|heif)$/.test(ext)) {
-    return "image";
-  }
-
-  const map: Record<string, string> = { pdf: "pdf", docx: "docx", pptx: "pptx", txt: "txt", md: "md" };
-  if (/(mp3|wav|m4a)$/.test(ext)) return "audio";
-  return map[ext] ?? "other";
-}
-
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
@@ -110,14 +91,12 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     // Plan limits: block Free users at the weekly note cap or daily token cap.
-    for (const feature of ["note", "tokens"] as const) {
-      const check = await assertWithinLimit(user.id, feature);
-      if (!check.ok) {
-        return NextResponse.json(
-          { success: false, error: check.reason, code: "LIMIT_REACHED", feature: check.feature, limit: check.limit, used: check.used },
-          { status: 402 }
-        );
-      }
+    const limitCheck = await assertWithinLimits(user.id, ["note", "tokens"]);
+    if (!limitCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: limitCheck.reason, code: "LIMIT_REACHED", feature: limitCheck.feature, limit: limitCheck.limit, used: limitCheck.used },
+        { status: 402 }
+      );
     }
 
     const formData = await req.formData();
@@ -130,31 +109,83 @@ export async function POST(req: Request) {
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
+    let validatedFile: ReturnType<typeof validateNoteUpload>;
+    try {
+      validatedFile = validateNoteUpload(file);
+    } catch (validationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            validationError instanceof Error
+              ? validationError.message
+              : "Invalid upload.",
+        },
+        { status: 400 }
+      );
+    }
+
+    let verifiedCourseId: string | null = null;
+    if (courseId) {
+      const parsedCourseId = z.string().uuid().safeParse(courseId);
+      if (!parsedCourseId.success) {
+        return NextResponse.json(
+          { success: false, error: "Invalid course." },
+          { status: 400 }
+        );
+      }
+      const { data: course } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("id", parsedCourseId.data)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!course) {
+        return NextResponse.json(
+          { success: false, error: "Course not found." },
+          { status: 404 }
+        );
+      }
+      verifiedCourseId = course.id;
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     let content: string;
     try {
       // Extraction may call vision/transcription models — attribute tokens to the user.
-      content = await runWithUsageContext(user.id, () => extractTextFromFile(file));
+      content = await runWithUsageContext(user.id, () =>
+        extractTextFromFile(file, buffer)
+      );
+      if (!content.trim()) throw new Error("No readable text was found.");
     } catch (err) {
+      console.warn("[notes/upload] Extraction failed:", err);
       return NextResponse.json(
-        { success: false, error: `Could not extract text: ${(err as Error).message}` },
+        { success: false, error: "Could not extract readable text from this file." },
         { status: 400 }
       );
     }
 
     const wordCount = content.split(/\s+/).filter(Boolean).length;
-    const fileType = getFileType(file);
-    const title = file.name.replace(/\.[^/.]+$/, "");
+    const fileType = validatedFile.fileType;
+    const title = validatedFile.safeFileName.replace(/\.[^/.]+$/, "");
     const noteId = uuidv4();
 
     // Upload raw file to Supabase Storage
-    const storagePath = `${user.id}/notes/${noteId}/${file.name}`;
-    await supabase.storage
+    const storagePath = `${user.id}/notes/${noteId}/${validatedFile.safeFileName}`;
+    const { error: storageError } = await supabase.storage
       .from("notes")
-      .upload(storagePath, await file.arrayBuffer(), {
+      .upload(storagePath, buffer, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
+    if (storageError) {
+      console.error("[notes/upload] Storage upload failed:", storageError);
+      return NextResponse.json(
+        { success: false, error: "Failed to store the uploaded file." },
+        { status: 500 }
+      );
+    }
 
     // Generate embedding
     let embedding: number[] | null = null;
@@ -169,21 +200,23 @@ export async function POST(req: Request) {
       .insert({
         id: noteId,
         user_id: user.id,
-        course_id: courseId || null,
+        course_id: verifiedCourseId,
         title,
         content,
         source_type: "upload" as const,
-        file_name: file.name,
+        file_name: validatedFile.safeFileName,
         file_type: fileType,
         file_size_bytes: file.size,
         storage_path: storagePath,
         word_count: wordCount,
-        unit_name: unitName?.trim() || null,
-        exam_name: examName?.trim() || null,
+        unit_name: unitName?.trim().slice(0, 120) || null,
+        exam_name: examName?.trim().slice(0, 120) || null,
         topic_tags: topicTagsRaw
           .split(",")
           .map((t) => t.trim())
-          .filter(Boolean),
+          .filter(Boolean)
+          .slice(0, 20)
+          .map((tag) => tag.slice(0, 60)),
         is_processed: true,
         embedding: embedding ? `[${embedding.join(",")}]` : null,
       })
@@ -191,7 +224,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      await supabase.storage.from("notes").remove([storagePath]);
+      console.error("[notes/upload] Note insert failed:", error);
+      return NextResponse.json(
+        { success: false, error: "Failed to save the uploaded note." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -206,7 +244,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[/api/notes/upload] Error:", err);
     return NextResponse.json(
-      { success: false, error: (err instanceof Error ? err.message : String(err)) },
+      { success: false, error: "Note upload failed." },
       { status: 500 }
     );
   }

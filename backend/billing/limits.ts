@@ -46,44 +46,30 @@ export async function getUserPlan(userId: string): Promise<Plan> {
   return "free";
 }
 
-function startOfTodayUtc(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+interface BillingUsageSnapshot {
+  plan: Plan;
+  practiceTests: number;
+  notes: number;
+  tokens: number;
 }
 
-function sevenDaysAgo(): string {
-  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-}
-
-async function currentUsage(userId: string, feature: GatedFeature): Promise<number> {
+async function billingUsageSnapshot(userId: string): Promise<BillingUsageSnapshot> {
   const supabase = createServiceClient();
-
-  if (feature === "practice_test") {
-    const { count } = await supabase
-      .from("practice_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", sevenDaysAgo());
-    return count ?? 0;
+  const { data, error } = await supabase.rpc("get_billing_usage", {
+    p_user_id: userId,
+  });
+  if (error) {
+    throw new Error("[billing] Could not load usage", { cause: error });
   }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("[billing] Billing profile was not found");
 
-  if (feature === "note") {
-    const { count } = await supabase
-      .from("notes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", sevenDaysAgo());
-    return count ?? 0;
-  }
-
-  // tokens: sum today's token events
-  const { data } = await supabase
-    .from("usage_events")
-    .select("amount")
-    .eq("user_id", userId)
-    .eq("kind", "tokens")
-    .gte("created_at", startOfTodayUtc());
-  return (data ?? []).reduce((sum, row) => sum + (row.amount ?? 0), 0);
+  return {
+    plan: row.effective_plan === "pro" ? "pro" : "free",
+    practiceTests: Number(row.practice_tests ?? 0),
+    notes: Number(row.notes ?? 0),
+    tokens: Number(row.tokens ?? 0),
+  };
 }
 
 function limitFor(limits: PlanLimits, feature: GatedFeature): number {
@@ -103,14 +89,27 @@ function limitFor(limits: PlanLimits, feature: GatedFeature): number {
  * at or above the limit" — call it before creating the new record.
  */
 export async function assertWithinLimit(userId: string, feature: GatedFeature): Promise<LimitResult> {
-  const plan = await getUserPlan(userId);
-  const limits = PLAN_LIMITS[plan];
+  return assertWithinLimits(userId, [feature]);
+}
+
+/** Check several limits from one consistent database usage snapshot. */
+export async function assertWithinLimits(
+  userId: string,
+  features: readonly GatedFeature[]
+): Promise<LimitResult> {
+  const snapshot = await billingUsageSnapshot(userId);
+  const limits = PLAN_LIMITS[snapshot.plan];
   if (limits === null) return { ok: true }; // Pro / unlimited
 
-  const limit = limitFor(limits, feature);
-  const used = await currentUsage(userId, feature);
-
-  if (used >= limit) {
+  for (const feature of features) {
+    const limit = limitFor(limits, feature);
+    const used =
+      feature === "practice_test"
+        ? snapshot.practiceTests
+        : feature === "note"
+        ? snapshot.notes
+        : snapshot.tokens;
+    if (used < limit) continue;
     const label =
       feature === "practice_test"
         ? "practice tests this week"
@@ -136,21 +135,27 @@ export interface UsageSummary {
 
 /** Current plan + usage numbers for the billing UI. */
 export async function getUsageSummary(userId: string): Promise<UsageSummary> {
-  const plan = await getUserPlan(userId);
-  const [practiceTests, notes, tokens] = await Promise.all([
-    currentUsage(userId, "practice_test"),
-    currentUsage(userId, "note"),
-    currentUsage(userId, "tokens"),
-  ]);
-  return { plan, limits: PLAN_LIMITS[plan], usage: { practiceTests, notes, tokens } };
+  const snapshot = await billingUsageSnapshot(userId);
+  return {
+    plan: snapshot.plan,
+    limits: PLAN_LIMITS[snapshot.plan],
+    usage: {
+      practiceTests: snapshot.practiceTests,
+      notes: snapshot.notes,
+      tokens: snapshot.tokens,
+    },
+  };
 }
 
-/** Fire-and-forget usage record. Must never throw into the caller. */
+/** Persist a usage record. Errors are logged but never thrown into the caller. */
 export async function recordUsage(userId: string, kind: GatedFeature, amount: number): Promise<void> {
   try {
     if (!userId || amount <= 0) return;
     const supabase = createServiceClient();
-    await supabase.from("usage_events").insert({ user_id: userId, kind, amount });
+    const { error } = await supabase
+      .from("usage_events")
+      .insert({ user_id: userId, kind, amount });
+    if (error) throw error;
   } catch (err) {
     console.error("[billing] recordUsage failed:", err);
   }

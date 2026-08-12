@@ -135,7 +135,7 @@ export default function NotesPage() {
     }
     loadModuleItems();
     return () => { mounted = false; };
-  }, [courseId]);
+  }, [courseId, setInputMode, setSelectedModuleItems]);
 
   // When the filter changes, auto-select ONLY the matching items (clears unmatched ones).
   // This means typing "Module 3" in the filter immediately scopes the study guide to Module 3.
@@ -151,7 +151,7 @@ export default function NotesPage() {
     const next: Record<string, boolean> = {};
     matched.forEach((item) => { next[item.itemKey] = true; });
     setSelectedModuleItems(next);
-  }, [lessonFilter, moduleItems]);
+  }, [lessonFilter, moduleItems, setSelectedModuleItems]);
 
   async function handleStudyGuide(e: React.FormEvent) {
     e.preventDefault();

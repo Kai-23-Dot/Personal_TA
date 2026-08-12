@@ -4,8 +4,24 @@ import { generateFlashcardsFromContent } from "@/backend/ai/generateFlashcards";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { z } from "zod";
 
 export const maxDuration = 60;
+
+const flashcardGenerationSchema = z.object({
+  noteId: z.string().uuid().optional(),
+  courseId: z.string().uuid().optional(),
+  topic: z.string().trim().min(1).max(200).optional(),
+  count: z.number().int().min(1).max(30).default(10),
+  difficulty: z.enum(["easy", "medium", "hard", "mixed"]).default("mixed"),
+}).strict().superRefine((value, context) => {
+  if (!value.noteId && (!value.topic || !value.courseId)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide a note, or both a course and topic.",
+    });
+  }
+});
 
 export async function POST(req: Request) {
   try {
@@ -21,14 +37,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const { noteId, courseId, topic, count = 10, difficulty = "mixed" } = await req.json();
-
-    if (!noteId && !topic) {
+    const parsed = flashcardGenerationSchema.safeParse(
+      await req.json().catch(() => null)
+    );
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Provide noteId or topic" },
+        {
+          success: false,
+          error: parsed.error.issues[0]?.message ?? "Invalid flashcard request.",
+        },
         { status: 400 }
       );
     }
+    let { courseId } = parsed.data;
+    const { noteId, topic, count, difficulty } = parsed.data;
 
     let content = "";
     let courseName: string | undefined;
@@ -46,17 +68,31 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Note not found or empty" }, { status: 404 });
       }
 
+      if (courseId && note.course_id && courseId !== note.course_id) {
+        return NextResponse.json(
+          { success: false, error: "The note does not belong to that course." },
+          { status: 400 }
+        );
+      }
+      courseId = note.course_id ?? courseId;
       content = note.content;
       courseName = (note as { course?: { name: string } }).course?.name;
       derivedTopic = topic || note.title;
     }
 
-    if (courseId && !courseName) {
+    if (courseId) {
       const { data: course } = await supabase
         .from("courses")
         .select("name")
         .eq("id", courseId)
+        .eq("user_id", user.id)
         .single();
+      if (!course) {
+        return NextResponse.json(
+          { success: false, error: "Course not found." },
+          { status: 404 }
+        );
+      }
       courseName = course?.name;
     }
 
@@ -88,6 +124,7 @@ export async function POST(req: Request) {
         .from("note_summaries")
         .select("content")
         .eq("user_id", user.id)
+        .eq("course_id", courseId!)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -100,9 +137,16 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    const safeTopic = derivedTopic?.trim();
+    if (!safeTopic) {
+      return NextResponse.json(
+        { success: false, error: "A topic is required to generate flashcards." },
+        { status: 400 }
+      );
+    }
 
     const generatedCards = await runWithUsageContext(user.id, () =>
-      generateFlashcardsFromContent(content, derivedTopic, count, courseName, difficulty)
+      generateFlashcardsFromContent(content, safeTopic, count, courseName, difficulty)
     );
 
     if (generatedCards.length === 0) {
@@ -124,14 +168,18 @@ export async function POST(req: Request) {
           front: card.front,
           back: card.back,
           hint: card.hint,
-          topic: card.topic || derivedTopic,
+          topic: card.topic || safeTopic,
           difficulty: card.difficulty,
         }))
       )
       .select();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      console.error("[/api/flashcards/generate] Failed to save cards:", error);
+      return NextResponse.json(
+        { success: false, error: "Could not save the generated flashcards." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -141,6 +189,9 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[/api/flashcards/generate]", err);
-    return NextResponse.json({ success: false, error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Could not generate flashcards." },
+      { status: 500 }
+    );
   }
 }

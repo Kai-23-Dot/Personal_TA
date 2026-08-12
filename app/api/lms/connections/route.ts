@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { z } from "zod";
 
 export async function GET() {
   const supabase = await createClient();
@@ -13,7 +14,10 @@ export async function GET() {
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[lms/connections] List failed:", error);
+    return NextResponse.json({ error: "Failed to load LMS connections." }, { status: 500 });
+  }
   return NextResponse.json(data ?? []);
 }
 
@@ -28,21 +32,19 @@ export async function DELETE(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const parsedId = z.string().uuid().safeParse(id);
+  if (!parsedId.success) {
+    return NextResponse.json({ error: "A valid connection id is required." }, { status: 400 });
+  }
 
-  // Cascade: mark courses from this connection as inactive
-  await supabase
-    .from("courses")
-    .update({ is_active: false })
-    .eq("connection_id", id)
-    .eq("user_id", user.id);
+  const { error } = await supabase.rpc("disconnect_lms_connection", {
+    disconnect_user_id: user.id,
+    disconnect_connection_id: parsedId.data,
+  });
 
-  const { error } = await supabase
-    .from("lms_connections")
-    .update({ is_active: false })
-    .eq("id", id)
-    .eq("user_id", user.id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[lms/connections] Disconnect failed:", error);
+    return NextResponse.json({ error: "Failed to disconnect LMS." }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

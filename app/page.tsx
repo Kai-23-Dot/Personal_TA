@@ -2,25 +2,20 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 import {
   ArrowRight,
   BookOpenCheck,
   Brain,
   CalendarCheck2,
   FileSearch,
-  ImageIcon,
   Layers3,
   PlugZap,
   Sparkles,
 } from "lucide-react";
 import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
 
-/* ─── Product showcase (macOS window) ──────────────────────────── */
-// Drop a screenshot at /public/app-preview.png and it appears automatically.
+/* ─── Product showcase (code-native preview) ──────────────────── */
 function AppShowcase() {
-  const [hasImage, setHasImage] = useState(true);
-
   return (
     <section className="showcase-section" aria-label="Product preview">
       <div className="showcase-heading premium-rise">
@@ -40,30 +35,50 @@ function AppShowcase() {
         </div>
 
         <div className="showcase-body">
-          {hasImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/app-preview.png"
-              alt="Conlearn dashboard preview"
-              className="showcase-img"
-              onError={() => setHasImage(false)}
-            />
-          ) : (
-            <div className="showcase-placeholder">
-              <div className="showcase-placeholder-frame">
-                <div>
-                  <div className="showcase-placeholder-icon">
-                    <ImageIcon className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <p className="showcase-placeholder-title">Add your Conlearn screenshot</p>
-                  <p className="showcase-placeholder-hint">
-                    Save a screenshot of the app as <code>app-preview.png</code> in the{" "}
-                    <code>/public</code> folder and it appears here automatically.
-                  </p>
+          <div className="showcase-product-preview" aria-label="Conlearn workflow preview">
+            <aside className="showcase-preview-sidebar">
+              <div className="showcase-preview-brand">
+                <Image src="/conlearn-logo.png" alt="" width={24} height={24} />
+                <span>Conlearn</span>
+              </div>
+              {[
+                ["01", "Courses"],
+                ["02", "Notes"],
+                ["03", "Practice"],
+                ["04", "Review"],
+              ].map(([number, label], index) => (
+                <div
+                  className={`showcase-preview-nav${index === 0 ? " active" : ""}`}
+                  key={label}
+                >
+                  <span>{number}</span>
+                  {label}
                 </div>
+              ))}
+            </aside>
+            <div className="showcase-preview-main">
+              <div className="showcase-preview-copy">
+                <span className="showcase-preview-kicker">Your study workspace</span>
+                <h3>From course material to focused practice.</h3>
+                <p>Connect, organize, and study from the sources your class actually uses.</p>
+              </div>
+              <div className="showcase-preview-flow">
+                {[
+                  ["Connect Canvas", "Discover courses, modules, pages, and files."],
+                  ["Build context", "Extract and organize readable instructional material."],
+                  ["Practice", "Generate grounded questions with source references."],
+                ].map(([title, description], index) => (
+                  <article key={title}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <h4>{title}</h4>
+                      <p>{description}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </section>

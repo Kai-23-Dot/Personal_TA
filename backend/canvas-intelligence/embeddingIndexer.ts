@@ -1,7 +1,14 @@
-import { generateEmbedding } from "@/backend/utils/embeddings";
+import {
+  generateEmbedding,
+  generateEmbeddings,
+} from "@/backend/utils/embeddings";
 
 export async function embedText(text: string): Promise<number[]> {
   return generateEmbedding(text.slice(0, 8000));
+}
+
+export async function embedTexts(texts: string[]): Promise<number[][]> {
+  return generateEmbeddings(texts.map((text) => text.slice(0, 8000)));
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {

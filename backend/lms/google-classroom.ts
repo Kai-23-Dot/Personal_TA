@@ -55,10 +55,11 @@ export async function refreshGoogleAccessToken(refreshToken: string) {
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
-    throw new Error(`Google token refresh failed: ${await res.text()}`);
+    throw new Error(`Google token refresh failed with status ${res.status}.`);
   }
 
   return res.json() as Promise<{
@@ -72,12 +73,14 @@ export async function refreshGoogleAccessToken(refreshToken: string) {
 export async function fetchGCCourses(accessToken: string): Promise<GCCourse[]> {
   const res = await fetch(
     "https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE&pageSize=20",
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Google Classroom courses error ${res.status}: ${err}`);
+    throw new Error(`Google Classroom courses request failed with status ${res.status}.`);
   }
 
   const data = await res.json();
@@ -91,7 +94,12 @@ export async function fetchGCCourseWork(
   let allWork: GCCourseWork[] = [];
   let pageToken: string | undefined;
 
+  let pageCount = 0;
   do {
+    pageCount++;
+    if (pageCount > 100) {
+      throw new Error("Google Classroom pagination exceeded the safety limit.");
+    }
     const url = new URL(`https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`);
     url.searchParams.set("pageSize", "50");
     url.searchParams.set("orderBy", "dueDate asc");
@@ -99,13 +107,24 @@ export async function fetchGCCourseWork(
 
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
     });
 
-    if (!res.ok) break;
+    if (!res.ok) {
+      throw new Error(
+        `Google Classroom coursework request failed with status ${res.status}.`
+      );
+    }
 
-    const data = await res.json();
+    const data = await res.json() as {
+      courseWork?: GCCourseWork[];
+      nextPageToken?: string;
+    };
     allWork = allWork.concat(data.courseWork ?? []);
-    pageToken = data.nextPageToken;
+    pageToken =
+      typeof data.nextPageToken === "string" && data.nextPageToken.length <= 2048
+        ? data.nextPageToken
+        : undefined;
   } while (pageToken);
 
   return allWork;
@@ -118,7 +137,10 @@ export async function fetchGCSubmissions(
 ): Promise<GCSubmission[]> {
   const res = await fetch(
     `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions?pageSize=1`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
 
   if (!res.ok) return [];

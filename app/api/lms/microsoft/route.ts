@@ -8,8 +8,11 @@
  * Grant API permissions: EduAssignments.ReadBasic, EduRoster.ReadBasic, Calendars.Read
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { createOAuthNonce, verifyOAuthNonce } from "@/backend/security/oauthState";
+
+const MICROSOFT_STATE_COOKIE = "conlearn_microsoft_oauth_state";
 
 const MS_SCOPES = [
   "openid",
@@ -21,15 +24,26 @@ const MS_SCOPES = [
   "Calendars.Read",
 ].join(" ");
 
-const TENANT = process.env.MICROSOFT_TENANT_ID ?? "common";
+const rawTenant = process.env.MICROSOFT_TENANT_ID ?? "common";
+const TENANT = /^(?:common|organizations|consumers|[0-9a-f-]{36})$/i.test(rawTenant)
+  ? rawTenant
+  : "common";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   // ---- Callback ----
   if (code) {
+    if (!verifyOAuthNonce(state, req.cookies.get(MICROSOFT_STATE_COOKIE)?.value)) {
+      const response = NextResponse.redirect(
+        new URL("/settings?error=microsoft_oauth_state_invalid", req.url)
+      );
+      response.cookies.delete(MICROSOFT_STATE_COOKIE);
+      return response;
+    }
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.redirect(new URL("/login", req.url));
@@ -48,23 +62,32 @@ export async function GET(req: Request) {
           redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/microsoft`,
           scope: MS_SCOPES,
         }),
+        signal: AbortSignal.timeout(15_000),
       }
     );
 
     if (!tokenRes.ok) {
-      console.error("MS token exchange failed:", await tokenRes.text());
+      console.error("MS token exchange failed with status:", tokenRes.status);
       return NextResponse.redirect(new URL("/settings?error=microsoft_auth_failed", req.url));
     }
 
-    const tokens = await tokenRes.json();
+    const tokens = await tokenRes.json() as {
+      access_token?: string;
+      expires_in?: number;
+      refresh_token?: string;
+    };
+    if (!tokens.access_token) {
+      return NextResponse.redirect(new URL("/settings?error=microsoft_auth_failed", req.url));
+    }
 
     // Get user profile
     const profileRes = await fetch("https://graph.microsoft.com/v1.0/me", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(15_000),
     });
     const profile = profileRes.ok ? await profileRes.json() : {};
 
-    const { data: conn } = await supabase.from("lms_connections").upsert(
+    const { data: conn, error: dbError } = await supabase.from("lms_connections").upsert(
       {
         user_id: user.id,
         platform: "microsoft_teams",
@@ -80,9 +103,15 @@ export async function GET(req: Request) {
       },
       { onConflict: "user_id,platform" }
     ).select("id").single();
+    if (dbError) {
+      console.error("DB error saving Microsoft connection:", dbError);
+      return NextResponse.redirect(new URL("/settings?error=microsoft_save_failed", req.url));
+    }
 
     const syncParam = conn?.id ? `&sync_id=${conn.id}` : "";
-    return NextResponse.redirect(new URL(`/settings?connected=microsoft_teams${syncParam}`, req.url));
+    const response = NextResponse.redirect(new URL(`/settings?connected=microsoft_teams${syncParam}`, req.url));
+    response.cookies.delete(MICROSOFT_STATE_COOKIE);
+    return response;
   }
 
   if (error) {
@@ -106,6 +135,16 @@ export async function GET(req: Request) {
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", MS_SCOPES);
   authUrl.searchParams.set("response_mode", "query");
+  const oauthState = createOAuthNonce();
+  authUrl.searchParams.set("state", oauthState);
 
-  return NextResponse.redirect(authUrl.toString());
+  const response = NextResponse.redirect(authUrl.toString());
+  response.cookies.set(MICROSOFT_STATE_COOKIE, oauthState, {
+    httpOnly: true,
+    maxAge: 10 * 60,
+    path: "/api/lms/microsoft",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }

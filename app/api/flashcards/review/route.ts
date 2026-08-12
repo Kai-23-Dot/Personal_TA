@@ -51,7 +51,7 @@ export async function PATCH(req: Request) {
     }
 
     return NextResponse.json({ success: true, nextReview: update.next_review });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

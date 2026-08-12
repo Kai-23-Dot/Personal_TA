@@ -50,7 +50,7 @@ Return JSON:
     maxTokens: 1200,
   });
 
-  let feedbackText = text.trim();
+  const feedbackText = text.trim();
 
   const { data: feedback, error: fbError } = await supabase
     .from("rubric_feedback")

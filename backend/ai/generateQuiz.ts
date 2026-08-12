@@ -3,6 +3,7 @@ import { chatModel } from "./provider";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty, QuizQuestion } from "@/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 export interface QuizSource {
   idx: number;
@@ -37,16 +38,140 @@ export interface GenerateQuizOptions {
   sources?: QuizSource[];
 }
 
-type RawQuestion = {
-  question: string;
-  type: "multiple_choice" | "true_false" | "short_answer";
-  options?: string[];
-  correct_answer: string;
-  explanation: string;
+const rawQuestionSchema = z.object({
+  question: z.string().trim().min(5).max(10_000),
+  type: z.enum(["multiple_choice", "true_false", "short_answer"]),
+  options: z.array(z.string().max(4_000)).max(10).optional(),
+  correct_answer: z.string().trim().min(1).max(4_000),
+  explanation: z.string().trim().min(1).max(10_000),
+  topic: z.string().trim().min(1).max(300),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  source_idx: z.number().int().nonnegative().optional(),
+});
+
+const rawQuizEnvelopeSchema = z.object({
+  questions: z.array(rawQuestionSchema).max(100),
+});
+
+type QuizValidationOptions = {
+  courseLanguage?: string;
+  questionCount: number;
+  sourceCount?: number;
   topic: string;
-  difficulty: "easy" | "medium" | "hard";
-  source_idx?: number;
 };
+
+function extractQuizEnvelope(text: string): unknown {
+  const stripped = text
+    .trim()
+    .replace(/^```(?:json)?\n?/, "")
+    .replace(/\n?```$/, "");
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error("Quiz generation failed: no JSON object in response");
+  }
+
+  try {
+    return JSON.parse(stripped.slice(start, end + 1));
+  } catch {
+    throw new Error("Quiz generation failed: could not parse AI response as JSON");
+  }
+}
+
+export function normalizeGeneratedQuizQuestions(
+  raw: unknown,
+  options: QuizValidationOptions
+): QuizQuestion[] {
+  const parsed = rawQuizEnvelopeSchema.safeParse(raw);
+  if (!parsed.success) return [];
+
+  const danglingReference =
+    /\b(the given|the above|the following|this)\s+(function|code|algorithm|method|example|snippet|program|class|implementation)\b/i;
+  const logisticsQuestion =
+    /\b(time\s*limit|how\s+long\s+(is|does|will|do|it\s+take)|how\s+many\s+(question|point|minute|attempt)|point\s*(value|worth)|due\s*(date|time)\b|when\s+is\s+(the|this)\s+(quiz|test|exam|assignment|due)|how\s+to\s+submit|submission\s*(policy|method|format)|how\s+much\s+time|allott?ed\s+time|attempt\s+limit|allowed\s+attempts?|retake|late\s+(submission|work|policy|penalty)|grading\s+(policy|scale|rubric)|office\s+hours|extra\s+credit|when\s+(is|are)\s+(it|they|the)\s+due|number\s+of\s+questions?\s+in\s+(this|the)|what\s+is\s+the\s+(time|point|question|attempt))\b/i;
+  const wrongLanguagePattern = options.courseLanguage
+    ? new RegExp(
+        "```(?!" +
+          options.courseLanguage.toLowerCase().replace(/\s+/g, "") +
+          "|pseudocode|text)[a-z+#]+",
+        "i"
+      )
+    : null;
+  const seenQuestions = new Set<string>();
+  const normalized: QuizQuestion[] = [];
+
+  for (const question of parsed.data.questions) {
+    if (
+      question.topic.localeCompare(options.topic, undefined, {
+        sensitivity: "accent",
+      }) !== 0 ||
+      (danglingReference.test(question.question) && !question.question.includes("```")) ||
+      logisticsQuestion.test(question.question) ||
+      (wrongLanguagePattern?.test(question.question) ?? false)
+    ) {
+      continue;
+    }
+
+    const questionKey = question.question.replace(/\s+/g, " ").trim().toLowerCase();
+    if (seenQuestions.has(questionKey)) continue;
+
+    const uniqueOptions = Array.from(
+      new Map(
+        (question.options ?? [])
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .map((value) => [value.toLowerCase(), value])
+      ).values()
+    );
+    let correctAnswer = question.correct_answer.trim();
+
+    if (/^[A-D]$/i.test(correctAnswer)) {
+      correctAnswer =
+        uniqueOptions[correctAnswer.toUpperCase().charCodeAt(0) - 65] ?? "";
+    }
+
+    let finalOptions: string[] | undefined;
+    if (question.type === "true_false") {
+      if (/^(true|t)$/i.test(correctAnswer)) correctAnswer = "True";
+      else if (/^(false|f)$/i.test(correctAnswer)) correctAnswer = "False";
+      else continue;
+      finalOptions = ["True", "False"];
+    } else if (question.type === "multiple_choice") {
+      const correctOption = uniqueOptions.find(
+        (value) => value.toLowerCase() === correctAnswer.toLowerCase()
+      );
+      if (!correctOption || uniqueOptions.length < 4) continue;
+      correctAnswer = correctOption;
+      finalOptions = uniqueOptions.slice(0, 4);
+      if (!finalOptions.includes(correctOption)) {
+        finalOptions = [...uniqueOptions.slice(0, 3), correctOption];
+      }
+    }
+
+    const sourceIndex =
+      typeof question.source_idx === "number" &&
+      question.source_idx < (options.sourceCount ?? 0)
+        ? question.source_idx
+        : undefined;
+    if ((options.sourceCount ?? 0) > 0 && sourceIndex === undefined) continue;
+
+    seenQuestions.add(questionKey);
+    normalized.push({
+      id: uuidv4(),
+      question: question.question,
+      type: question.type,
+      ...(finalOptions ? { options: finalOptions } : {}),
+      correct_answer: correctAnswer,
+      explanation: question.explanation,
+      topic: options.topic,
+      difficulty: question.difficulty,
+      ...(sourceIndex === undefined ? {} : { source_idx: sourceIndex }),
+    } as QuizQuestion);
+    if (normalized.length >= options.questionCount) break;
+  }
+
+  return normalized;
+}
 
 // ---- Difficulty instruction builders ----
 
@@ -262,108 +387,57 @@ Rules: type must be "multiple_choice", "true_false", or "short_answer". For true
     maxTokens: lowTokenMode ? 3200 : 16000,
   });
 
-  // Strip markdown code fences if present, then find outermost JSON object
-  const stripped = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  const start = stripped.indexOf("{");
-  const end = stripped.lastIndexOf("}");
+  const validationOptions: QuizValidationOptions = {
+    courseLanguage,
+    questionCount,
+    sourceCount: sources?.length ?? 0,
+    topic,
+  };
+  let normalized = normalizeGeneratedQuizQuestions(
+    extractQuizEnvelope(text),
+    validationOptions
+  );
 
-  if (start === -1 || end === -1) {
-    throw new Error("Quiz generation failed: no JSON object in response");
+  if (normalized.length < questionCount) {
+    const missing = questionCount - normalized.length;
+    const existingStems = normalized
+      .map((question) => question.question.slice(0, 240))
+      .join("\n- ");
+    const { text: repairText } = await generateText({
+      model: chatModel,
+      prompt: `${prompt}
+
+REPAIR PASS: The prior response did not contain enough valid, distinct questions.
+Return exactly ${missing} NEW replacement questions in the same JSON format.
+Do not repeat any of these accepted question stems:
+- ${existingStems || "(none)"}`,
+      maxTokens: lowTokenMode ? 2400 : 8000,
+    });
+    const replacements = normalizeGeneratedQuizQuestions(
+      extractQuizEnvelope(repairText),
+      { ...validationOptions, questionCount: missing }
+    );
+    const existingKeys = new Set(
+      normalized.map((question) =>
+        question.question.replace(/\s+/g, " ").trim().toLowerCase()
+      )
+    );
+    normalized = [
+      ...normalized,
+      ...replacements.filter(
+        (question) =>
+          !existingKeys.has(
+            question.question.replace(/\s+/g, " ").trim().toLowerCase()
+          )
+      ),
+    ].slice(0, questionCount);
   }
 
-  let questions: RawQuestion[] = [];
-  try {
-    const parsed = JSON.parse(stripped.slice(start, end + 1));
-    questions = parsed.questions ?? [];
-  } catch {
-    throw new Error("Quiz generation failed: could not parse AI response as JSON");
+  if (normalized.length !== questionCount) {
+    throw new Error(
+      `Quiz generation failed validation: expected ${questionCount} questions but received ${normalized.length}.`
+    );
   }
-
-  // Filter out malformed questions (missing fields, or dangling code references without an actual code block)
-  const DANGLING_REF = /\b(the given|the above|the following|this)\s+(function|code|algorithm|method|example|snippet|program|class|implementation)\b/i;
-  const HAS_CODE_BLOCK = /```/;
-
-  // Filter out logistics/administrative questions about how assessments work, not what was learned
-  const LOGISTICS_QUESTION =
-    /\b(time\s*limit|how\s+long\s+(is|does|will|do|it\s+take)|how\s+many\s+(question|point|minute|attempt)|point\s*(value|worth)|due\s*(date|time)\b|when\s+is\s+(the|this)\s+(quiz|test|exam|assignment|due)|how\s+to\s+submit|submission\s*(policy|method|format)|how\s+much\s+time|allott?ed\s+time|attempt\s+limit|allowed\s+attempts?|retake|late\s+(submission|work|policy|penalty)|grading\s+(policy|scale|rubric)|office\s+hours|extra\s+credit|when\s+(is|are)\s+(it|they|the)\s+due|number\s+of\s+questions?\s+in\s+(this|the)|what\s+is\s+the\s+(time|point|question|attempt))\b/i;
-
-  // Wrong-language code blocks — e.g. ```python in a Java course
-  const WRONG_LANG_PATTERN =
-    courseLanguage
-      ? new RegExp(
-          "```(?!" +
-            courseLanguage.toLowerCase().replace(/\s+/g, "") +
-            "|pseudocode|text)[a-z+#]+",
-          "i"
-        )
-      : null;
-
-  const valid = questions.filter((q) => {
-    if (!q.question || !q.correct_answer || !q.type) return false;
-    // Drop questions that reference "the given function" etc. without embedding the actual code
-    if (DANGLING_REF.test(q.question) && !HAS_CODE_BLOCK.test(q.question)) return false;
-    // Drop questions containing code blocks in the wrong programming language
-    if (WRONG_LANG_PATTERN && WRONG_LANG_PATTERN.test(q.question)) return false;
-    // Drop logistics/meta questions about assessment structure (time limits, point values, due dates, etc.)
-    if (LOGISTICS_QUESTION.test(q.question)) return false;
-    return true;
-  });
-  const normalized = valid.slice(0, questionCount).map((q) => {
-    const trimmedOptions = (q.options ?? [])
-      .map((opt) => opt?.toString().trim())
-      .filter((opt): opt is string => Boolean(opt));
-
-    const uniqueOptions: string[] = [];
-    const seen = new Set<string>();
-    for (const opt of trimmedOptions) {
-      const key = opt.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueOptions.push(opt);
-      }
-    }
-
-    let correct = (q.correct_answer ?? "").toString().trim();
-
-    // If the model returns "A/B/C/D", map to the corresponding option value when possible.
-    const letterIndex = /^[A-D]$/i.test(correct) ? correct.toUpperCase().charCodeAt(0) - 65 : -1;
-    if (letterIndex >= 0 && uniqueOptions[letterIndex]) {
-      correct = uniqueOptions[letterIndex];
-    }
-
-    if (q.type === "true_false") {
-      const tfOptions = ["True", "False"];
-      const normalizedCorrect =
-        correct.toLowerCase().startsWith("t") ? "True" : correct.toLowerCase().startsWith("f") ? "False" : correct;
-      correct = tfOptions.includes(normalizedCorrect) ? normalizedCorrect : "True";
-      return {
-        ...q,
-        id: uuidv4(),
-        options: tfOptions,
-        correct_answer: correct,
-        source_idx: typeof q.source_idx === "number" ? q.source_idx : undefined,
-      };
-    }
-
-    if (q.type === "multiple_choice") {
-      const hasCorrect = uniqueOptions.some((opt) => opt.trim().toLowerCase() === correct.toLowerCase());
-      if (!hasCorrect && correct) {
-        if (uniqueOptions.length >= 4) {
-          uniqueOptions[uniqueOptions.length - 1] = correct;
-        } else {
-          uniqueOptions.push(correct);
-        }
-      }
-    }
-
-    return {
-      ...q,
-      id: uuidv4(),
-      options: uniqueOptions,
-      correct_answer: correct,
-      source_idx: typeof q.source_idx === "number" ? q.source_idx : undefined,
-    };
-  });
 
   return normalized;
 }
@@ -377,22 +451,13 @@ export async function updatePerformanceMetrics(
   correct: number,
   total: number
 ): Promise<void> {
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const mastery =
-    accuracy >= 85 ? "mastered" : accuracy >= 65 ? "practicing" : "learning";
-
-  const { error } = await supabase.from("performance_metrics").upsert(
-    {
-      user_id: userId,
-      course_id: courseId,
-      topic,
-      attempts: total,
-      correct,
-      last_practiced: new Date().toISOString(),
-      mastery_level: mastery,
-    },
-    { onConflict: "user_id,topic" }
-  );
+  const { error } = await supabase.rpc("record_performance_metric", {
+    metric_user_id: userId,
+    metric_course_id: courseId,
+    metric_topic: topic,
+    session_correct: correct,
+    session_total: total,
+  });
 
   if (error) {
     console.error("Failed to upsert performance metrics:", error);

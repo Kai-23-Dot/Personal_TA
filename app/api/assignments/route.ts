@@ -8,6 +8,42 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { z } from "zod";
+
+const assignmentTypeSchema = z.enum([
+  "homework",
+  "quiz",
+  "test",
+  "exam",
+  "project",
+  "lab",
+  "essay",
+  "other",
+]);
+const dateSchema = z.string().max(64).refine(
+  (value) => Number.isFinite(Date.parse(value)),
+  "Invalid date."
+);
+const assignmentFieldsSchema = z.object({
+  assignment_type: assignmentTypeSchema.optional(),
+  course_id: z.string().uuid().optional(),
+  description: z.string().trim().max(10_000).nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  estimated_minutes: z.number().int().min(0).max(100_000).nullable().optional(),
+  is_completed: z.boolean().optional(),
+  points_possible: z.number().min(0).max(1_000_000).nullable().optional(),
+  title: z.string().trim().min(1).max(300).optional(),
+});
+const createAssignmentSchema = assignmentFieldsSchema.extend({
+  course_id: z.string().uuid(),
+  title: z.string().trim().min(1).max(300),
+}).strict();
+const updateAssignmentSchema = assignmentFieldsSchema.extend({
+  id: z.string().uuid(),
+}).strict().refine(
+  (value) => Object.keys(value).some((key) => key !== "id"),
+  "At least one assignment field is required."
+);
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -25,22 +61,32 @@ export async function GET(req: Request) {
     .order("due_date", { ascending: false, nullsFirst: false });
 
   if (courseId) {
+    const parsedCourseId = z.string().uuid().safeParse(courseId);
+    if (!parsedCourseId.success) {
+      return NextResponse.json({ error: "Invalid course id." }, { status: 400 });
+    }
     const { data: course, error: courseError } = await supabase
       .from("courses")
       .select("id")
-      .eq("id", courseId)
+      .eq("id", parsedCourseId.data)
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
 
-    if (courseError) return NextResponse.json({ error: courseError.message }, { status: 500 });
+    if (courseError) {
+      console.error("[assignments] Course lookup failed:", courseError);
+      return NextResponse.json({ error: "Failed to load assignments." }, { status: 500 });
+    }
     if (!course) return NextResponse.json({ error: "Course not found" }, { status: 404 });
 
-    query = query.eq("course_id", courseId);
+    query = query.eq("course_id", parsedCourseId.data);
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[assignments] List failed:", error);
+    return NextResponse.json({ error: "Failed to load assignments." }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -49,7 +95,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  const parsed = createAssignmentSchema.safeParse(
+    await req.json().catch(() => null)
+  );
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid assignment details." }, { status: 400 });
+  }
   const {
     course_id,
     title,
@@ -58,10 +109,7 @@ export async function POST(req: Request) {
     due_date,
     points_possible,
     estimated_minutes,
-  } = body;
-
-  if (!course_id) return NextResponse.json({ error: "course_id required" }, { status: 400 });
-  if (!title?.trim()) return NextResponse.json({ error: "title required" }, { status: 400 });
+  } = parsed.data;
 
   // Verify the course belongs to this user
   const { data: course } = await supabase
@@ -78,8 +126,8 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       course_id,
-      title: title.trim(),
-      description: description?.trim() || null,
+      title,
+      description: description || null,
       assignment_type: assignment_type || "homework",
       due_date: due_date || null,
       points_possible: points_possible ?? null,
@@ -89,7 +137,10 @@ export async function POST(req: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[assignments] Create failed:", error);
+    return NextResponse.json({ error: "Failed to create assignment." }, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -98,20 +149,30 @@ export async function PATCH(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const { id, ...fields } = body;
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-
-  const allowed = [
-    "title", "description", "assignment_type", "due_date",
-    "points_possible", "estimated_minutes", "is_completed", "completed_at", "course_id",
-  ];
-  const updates: Record<string, unknown> = {};
-  for (const key of allowed) {
-    if (key in fields) updates[key] = fields[key];
+  const parsed = updateAssignmentSchema.safeParse(
+    await req.json().catch(() => null)
+  );
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid assignment update." }, { status: 400 });
   }
-  if (updates.is_completed === true && !updates.completed_at) {
+  const { id, ...validatedUpdates } = parsed.data;
+  const updates: Record<string, unknown> = { ...validatedUpdates };
+
+  if (validatedUpdates.course_id) {
+    const { data: destinationCourse } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", validatedUpdates.course_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!destinationCourse) {
+      return NextResponse.json({ error: "Destination course not found." }, { status: 404 });
+    }
+  }
+  if (validatedUpdates.is_completed === true) {
     updates.completed_at = new Date().toISOString();
+  } else if (validatedUpdates.is_completed === false) {
+    updates.completed_at = null;
   }
 
   const { data, error } = await supabase
@@ -122,7 +183,10 @@ export async function PATCH(req: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[assignments] Update failed:", error);
+    return NextResponse.json({ error: "Failed to update assignment." }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -133,14 +197,20 @@ export async function DELETE(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const parsedId = z.string().uuid().safeParse(id);
+  if (!parsedId.success) {
+    return NextResponse.json({ error: "A valid assignment id is required." }, { status: 400 });
+  }
 
   const { error } = await supabase
     .from("assignments")
     .delete()
-    .eq("id", id)
+    .eq("id", parsedId.data)
     .eq("user_id", user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[assignments] Delete failed:", error);
+    return NextResponse.json({ error: "Failed to delete assignment." }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

@@ -9,6 +9,10 @@ import { NextResponse } from "next/server";
 import { extractTextFromImage, type ImageMediaType } from "@/backend/ai/ocrImage";
 import { generateEmbedding } from "@/backend/utils/embeddings";
 import { v4 as uuidv4 } from "uuid";
+import { assertWithinLimits } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { validateNoteUpload } from "@/backend/utils/uploadValidation";
+import { z } from "zod";
 
 export const maxDuration = 60;
 
@@ -25,6 +29,13 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const limitCheck = await assertWithinLimits(user.id, ["note", "tokens"]);
+    if (!limitCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: limitCheck.reason, code: "LIMIT_REACHED" },
+        { status: 402 }
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -35,6 +46,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
 
+    let safeFileName: string;
+    try {
+      safeFileName = validateNoteUpload(file, new Set(["image"])).safeFileName;
+    } catch (validationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validationError instanceof Error
+            ? validationError.message
+            : "Invalid image.",
+        },
+        { status: 400 }
+      );
+    }
+
     const mediaType = SUPPORTED_IMAGE_TYPES[file.type];
     if (!mediaType) {
       return NextResponse.json(
@@ -43,18 +69,37 @@ export async function POST(req: Request) {
       );
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { success: false, error: "Image must be under 5 MB" },
-        { status: 400 }
-      );
+    let verifiedCourseId: string | null = null;
+    if (courseId) {
+      const parsedCourseId = z.string().uuid().safeParse(courseId);
+      const { data: course } = parsedCourseId.success
+        ? await supabase
+            .from("courses")
+            .select("id")
+            .eq("id", parsedCourseId.data)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : { data: null };
+      if (!course) {
+        return NextResponse.json(
+          { success: false, error: "Course not found." },
+          { status: 404 }
+        );
+      }
+      verifiedCourseId = course.id;
     }
 
     const imageBuffer = Buffer.from(await file.arrayBuffer());
 
     // Run OCR via AI vision
     const { extractedText, structuredContent, confidence, warnings } =
-      await extractTextFromImage(imageBuffer, mediaType, context ?? undefined);
+      await runWithUsageContext(user.id, () =>
+        extractTextFromImage(
+          imageBuffer,
+          mediaType,
+          context?.slice(0, 500) ?? undefined
+        )
+      );
 
     if (!extractedText.trim()) {
       return NextResponse.json(
@@ -64,13 +109,20 @@ export async function POST(req: Request) {
     }
 
     const noteId = uuidv4();
-    const title = file.name.replace(/\.[^/.]+$/, "") || "Handwritten Note";
+    const title = safeFileName.replace(/\.[^/.]+$/, "") || "Handwritten Note";
 
     // Upload image to Supabase Storage
-    const storagePath = `${user.id}/notes/${noteId}/${file.name}`;
-    await supabase.storage
+    const storagePath = `${user.id}/notes/${noteId}/${safeFileName}`;
+    const { error: storageError } = await supabase.storage
       .from("notes")
       .upload(storagePath, imageBuffer, { contentType: file.type, upsert: false });
+    if (storageError) {
+      console.error("[notes/ocr] Storage upload failed:", storageError);
+      return NextResponse.json(
+        { success: false, error: "Failed to store the uploaded image." },
+        { status: 500 }
+      );
+    }
 
     // Generate embedding
     let embedding: number[] | null = null;
@@ -87,11 +139,11 @@ export async function POST(req: Request) {
       .insert({
         id: noteId,
         user_id: user.id,
-        course_id: courseId ?? null,
+        course_id: verifiedCourseId,
         title,
         content: structuredContent,
         source_type: "upload",
-        file_name: file.name,
+        file_name: safeFileName,
         file_type: "image",
         file_size_bytes: file.size,
         storage_path: storagePath,
@@ -104,7 +156,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      await supabase.storage.from("notes").remove([storagePath]);
+      console.error("[notes/ocr] Note insert failed:", error);
+      return NextResponse.json(
+        { success: false, error: "Failed to save the extracted note." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -120,6 +177,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[/api/notes/ocr] Error:", err);
-    return NextResponse.json({ success: false, error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Image extraction failed." }, { status: 500 });
   }
 }

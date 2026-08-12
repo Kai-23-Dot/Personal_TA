@@ -62,6 +62,7 @@ export default function PracticeSessionPage() {
   const [times, setTimes] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const sessionStartRef = useRef<number | null>(null);
   const questionStartRef = useRef<number | null>(null);
   const sessionRef = useRef<PracticeSession | null>(null);
@@ -184,40 +185,37 @@ export default function PracticeSessionPage() {
   async function handleSubmitTest() {
     if (!session || !sessionId) return;
     setSubmitting(true);
+    setSubmissionError(null);
     try {
-      const total = questions.length;
-      const correct = questions.reduce((count, question, idx) => {
-        const userAnswer = answers[idx];
-        if (!userAnswer) return count;
-        return question.correct_answer.trim().toLowerCase() === userAnswer.trim().toLowerCase()
-          ? count + 1
-          : count;
-      }, 0);
-
-      await fetch("/api/practice/generate", {
+      const response = await fetch("/api/practice/generate", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          correct,
-          total,
-          topic: session.topic,
-          courseId: session.course_id,
           durationSeconds: sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 1000) : null,
-          attempts: questions.map((q, idx) => ({
+          attempts: questions.map((_question, idx) => ({
             question_index: idx,
             user_answer: answers[idx] ?? "",
-            is_correct: q.correct_answer.trim().toLowerCase() === (answers[idx] ?? "").trim().toLowerCase(),
             time_taken_seconds: times[idx] ?? 0,
           })),
         }),
       });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to save practice results.");
+      }
 
       setSubmitted(true);
       // Clear saved progress — test is done
       if (sessionId) {
         try { localStorage.removeItem(resumeKey(sessionId)); } catch {}
       }
+    } catch (submissionError) {
+      setSubmissionError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Failed to save practice results."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -418,6 +416,11 @@ export default function PracticeSessionPage() {
               isLast={index === questions.length - 1}
               submitting={submitting}
             />
+            {submissionError ? (
+              <p className="mt-3 text-sm text-rose-300" role="alert">
+                {submissionError} Your answers are still saved; please try again.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

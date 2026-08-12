@@ -24,7 +24,10 @@ export async function retrieveRelevantContext(
 
   const supabase = createServiceClient();
 
-  const [{ data: notes }, { data: summaries }] = await Promise.all([
+  const [
+    { data: notes, error: notesError },
+    { data: summaries, error: summariesError },
+  ] = await Promise.all([
     supabase.rpc("match_notes", {
       query_embedding: embeddingStr,
       match_user_id: userId,
@@ -38,6 +41,10 @@ export async function retrieveRelevantContext(
       similarity_threshold: 0.5,
     }),
   ]);
+  if (notesError || summariesError) {
+    console.error("[rag] Vector search failed:", notesError ?? summariesError);
+    throw new Error("Vector search failed.");
+  }
 
   const noteResults: RagResult[] = (notes ?? []).map((n: {
     id: string;

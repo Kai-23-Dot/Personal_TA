@@ -27,7 +27,8 @@ test.describe("goal-bound group flow", () => {
     await page.getByRole("button", { name: "Create group" }).first().click();
 
     // Submit stays disabled until every required field is valid.
-    const submit = page.getByRole("button", { name: "Create group" }).last();
+    const createForm = page.getByRole("form", { name: "Create study group" });
+    const submit = createForm.getByRole("button", { name: "Create group" });
     await expect(submit).toBeDisabled();
 
     await page.getByLabel("Group name *").fill(groupName);

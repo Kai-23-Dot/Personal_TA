@@ -32,9 +32,15 @@ test.describe("groups API", () => {
   });
 
   test("unauthenticated create is rejected", async ({ baseURL }) => {
-    const anon: APIRequestContext = await pwRequest.newContext({ baseURL });
-    const res = await anon.post("/api/groups", { data: validPayload() });
-    expect([401, 307]).toContain(res.status()); // middleware may redirect API-less clients
+    const anon: APIRequestContext = await pwRequest.newContext({
+      baseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const res = await anon.post("/api/groups", {
+      data: validPayload(),
+      maxRedirects: 0,
+    });
+    expect(res.status()).toBe(401);
     await anon.dispose();
   });
 

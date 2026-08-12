@@ -7,7 +7,10 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/backend/supabase/server";
+import { timingSafeEqual } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import { createClient, createServiceClient } from "@/backend/supabase/server";
 import {
   fetchGCCourses,
   fetchGCCourseWork,
@@ -26,6 +29,7 @@ import {
   fetchCanvasFileById,
   fetchCanvasModules,
   fetchCanvasModuleItems,
+  downloadCanvasFile,
   mapCanvasAssignmentType,
   htmlToPlainText,
 } from "@/backend/lms/canvas";
@@ -46,53 +50,99 @@ import { extractFromGoogleLink, extractFromHtml } from "@/backend/canvas-intelli
 import { classifyContent } from "@/backend/canvas-intelligence/contentClassifier";
 
 const CRON_SECRET = process.env.CRON_SECRET;
+const syncRequestSchema = z.object({
+  connectionId: z.string().uuid(),
+}).strict();
+
+function validCronAuthorization(req: Request): boolean {
+  if (!CRON_SECRET) return false;
+  const authorization = req.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+
+  const supplied = Buffer.from(authorization.slice("Bearer ".length));
+  const expected = Buffer.from(CRON_SECRET);
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
+async function runCronSync(req: Request) {
+  if (!validCronAuthorization(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // The service client is created only after the cron secret is verified.
+  const supabase = createServiceClient();
+  const { data: connections, error: connectionError } = await supabase
+    .from("lms_connections")
+    .select("*")
+    .eq("is_active", true)
+    .order("last_synced_at", { ascending: true, nullsFirst: true })
+    .limit(3);
+
+  if (connectionError) {
+    console.error("[sync/cron] Failed to load connections:", connectionError);
+    return NextResponse.json({ error: "Failed to load LMS connections." }, { status: 500 });
+  }
+
+  let totalCourses = 0;
+  let totalAssignments = 0;
+  let totalNotes = 0;
+  const errors: string[] = [];
+
+  for (const conn of connections ?? []) {
+    try {
+      const result = await syncConnection(supabase, conn);
+      totalCourses += result.courses;
+      totalAssignments += result.assignments;
+      totalNotes += result.notes;
+      errors.push(...result.errors.map((message) => `${conn.id}: ${message}`));
+      if (result.courses > 0 || result.assignments > 0 || result.notes > 0) {
+        await supabase
+          .from("lms_connections")
+          .update({ last_synced_at: new Date().toISOString() })
+          .eq("id", conn.id);
+      }
+    } catch (error) {
+      console.error(`[sync/cron] Connection ${conn.id} failed:`, error);
+      errors.push(`${conn.id}: connection sync failed`);
+    }
+  }
+
+  return NextResponse.json({
+    success: errors.length === 0,
+    partial: errors.length > 0,
+    processedConnections: connections?.length ?? 0,
+    courses: totalCourses,
+    assignments: totalAssignments,
+    notes: totalNotes,
+    errors,
+  });
+}
+
+export async function GET(req: Request) {
+  return runCronSync(req);
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-
-  const cronHeader = req.headers.get("x-cron-secret");
-
-  if (cronHeader && cronHeader === CRON_SECRET) {
-    // Cron mode: sync all active connections
-    const { data: connections } = await supabase
-      .from("lms_connections")
-      .select("*")
-      .eq("is_active", true);
-
-    if (!connections) return NextResponse.json({ success: true, synced: 0 });
-
-    let totalCourses = 0;
-    let totalAssignments = 0;
-    let totalNotes = 0;
-
-    for (const conn of connections) {
-      try {
-        const result = await syncConnection(supabase, conn);
-        totalCourses += result.courses;
-        totalAssignments += result.assignments;
-        totalNotes += result.notes;
-      } catch (err) {
-        console.error(`Sync failed for connection ${conn.id}:`, err);
-      }
-    }
-
-    return NextResponse.json({ success: true, courses: totalCourses, assignments: totalAssignments, notes: totalNotes });
-  }
 
   // User-initiated sync
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { connectionId } = await req.json();
+  const parsedBody = syncRequestSchema.safeParse(await req.json().catch(() => null));
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "A valid connectionId is required." }, { status: 400 });
+  }
+  const { connectionId } = parsedBody.data;
 
-  const { data: connection } = await supabase
+  const { data: connection, error: connectionError } = await supabase
     .from("lms_connections")
     .select("*")
     .eq("id", connectionId)
     .eq("user_id", user.id)
     .single();
 
-  if (!connection) {
+  if (connectionError || !connection) {
     return NextResponse.json({ success: false, error: "Connection not found" }, { status: 404 });
   }
 
@@ -106,7 +156,11 @@ export async function POST(req: Request) {
       .eq("id", connectionId);
   }
 
-  return NextResponse.json({ success: true, ...result });
+  return NextResponse.json({
+    success: result.errors.length === 0,
+    partial: result.errors.length > 0,
+    ...result,
+  });
 }
 
 type SyncResult = { courses: number; assignments: number; notes: number; errors: string[] };
@@ -121,7 +175,7 @@ function isOlderThanOneYear(dateIso: string | null | undefined, cutoffIso: strin
 }
 
 async function syncConnection(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
   connection: {
     id: string;
     user_id: string;
@@ -461,12 +515,12 @@ async function syncConnection(
           // Download file — Canvas URL may redirect to S3; follow redirects with auth
           let fileBuffer: Buffer;
           try {
-            const dlRes = await fetch(file.url, {
-              headers: { Authorization: `Bearer ${access_token}` },
-              redirect: "follow",
-            });
-            if (!dlRes.ok) continue;
-            fileBuffer = Buffer.from(await dlRes.arrayBuffer());
+            ({ buffer: fileBuffer } = await downloadCanvasFile(
+              canvas_domain,
+              access_token,
+              file.url,
+              FILES_SIZE_CAP
+            ));
           } catch {
             continue;
           }
@@ -584,12 +638,12 @@ async function syncConnection(
 
               let fileBuffer: Buffer;
               try {
-                const dlRes = await fetch(dlUrl, {
-                  headers: { Authorization: `Bearer ${access_token}` },
-                  redirect: "follow",
-                });
-                if (!dlRes.ok) continue;
-                fileBuffer = Buffer.from(await dlRes.arrayBuffer());
+                ({ buffer: fileBuffer } = await downloadCanvasFile(
+                  canvas_domain,
+                  access_token,
+                  dlUrl,
+                  5 * 1024 * 1024
+                ));
               } catch {
                 continue;
               }

@@ -2,7 +2,7 @@ import { createServiceClient } from "@/backend/supabase/server";
 import { classifyContent } from "./contentClassifier";
 import { chunkDocument } from "./chunker";
 import { scoreConfidence } from "./confidenceScorer";
-import { embedText, cosineSimilarity } from "./embeddingIndexer";
+import { embedTexts, cosineSimilarity } from "./embeddingIndexer";
 import { dateProximityScore, scoreChunk, keywordScore, fuzzyTitleScore } from "./rankingModel";
 import { explainSourceChoice } from "./sourceExplainer";
 import type { CanvasContentItem, DocumentChunk, ExtractedDocument, RankedSource, RetrievalQuery } from "./types";
@@ -145,11 +145,18 @@ export async function retrieveRankedSources(query: RetrievalQuery): Promise<{
     .slice(0, 24)
     .map((x) => x.c);
 
-  const queryEmbedding = await embedText(query.query);
+  const embeddings = await embedTexts([
+    query.query,
+    ...narrowed.map(
+      (chunk) => `${chunk.title}\n${chunk.text.slice(0, 3000)}`
+    ),
+  ]);
+  const queryEmbedding = embeddings[0];
   const ranked: RankedSource[] = [];
 
-  for (const chunk of narrowed) {
-    const chunkEmbedding = await embedText(`${chunk.title}\n${chunk.text.slice(0, 3000)}`);
+  for (let chunkIndex = 0; chunkIndex < narrowed.length; chunkIndex++) {
+    const chunk = narrowed[chunkIndex];
+    const chunkEmbedding = embeddings[chunkIndex + 1];
     const semantic = Math.max(0, cosineSimilarity(queryEmbedding, chunkEmbedding));
     const keyword = keywordScore(chunk.text, queryWords);
     const title = keywordScore(chunk.title, queryWords);

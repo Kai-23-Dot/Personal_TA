@@ -29,7 +29,6 @@ export function usePersistentState<T>(key: string, initial: T) {
     }
     setHydrated(true);
     // Re-run only if the key changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   // Persist after hydration so we never clobber stored data with `initial`.

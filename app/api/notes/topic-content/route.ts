@@ -37,6 +37,8 @@ export async function GET(req: Request) {
       success: true,
       hasDirectContent: result.hasDirectContent,
       moduleNames: result.moduleNames,
+      partial: result.warnings.length > 0,
+      warnings: result.warnings,
       sources: result.ranked.map((r) => ({
         title: r.chunk.title,
         text: r.chunk.text.slice(0, 2000),

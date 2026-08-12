@@ -13,25 +13,32 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { fetchICProfile } from "@/backend/lms/infinite-campus";
+import { normalizeInfiniteCampusDomain } from "@/backend/security/infiniteCampus";
+import { z } from "zod";
+
+const infiniteCampusTokenSchema = z.object({
+  access_token: z.string().trim().min(1).max(4096),
+  domain: z.string().trim().min(1).max(300),
+}).strict();
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const domain: string = (body.domain ?? "").trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const accessToken: string = (body.access_token ?? "").trim();
-
-  if (!domain || !accessToken) {
-    return NextResponse.json({ error: "domain and access_token are required" }, { status: 400 });
+  const parsed = infiniteCampusTokenSchema.safeParse(
+    await req.json().catch(() => null)
+  );
+  if (!parsed.success) {
+    return NextResponse.json({ error: "A valid domain and token are required." }, { status: 400 });
   }
-  if (!domain.includes(".")) {
-    return NextResponse.json(
-      { error: "Invalid domain — should look like district.infinitecampus.org" },
-      { status: 400 }
-    );
+  let domain: string;
+  try {
+    domain = normalizeInfiniteCampusDomain(parsed.data.domain);
+  } catch {
+    return NextResponse.json({ error: "Infinite Campus domain is not allowed." }, { status: 400 });
   }
+  const accessToken = parsed.data.access_token;
 
   // Validate the token by fetching the student profile
   const profile = await fetchICProfile(domain, accessToken);
@@ -58,7 +65,10 @@ export async function POST(req: Request) {
     { onConflict: "user_id,platform" }
   );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[Infinite Campus] Connection save failed:", error);
+    return NextResponse.json({ error: "Failed to save Infinite Campus connection." }, { status: 500 });
+  }
 
   const { data: conn } = await supabase
     .from("lms_connections")

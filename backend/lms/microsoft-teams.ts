@@ -51,7 +51,11 @@ export interface MSCalendarEvent {
 export async function refreshMicrosoftAccessToken(refreshToken: string) {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const tenant = process.env.MICROSOFT_TENANT_ID ?? "common";
+  const configuredTenant = process.env.MICROSOFT_TENANT_ID ?? "common";
+  const tenant =
+    /^(?:common|organizations|consumers|[0-9a-f-]{36})$/i.test(configuredTenant)
+      ? configuredTenant
+      : "common";
   if (!clientId || !clientSecret) {
     throw new Error("Microsoft OAuth not configured");
   }
@@ -76,11 +80,12 @@ export async function refreshMicrosoftAccessToken(refreshToken: string) {
           "Calendars.Read",
         ].join(" "),
       }),
+      signal: AbortSignal.timeout(15_000),
     }
   );
 
   if (!res.ok) {
-    throw new Error(`Microsoft token refresh failed: ${await res.text()}`);
+    throw new Error(`Microsoft token refresh failed with status ${res.status}.`);
   }
 
   return res.json() as Promise<{
@@ -93,7 +98,10 @@ export async function refreshMicrosoftAccessToken(refreshToken: string) {
 export async function fetchMSClasses(accessToken: string): Promise<MSClass[]> {
   const res = await fetch(
     "https://graph.microsoft.com/v1.0/education/me/classes?$select=id,displayName,description,mailNickname",
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
 
   if (!res.ok) throw new Error(`MS Graph classes error ${res.status}`);
@@ -111,17 +119,31 @@ export async function fetchMSAssignments(
     | string
     | null = `https://graph.microsoft.com/v1.0/education/classes/${classId}/assignments?$top=50`;
 
-  while (url) {
-    const res: Response = await fetch(url, {
+  const visited = new Set<string>();
+  while (url && visited.size < 100) {
+    const safeUrl = new URL(url);
+    if (
+      safeUrl.protocol !== "https:" ||
+      safeUrl.hostname !== "graph.microsoft.com" ||
+      visited.has(safeUrl.toString())
+    ) {
+      throw new Error("Microsoft Graph returned an unsafe pagination URL.");
+    }
+    visited.add(safeUrl.toString());
+    const res: Response = await fetch(safeUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
     });
 
-    if (!res.ok) break;
+    if (!res.ok) {
+      throw new Error(`Microsoft assignments request failed with status ${res.status}.`);
+    }
 
     const data: { value?: MSAssignment[]; "@odata.nextLink"?: string } = await res.json();
     allAssignments = allAssignments.concat(data.value ?? []);
     url = data["@odata.nextLink"] ?? null;
   }
+  if (url) throw new Error("Microsoft Graph pagination exceeded the safety limit.");
 
   return allAssignments;
 }
@@ -133,7 +155,10 @@ export async function fetchMSSubmission(
 ): Promise<MSSubmission | null> {
   const res = await fetch(
     `https://graph.microsoft.com/v1.0/education/classes/${classId}/assignments/${assignmentId}/submissions?$filter=submittedBy/user/id eq 'me'`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
 
   if (!res.ok) return null;
@@ -155,6 +180,7 @@ export async function fetchMSCalendarEvents(
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) return [];

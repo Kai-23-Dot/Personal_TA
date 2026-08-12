@@ -21,13 +21,15 @@ import {
   fetchCanvasAssignments,
   fetchCanvasPageBody,
   fetchCanvasFilesWide,
+  downloadCanvasFile,
   htmlToPlainText,
 } from "@/backend/lms/canvas";
+import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
 import { classifyContent } from "./contentClassifier";
 import { chunkDocument } from "./chunker";
 import { scoreConfidence } from "./confidenceScorer";
-import { embedText, cosineSimilarity } from "./embeddingIndexer";
+import { embedTexts, cosineSimilarity } from "./embeddingIndexer";
 import {
   dateProximityScore,
   scoreChunk,
@@ -57,6 +59,22 @@ const MAX_MODULES_FOR_ITEM_FETCH = 40;
 
 const HIGH_VALUE_FILE_TERMS =
   /\b(notes?|slides?|lecture|lesson|unit|chapter|study\s*guide|review|packet|worksheet|reading|handout|presentation|powerpoint|ppt|pdf)\b/i;
+
+async function canvasCollectionOrFallback<T>(
+  label: string,
+  request: Promise<T>,
+  fallback: T,
+  warnings: string[]
+): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Canvas request failed.";
+    warnings.push(`${label}: ${message}`);
+    console.warn(`[CanvasDeepFetch] ${label} unavailable: ${message}`);
+    return fallback;
+  }
+}
 
 // ── Local DB row types ────────────────────────────────────────────────────────
 
@@ -197,6 +215,7 @@ function moduleTopicScore(moduleName: string, topicWords: string[]): number {
 // ── File download helper ──────────────────────────────────────────────────────
 
 async function downloadFileText(
+  domain: string,
   url: string,
   accessToken: string,
   mimeType: string,
@@ -207,13 +226,13 @@ async function downloadFileText(
   if (!fileType) return null;
   if (size && size > MAX_FILE_BYTES) return null;
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      redirect: "follow",
-    });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    const text = await extractFileText(buf, fileType);
+    const { buffer } = await downloadCanvasFile(
+      domain,
+      accessToken,
+      url,
+      MAX_FILE_BYTES
+    );
+    const text = await extractFileText(buffer, fileType);
     return text ?? null;
   } catch {
     return null;
@@ -234,6 +253,8 @@ export interface CanvasDeepFetchResult {
   styleHint?: string;
   /** All module names found in the course (Canvas order). */
   moduleNames: string[];
+  /** Live Canvas resources that could not be refreshed; stored content may still be used. */
+  warnings: string[];
 }
 
 // ── Core algorithm ────────────────────────────────────────────────────────────
@@ -256,24 +277,11 @@ export async function canvasDeepFetch(params: {
 
   // ── Step 1: Load DB-synced content ────────────────────────────────────────
   const [
-    { data: connection },
-    { data: course },
+    canvasContext,
     { data: dbNotes },
     { data: dbAssignments },
   ] = await Promise.all([
-    supabase
-      .from("lms_connections")
-      .select("access_token, canvas_domain")
-      .eq("user_id", userId)
-      .eq("platform", "canvas")
-      .eq("is_active", true)
-      .maybeSingle(),
-    supabase
-      .from("courses")
-      .select("platform_id, name")
-      .eq("id", courseId)
-      .eq("user_id", userId)
-      .maybeSingle(),
+    getCanvasCourseContext(supabase, userId, courseId),
     supabase
       .from("notes")
       .select(
@@ -293,6 +301,8 @@ export async function canvasDeepFetch(params: {
       .order("updated_at", { ascending: false })
       .limit(60),
   ]);
+  const connection = canvasContext?.connection;
+  const course = canvasContext?.course;
 
   const contentItems: CanvasContentItem[] = [
     ...((dbNotes ?? []) as NoteRow[]).map(noteToContentItem),
@@ -300,6 +310,7 @@ export async function canvasDeepFetch(params: {
   ];
 
   const moduleNames: string[] = [];
+  const warnings: string[] = [];
 
   // ── Step 2: Live Canvas deep-crawl ────────────────────────────────────────
   if (connection?.access_token && connection.canvas_domain && course?.platform_id) {
@@ -323,10 +334,30 @@ export async function canvasDeepFetch(params: {
 
       // Parallel Canvas API calls
       const [modules, pages, liveAssignments, files] = await Promise.all([
-        fetchCanvasModules(canvas_domain, access_token, canvasCourseId),
-        fetchCanvasPages(canvas_domain, access_token, canvasCourseId),
-        fetchCanvasAssignments(canvas_domain, access_token, canvasCourseId),
-        fetchCanvasFilesWide(canvas_domain, access_token, canvasCourseId, 200).catch(() => [] as Awaited<ReturnType<typeof fetchCanvasFilesWide>>),
+        canvasCollectionOrFallback(
+          "modules",
+          fetchCanvasModules(canvas_domain, access_token, canvasCourseId),
+          [],
+          warnings
+        ),
+        canvasCollectionOrFallback(
+          "pages",
+          fetchCanvasPages(canvas_domain, access_token, canvasCourseId),
+          [],
+          warnings
+        ),
+        canvasCollectionOrFallback(
+          "assignments",
+          fetchCanvasAssignments(canvas_domain, access_token, canvasCourseId),
+          [],
+          warnings
+        ),
+        canvasCollectionOrFallback(
+          "files",
+          fetchCanvasFilesWide(canvas_domain, access_token, canvasCourseId, 200),
+          [],
+          warnings
+        ),
       ]);
 
       moduleNames.push(...modules.map((m) => m.name));
@@ -337,7 +368,14 @@ export async function canvasDeepFetch(params: {
         moduleSlice.map((m) =>
           fetchCanvasModuleItems(canvas_domain, access_token, canvasCourseId, m.id)
             .then((items) => ({ module: m, items }))
-            .catch(() => ({ module: m, items: [] as Awaited<ReturnType<typeof fetchCanvasModuleItems>> }))
+            .catch((error: unknown) => {
+              const message = error instanceof Error ? error.message : "Canvas request failed.";
+              warnings.push(`module ${m.id}: ${message}`);
+              return {
+                module: m,
+                items: [] as Awaited<ReturnType<typeof fetchCanvasModuleItems>>,
+              };
+            })
         )
       );
 
@@ -483,7 +521,14 @@ export async function canvasDeepFetch(params: {
           const downloadUrl = (f as unknown as { url?: string }).url;
           const size = (f as unknown as { size?: number }).size ?? null;
           if (!downloadUrl) return null;
-          const text = await downloadFileText(downloadUrl, access_token, mimeType, fileName, size);
+          const text = await downloadFileText(
+            canvas_domain,
+            downloadUrl,
+            access_token,
+            mimeType,
+            fileName,
+            size
+          );
           if (!text || text.trim().length < 50) return null;
           return {
             id: `canvas_file_${f.id}`,
@@ -553,6 +598,7 @@ export async function canvasDeepFetch(params: {
       confidence: scoreConfidence([]),
       hasDirectContent: false,
       moduleNames,
+      warnings,
     };
   }
 
@@ -577,19 +623,23 @@ export async function canvasDeepFetch(params: {
       : scoredChunks.slice(0, MAX_CANDIDATE_CHUNKS).map((x) => x.c);
 
   // ── Step 5: Embed + multi-signal rank ────────────────────────────────────
-  const queryEmbedding = await embedText(topic);
+  const embeddings = await embedTexts([
+    topic,
+    ...candidates.map(
+      (chunk) => `${chunk.title}\n${chunk.text.slice(0, 3000)}`
+    ),
+  ]);
+  const queryEmbedding = embeddings[0];
   const ranked: RankedSource[] = [];
 
-  for (const chunk of candidates) {
-    const chunkEmbedding = await embedText(
-      `${chunk.title}\n${chunk.text.slice(0, 3000)}`
-    );
+  for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+    const chunk = candidates[candidateIndex];
+    const chunkEmbedding = embeddings[candidateIndex + 1];
     const semantic = Math.max(0, cosineSimilarity(queryEmbedding, chunkEmbedding));
     const keyword = keywordScore(chunk.text, topicWords);
     const titleKw = keywordScore(chunk.title, topicWords);
     const fuzzy = fuzzyTitleScore(chunk.title, topicWords);
 
-    const topicLower = topic.toLowerCase();
     const modScore = chunk.moduleName
       ? moduleTopicScore(chunk.moduleName, topicWords)
       : 0.4;
@@ -655,7 +705,14 @@ export async function canvasDeepFetch(params: {
     }
   }
 
-  return { ranked: top, confidence, hasDirectContent, styleHint, moduleNames };
+  return {
+    ranked: top,
+    confidence,
+    hasDirectContent,
+    styleHint,
+    moduleNames,
+    warnings,
+  };
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────────

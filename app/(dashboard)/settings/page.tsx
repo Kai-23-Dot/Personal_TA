@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/frontend/components/ui/select";
 import { Badge } from "@/frontend/components/ui/badge";
+import Link from "next/link";
 
 type Profile = {
   full_name: string | null;
@@ -68,11 +69,35 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let mounted = true;
+    const checkout =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("checkout")
+        : null;
+
+    async function refreshBillingAfterCheckout() {
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+        if (!mounted) return;
+        const response = await fetch("/api/billing/status", {
+          cache: "no-store",
+        }).catch(() => null);
+        if (!response?.ok) continue;
+        const nextBilling = (await response.json()) as BillingStatus;
+        if (!mounted) return;
+        setBilling(nextBilling);
+        if (nextBilling.plan === "pro") {
+          setMessage("Subscription active — welcome to Pro!");
+          setMessageType("success");
+          return;
+        }
+      }
+    }
+
     async function load() {
       const [profileRes, connectionsRes, billingRes] = await Promise.all([
         fetch("/api/profile"),
         fetch("/api/lms/connections"),
-        fetch("/api/billing/status"),
+        fetch("/api/billing/status", { cache: "no-store" }),
       ]);
       const profileData = profileRes.ok ? await profileRes.json() : null;
       const connectionsData = connectionsRes.ok ? await connectionsRes.json() : [];
@@ -82,16 +107,16 @@ export default function SettingsPage() {
         setConnections(connectionsData ?? []);
         setBilling(billingData ?? null);
       }
+      if (checkout === "success" && billingData?.plan !== "pro") {
+        void refreshBillingAfterCheckout();
+      }
     }
-    load();
+    void load();
 
     // Surface the outcome of a returning Checkout redirect.
-    if (typeof window !== "undefined") {
-      const checkout = new URLSearchParams(window.location.search).get("checkout");
-      if (checkout === "success") {
-        setMessage("Subscription active — welcome to Pro! It may take a moment to reflect.");
-        setMessageType("success");
-      }
+    if (checkout === "success") {
+      setMessage("Payment received — activating Pro access…");
+      setMessageType("success");
     }
     return () => {
       mounted = false;
@@ -377,7 +402,7 @@ export default function SettingsPage() {
                 </a>
               </Button>
               <Button variant="secondary" asChild>
-                <a href="/settings/setup/canvas">Use access token</a>
+                <Link href="/settings/setup/canvas">Use access token</Link>
               </Button>
             </div>
           </div>

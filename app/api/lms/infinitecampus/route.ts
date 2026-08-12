@@ -13,19 +13,24 @@
  *   Token:     /oAuth/token
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { fetchICProfile } from "@/backend/lms/infinite-campus";
+import {
+  createInfiniteCampusState,
+  normalizeInfiniteCampusDomain,
+  verifyInfiniteCampusState,
+} from "@/backend/security/infiniteCampus";
 
+const IC_STATE_COOKIE = "conlearn_ic_oauth_nonce";
 function icBase(domain: string) {
-  const d = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  return d.endsWith("/campus") ? `https://${d}` : `https://${d}/campus`;
+  return `https://${normalizeInfiniteCampusDomain(domain)}/campus`;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state"); // encoded domain
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   // ── OAuth Callback ──────────────────────────────────────────────────────
@@ -34,7 +39,20 @@ export async function GET(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.redirect(new URL("/login", req.url));
 
-    const icDomain = decodeURIComponent(state);
+    let icDomain: string;
+    try {
+      icDomain = verifyInfiniteCampusState(
+        state,
+        req.cookies.get(IC_STATE_COOKIE)?.value
+      ).domain;
+    } catch (stateError) {
+      console.warn("[Infinite Campus OAuth] State verification failed:", stateError);
+      const response = NextResponse.redirect(
+        new URL("/settings?error=ic_oauth_state_invalid", req.url)
+      );
+      response.cookies.delete(IC_STATE_COOKIE);
+      return response;
+    }
     const base = icBase(icDomain);
 
     const tokenRes = await fetch(`${base}/oAuth/token`, {
@@ -47,17 +65,25 @@ export async function GET(req: Request) {
         client_secret: process.env.INFINITE_CAMPUS_CLIENT_SECRET!,
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/infinitecampus`,
       }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!tokenRes.ok) {
-      console.error("IC token exchange failed:", await tokenRes.text());
+      console.error("IC token exchange failed with status:", tokenRes.status);
       return NextResponse.redirect(new URL("/settings?error=ic_auth_failed", req.url));
     }
 
-    const tokens = await tokenRes.json();
+    const tokens = await tokenRes.json() as {
+      access_token?: string;
+      expires_in?: number;
+      refresh_token?: string;
+    };
+    if (!tokens.access_token) {
+      return NextResponse.redirect(new URL("/settings?error=ic_auth_failed", req.url));
+    }
     const profile = await fetchICProfile(icDomain, tokens.access_token);
 
-    const { data: conn } = await supabase
+    const { data: conn, error: dbError } = await supabase
       .from("lms_connections")
       .upsert(
         {
@@ -78,11 +104,17 @@ export async function GET(req: Request) {
       )
       .select("id")
       .single();
+    if (dbError) {
+      console.error("DB error saving Infinite Campus connection:", dbError);
+      return NextResponse.redirect(new URL("/settings?error=ic_save_failed", req.url));
+    }
 
     const syncParam = conn?.id ? `&sync_id=${conn.id}` : "";
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       new URL(`/settings?connected=infinite_campus${syncParam}`, req.url)
     );
+    response.cookies.delete(IC_STATE_COOKIE);
+    return response;
   }
 
   if (error) {
@@ -94,11 +126,15 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/settings?error=ic_not_configured", req.url));
   }
 
-  const domain = searchParams.get("domain");
-  if (!domain || !domain.includes(".")) {
-    return NextResponse.redirect(new URL("/settings?error=ic_domain_required", req.url));
+  let domain: string;
+  try {
+    domain = normalizeInfiniteCampusDomain(searchParams.get("domain") ?? "");
+  } catch {
+    return NextResponse.redirect(new URL("/settings?error=ic_domain_invalid", req.url));
   }
 
+  const { state: oauthState, cookieNonce } =
+    createInfiniteCampusState(domain);
   const base = icBase(domain);
   const authUrl = new URL(`${base}/oAuth/authorize`);
   authUrl.searchParams.set("client_id", process.env.INFINITE_CAMPUS_CLIENT_ID);
@@ -107,7 +143,15 @@ export async function GET(req: Request) {
     `${process.env.NEXT_PUBLIC_APP_URL}/api/lms/infinitecampus`
   );
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("state", encodeURIComponent(domain));
+  authUrl.searchParams.set("state", oauthState);
 
-  return NextResponse.redirect(authUrl.toString());
+  const response = NextResponse.redirect(authUrl.toString());
+  response.cookies.set(IC_STATE_COOKIE, cookieNonce, {
+    httpOnly: true,
+    maxAge: 10 * 60,
+    path: "/api/lms/infinitecampus",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }

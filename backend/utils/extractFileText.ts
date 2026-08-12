@@ -7,6 +7,10 @@
  */
 
 export type SupportedFileType = "pdf" | "docx" | "pptx" | "txt";
+export const MAX_EXTRACT_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRIES = 5000;
+const MAX_XML_ENTRY_CHARS = 2_000_000;
+const MAX_EXTRACTED_CHARS = 2_000_000;
 
 /**
  * Detect file type from MIME type string.
@@ -17,7 +21,6 @@ export function mimeToFileType(contentType: string): SupportedFileType | null {
   if (ct === "application/pdf") return "pdf";
   if (ct === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "docx";
   if (ct === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return "pptx";
-  if (ct === "application/vnd.ms-powerpoint") return "pptx"; // best-effort for legacy PowerPoint
   if (ct === "text/plain") return "txt";
   return null;
 }
@@ -33,7 +36,7 @@ export function detectFileType(contentType: string, fileName?: string | null): S
   if (!lower) return null;
   if (lower.endsWith(".pdf")) return "pdf";
   if (lower.endsWith(".docx")) return "docx";
-  if (lower.endsWith(".pptx") || lower.endsWith(".ppt")) return "pptx";
+  if (lower.endsWith(".pptx")) return "pptx";
   if (lower.endsWith(".txt") || lower.endsWith(".md")) return "txt";
   return null;
 }
@@ -48,6 +51,7 @@ export async function extractFileText(
   buffer: Buffer,
   type: SupportedFileType
 ): Promise<string | null> {
+  if (!buffer.length || buffer.length > MAX_EXTRACT_FILE_BYTES) return null;
   try {
     switch (type) {
       case "pdf":
@@ -57,7 +61,7 @@ export async function extractFileText(
       case "pptx":
         return await extractPptx(buffer);
       case "txt":
-        return buffer.toString("utf8").trim() || null;
+        return normalizeExtractedText(buffer.toString("utf8"));
       default:
         return null;
     }
@@ -66,13 +70,24 @@ export async function extractFileText(
   }
 }
 
+function normalizeExtractedText(text: string): string | null {
+  const normalized = text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[^\S\n]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, MAX_EXTRACTED_CHARS);
+  return normalized || null;
+}
+
 // ── PDF ──────────────────────────────────────────────────────────────────────
 
 async function extractPdf(buffer: Buffer): Promise<string | null> {
   const pdfParse = (await import("pdf-parse")).default as (buf: Buffer) => Promise<{ text: string }>;
   const data = await pdfParse(buffer);
-  const text = data.text.replace(/\s+/g, " ").trim();
-  return text || null;
+  return normalizeExtractedText(data.text);
 }
 
 // ── DOCX ─────────────────────────────────────────────────────────────────────
@@ -80,8 +95,7 @@ async function extractPdf(buffer: Buffer): Promise<string | null> {
 async function extractDocx(buffer: Buffer): Promise<string | null> {
   const mammoth = await import("mammoth");
   const result = await mammoth.extractRawText({ buffer });
-  const text = result.value.replace(/\s+/g, " ").trim();
-  return text || null;
+  return normalizeExtractedText(result.value);
 }
 
 // ── PPTX ─────────────────────────────────────────────────────────────────────
@@ -89,6 +103,7 @@ async function extractDocx(buffer: Buffer): Promise<string | null> {
 async function extractPptx(buffer: Buffer): Promise<string | null> {
   const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(buffer);
+  if (Object.keys(zip.files).length > MAX_ARCHIVE_ENTRIES) return null;
 
   // Collect slide XML files in slide order
   const slideEntries = Object.keys(zip.files)
@@ -100,17 +115,59 @@ async function extractPptx(buffer: Buffer): Promise<string | null> {
     });
 
   const slideTexts: string[] = [];
+  let extractedChars = 0;
+
+  const decodeXmlText = (value: string) =>
+    value
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+        String.fromCodePoint(Number.parseInt(hex, 16))
+      )
+      .replace(/&#(\d+);/g, (_, decimal: string) =>
+        String.fromCodePoint(Number.parseInt(decimal, 10))
+      )
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+
+  const textRuns = (xml: string): string[] =>
+    [...xml.matchAll(/<a:t[^>]*>([\s\S]*?)<\/a:t>/g)]
+      .map((match) => decodeXmlText(match[1]).replace(/\s+/g, " ").trim())
+      .filter(Boolean);
 
   for (let i = 0; i < slideEntries.length; i++) {
     const xml = await zip.files[slideEntries[i]].async("string");
-    // Extract all <a:t> text runs
-    const matches = [...xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)];
-    const texts = matches.map((m) => m[1].trim()).filter(Boolean);
-    if (texts.length > 0) {
-      slideTexts.push(`[Slide ${i + 1}]\n${texts.join(" ")}`);
+    if (xml.length > MAX_XML_ENTRY_CHARS) return null;
+    const texts = textRuns(xml);
+
+    const slideNumber = Number.parseInt(
+      slideEntries[i].match(/slide(\d+)\.xml$/)?.[1] ?? String(i + 1),
+      10
+    );
+    const notesEntry = zip.files[`ppt/notesSlides/notesSlide${slideNumber}.xml`];
+    let notes: string[] = [];
+    if (notesEntry) {
+      const notesXml = await notesEntry.async("string");
+      if (notesXml.length > MAX_XML_ENTRY_CHARS) return null;
+      notes = textRuns(notesXml).filter(
+        (value) => !/^(slide image|slide number)$/i.test(value)
+      );
+    }
+
+    if (texts.length > 0 || notes.length > 0) {
+      const section = [
+        `[Slide ${slideNumber}]`,
+        texts.join(" "),
+        notes.length > 0 ? `[Speaker Notes]\n${notes.join(" ")}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      extractedChars += section.length;
+      if (extractedChars > MAX_EXTRACTED_CHARS) return null;
+      slideTexts.push(section);
     }
   }
 
-  const combined = slideTexts.join("\n\n").trim();
-  return combined || null;
+  return normalizeExtractedText(slideTexts.join("\n\n"));
 }

@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { chatModel } from "./provider";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import type { SRSGrade } from "@/types";
 
 export interface GeneratedFlashcard {
@@ -12,13 +13,56 @@ export interface GeneratedFlashcard {
   difficulty: "easy" | "medium" | "hard";
 }
 
-type RawCard = {
-  front: string;
-  back: string;
-  hint?: string | null;
-  topic: string;
-  difficulty: "easy" | "medium" | "hard";
-};
+const rawCardSchema = z.object({
+  front: z.string().trim().min(3).max(500),
+  back: z.string().trim().min(1).max(2000),
+  hint: z.string().trim().min(1).max(500).nullable().optional(),
+  topic: z.string().trim().min(1).max(120),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+}).strict();
+
+const cardEnvelopeSchema = z.object({
+  cards: z.array(rawCardSchema).max(30),
+}).strict();
+
+type RawCard = z.infer<typeof rawCardSchema>;
+
+export function validateGeneratedFlashcards(
+  value: unknown,
+  expectedCount: number
+): RawCard[] {
+  const parsed = cardEnvelopeSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error("Flashcard generation returned an invalid response.");
+  }
+  if (parsed.data.cards.length !== expectedCount) {
+    throw new Error(`Flashcard generation did not return exactly ${expectedCount} cards.`);
+  }
+
+  const fronts = new Set<string>();
+  for (const card of parsed.data.cards) {
+    const normalized = card.front.toLocaleLowerCase().replace(/\W+/g, " ").trim();
+    if (!normalized || fronts.has(normalized)) {
+      throw new Error("Flashcard generation returned duplicate cards.");
+    }
+    fronts.add(normalized);
+  }
+  return parsed.data.cards;
+}
+
+function parseFlashcardJson(text: string): unknown {
+  const stripped = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  if (start === -1 || end <= start) {
+    throw new Error("Flashcard generation returned no JSON object.");
+  }
+  try {
+    return JSON.parse(stripped.slice(start, end + 1));
+  } catch {
+    throw new Error("Flashcard generation returned malformed JSON.");
+  }
+}
 
 export async function generateFlashcardsFromContent(
   content: string,
@@ -69,23 +113,29 @@ difficulty must be one of: easy, medium, hard. hint is optional.`,
     maxTokens: 8000,
   });
 
-  const stripped = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  const start = stripped.indexOf("{");
-  const end = stripped.lastIndexOf("}");
-
-  if (start === -1 || end === -1) {
-    throw new Error("Flashcard generation failed: no JSON object in response");
-  }
-
-  let cards: RawCard[] = [];
+  let cards: RawCard[];
   try {
-    const parsed = JSON.parse(stripped.slice(start, end + 1));
-    cards = parsed.cards ?? [];
-  } catch {
-    throw new Error("Flashcard generation failed: could not parse AI response as JSON");
+    cards = validateGeneratedFlashcards(parseFlashcardJson(text), count);
+  } catch (validationError) {
+    const { text: repairedText } = await generateText({
+      model: chatModel,
+      prompt: [
+        `Repair the flashcard JSON below. Return exactly ${count} unique cards.`,
+        "Do not add facts that are absent from the study material.",
+        "Every card requires front, back, topic, difficulty; hint may be null.",
+        `Study material:\n${content.slice(0, 20000)}`,
+        `Invalid response:\n${text.slice(0, 20000)}`,
+        `Validation problem: ${
+          validationError instanceof Error ? validationError.message : "invalid output"
+        }`,
+        "Return only the corrected JSON object.",
+      ].join("\n\n"),
+      maxTokens: 8000,
+    });
+    cards = validateGeneratedFlashcards(parseFlashcardJson(repairedText), count);
   }
 
-  return cards.slice(0, count).map((c) => ({
+  return cards.map((c) => ({
     ...c,
     id: uuidv4(),
     hint: c.hint ?? null,

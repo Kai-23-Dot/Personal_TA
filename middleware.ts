@@ -12,6 +12,7 @@ export async function middleware(request: NextRequest) {
     "/",
     "/login",
     "/signup",
+    "/forgot-password",
     "/callback",
     "/about",
     "/contact",
@@ -39,10 +40,16 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return supabaseResponse;
+    if (isPublicRoute) return supabaseResponse;
+    return NextResponse.json(
+      { error: "Authentication service is not configured." },
+      { status: 503 }
+    );
   }
 
-  if (isPrefetch) {
+  // Page prefetches are guarded again by the authenticated dashboard layout.
+  // Never let a caller bypass API middleware merely by spoofing this header.
+  if (isPrefetch && !isApiRoute) {
     return supabaseResponse;
   }
 
@@ -101,8 +108,6 @@ export async function middleware(request: NextRequest) {
     
     user = fetchedUser;
   } catch (error) {
-    // Avoid hard-failing middleware on network/auth errors.
-    // This is especially important during build time or when Supabase is unreachable
     const isNetworkError = 
       error instanceof Error && 
       (error.message.includes('fetch failed') || 
@@ -110,33 +115,23 @@ export async function middleware(request: NextRequest) {
        error.message.includes('ECONNREFUSED') ||
        error.message.includes('ETIMEDOUT'));
     
-    // If auth refresh fails repeatedly, clear stale auth cookies to stop retry loops.
     if (isNetworkError) {
-      cookieKeys.forEach((name) => {
-        if (name.startsWith("sb-") || name.startsWith("supabase-")) {
-          supabaseResponse.cookies.delete(name);
-        }
-      });
-    }
-
-    // If it's a network error, allow the request to continue after cleanup.
-    if (isNetworkError) {
-      console.warn(
-        "[Middleware] Supabase network error, cleared stale auth cookies and allowing request:",
-        error.message
+      console.error("[Middleware] Supabase authentication unavailable:", error.message);
+      if (isPublicRoute) return supabaseResponse;
+      return NextResponse.json(
+        { error: "Authentication service is temporarily unavailable." },
+        { status: 503 }
       );
-      return supabaseResponse;
     }
     
-    if (!hasAuthCookie) {
-      if (isApiRoute) {
-        return supabaseResponse;
-      }
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+    if (isPublicRoute) return supabaseResponse;
+    if (isApiRoute) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return supabaseResponse;
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "session_expired");
+    return NextResponse.redirect(url);
   }
 
   if (!user && !isPublicRoute) {

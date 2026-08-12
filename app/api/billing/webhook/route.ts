@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/backend/billing/stripe";
+import {
+  stripe,
+  PRO_PRICE_ID,
+  resolveSubscriptionEntitlement,
+} from "@/backend/billing/stripe";
 import { createServiceClient } from "@/backend/supabase/server";
 
 // Stripe posts here unauthenticated; this route is exempt from auth in middleware.ts.
@@ -8,28 +12,108 @@ export const dynamic = "force-dynamic";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 
-/** Statuses Stripe considers as granting access. */
-const ACTIVE_STATUSES = new Set(["active", "trialing"]);
+const SUBSCRIPTION_EVENT_TYPES = new Set([
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
+]);
 
-/** Write subscription state back onto the matching profile (keyed by customer id). */
-async function syncSubscription(sub: Stripe.Subscription) {
+function stripeObjectId(
+  value: string | { id: string } | null | undefined
+): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+function eventCustomerId(event: Stripe.Event): string | null {
+  if (event.type === "checkout.session.completed") {
+    return stripeObjectId((event.data.object as Stripe.Checkout.Session).customer);
+  }
+  if (SUBSCRIPTION_EVENT_TYPES.has(event.type)) {
+    return stripeObjectId(
+      (event.data.object as Stripe.Subscription).customer
+    );
+  }
+  return null;
+}
+
+async function eventWasProcessed(eventId: string): Promise<boolean> {
   const supabase = createServiceClient();
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  const isActive = ACTIVE_STATUSES.has(sub.status);
-  // current_period_end is a unix timestamp (seconds).
-  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
+  const { data, error } = await supabase
+    .from("stripe_webhook_events")
+    .select("event_id")
+    .eq("event_id", eventId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
 
-  const { error } = await supabase
+async function recordIgnoredEvent(event: Stripe.Event): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("stripe_webhook_events").upsert(
+    {
+      event_id: event.id,
+      event_type: event.type,
+      event_created_at: new Date(event.created * 1000).toISOString(),
+      processing_result: "ignored",
+    },
+    { onConflict: "event_id", ignoreDuplicates: true }
+  );
+  if (error) throw error;
+}
+
+/** Reconcile the customer's current Pro entitlement, independent of event order. */
+async function reconcileCustomer(customerId: string, event: Stripe.Event) {
+  if (!PRO_PRICE_ID) throw new Error("[billing] STRIPE_PRO_PRICE_ID is not set");
+
+  const supabase = createServiceClient();
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .update({
-      plan: isActive ? "pro" : "free",
-      subscription_status: sub.status,
-      stripe_subscription_id: sub.id,
-      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-    })
-    .eq("stripe_customer_id", customerId);
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile) {
+    // The Stripe account can contain customers unrelated to this application.
+    await recordIgnoredEvent(event);
+    return "ignored";
+  }
 
-  if (error) console.error("[billing/webhook] profile update failed:", error);
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    price: PRO_PRICE_ID,
+    status: "all",
+    limit: 100,
+  });
+  if (subscriptions.has_more) {
+    console.warn(
+      `[billing/webhook] More than 100 Pro subscriptions found for customer ${customerId}; using the newest page.`
+    );
+  }
+  const entitlement = resolveSubscriptionEntitlement(
+    subscriptions.data,
+    PRO_PRICE_ID
+  );
+
+  const { data: result, error } = await supabase.rpc(
+    "sync_stripe_subscription",
+    {
+      p_event_id: event.id,
+      p_event_type: event.type,
+      p_event_created_at: new Date(event.created * 1000).toISOString(),
+      p_customer_id: customerId,
+      p_subscription_id: entitlement.subscriptionId,
+      p_subscription_status: entitlement.status,
+      p_plan: entitlement.plan,
+      p_current_period_end: entitlement.currentPeriodEnd
+        ? new Date(entitlement.currentPeriodEnd * 1000).toISOString()
+        : null,
+    }
+  );
+  if (error) throw error;
+  return result;
 }
 
 export async function POST(req: Request) {
@@ -49,31 +133,25 @@ export async function POST(req: Request) {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        if (session.subscription) {
-          const subId =
-            typeof session.subscription === "string" ? session.subscription : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await syncSubscription(sub);
-        }
-        break;
-      }
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        await syncSubscription(event.data.object as Stripe.Subscription);
-        break;
-      }
-      default:
-        // Ignore unrelated events.
-        break;
+    const handled =
+      event.type === "checkout.session.completed" ||
+      SUBSCRIPTION_EVENT_TYPES.has(event.type);
+    if (!handled) return NextResponse.json({ received: true });
+
+    if (await eventWasProcessed(event.id)) {
+      return NextResponse.json({ received: true, duplicate: true });
     }
+
+    const customerId = eventCustomerId(event);
+    if (!customerId) {
+      await recordIgnoredEvent(event);
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    const result = await reconcileCustomer(customerId, event);
+    return NextResponse.json({ received: true, result });
   } catch (err) {
     console.error(`[billing/webhook] handler error for ${event.type}:`, err);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
-
-  return NextResponse.json({ received: true });
 }

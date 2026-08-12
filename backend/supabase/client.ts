@@ -12,7 +12,7 @@ export function createClient() {
 
   return createBrowserClient(url ?? "", key ?? "", {
     auth: {
-      autoRefreshToken: false,
+      autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
     },

@@ -1,5 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { z } from "zod";
+
+const profileSchema = z.object({
+  full_name: z.string().trim().max(100).nullable().optional(),
+  grade_level: z.number().int().min(1).max(20).nullable().optional(),
+  preferred_subjects: z.array(z.string().trim().min(1).max(80)).max(20).nullable().optional(),
+  role: z.enum(["student", "teacher"]).nullable().optional(),
+  school_name: z.string().trim().max(160).nullable().optional(),
+  timezone: z.string().trim().min(1).max(80).nullable().optional().refine(
+    (value) => {
+      if (!value) return true;
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    "Invalid timezone."
+  ),
+}).strict();
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,7 +33,10 @@ export async function GET() {
     .eq("id", user.id)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[profile] Load failed:", error);
+    return NextResponse.json({ error: "Failed to load profile." }, { status: 500 });
+  }
   return NextResponse.json(data ?? {
     full_name: null,
     school_name: null,
@@ -29,7 +53,10 @@ export async function PATCH(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  const parsed = profileSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid profile details." }, { status: 400 });
+  }
   const {
     full_name,
     school_name,
@@ -37,14 +64,7 @@ export async function PATCH(req: Request) {
     timezone,
     preferred_subjects,
     role,
-  } = body as {
-    full_name?: string | null;
-    school_name?: string | null;
-    grade_level?: number | null;
-    timezone?: string | null;
-    preferred_subjects?: string[] | null;
-    role?: "student" | "teacher" | null;
-  };
+  } = parsed.data;
 
   const update = {
     full_name: full_name ?? null,
@@ -62,6 +82,9 @@ export async function PATCH(req: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[profile] Update failed:", error);
+    return NextResponse.json({ error: "Failed to update profile." }, { status: 500 });
+  }
   return NextResponse.json({ success: true, profile: data });
 }
