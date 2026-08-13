@@ -3,6 +3,9 @@ import { runTAChatAgent, type AgentContext } from "@/backend/ai/agent";
 import { type CoreMessage } from "ai"; // CoreMessage still used for messages type
 import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
+import { assertWithinLimit } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { parseChatBody } from "@/backend/security/chatInput";
 
 export const maxDuration = 60;
 
@@ -15,16 +18,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { messages, sessionId, context } = body as {
-      messages: CoreMessage[];
-      sessionId: string;
-      context?: string;
-    };
-
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
+    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    if (!tokenCheck.ok) {
+      return NextResponse.json(
+        { error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
+        { status: 402 }
+      );
     }
+
+    const parsed = parseChatBody(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const { sessionId, context } = parsed.data;
+    const messages: CoreMessage[] = parsed.messages;
 
     const pageContextExtra = context ? `\n\nCURRENT PAGE CONTEXT:\n${context}` : "";
 
@@ -132,18 +139,20 @@ export async function POST(req: Request) {
         : { has_plan: false },
     };
 
-    const result = await runTAChatAgent(user.id, messages, contextData, pageContextExtra);
+    const result = await runWithUsageContext(user.id, () =>
+      runTAChatAgent(user.id, messages, contextData, pageContextExtra)
+    );
 
     return result.toDataStreamResponse({
       getErrorMessage: (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[/api/chat/context] Stream error:", msg);
-        return msg;
+        return "The assistant could not complete this request.";
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[/api/chat/context] Handler error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "The assistant could not complete this request." }, { status: 500 });
   }
 }

@@ -6,31 +6,7 @@ import { NextResponse } from "next/server";
 import { format, addDays } from "date-fns";
 import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
-
-/** Convert Vercel AI SDK UI messages (which may carry experimental_attachments)
- *  into CoreMessage[] with proper image content parts for vision models. */
-function toCoreMsgs(rawMessages: any[]): CoreMessage[] {
-  return rawMessages.map((msg) => {
-    if (msg.role === "user") {
-      const attachments: Array<{ contentType?: string; url: string; name?: string }> =
-        msg.experimental_attachments ?? [];
-      const imageAtts = attachments.filter((a) => a.contentType?.startsWith("image/"));
-
-      if (imageAtts.length > 0) {
-        const parts: any[] = [];
-        if (msg.content) parts.push({ type: "text", text: String(msg.content) });
-        for (const att of imageAtts) {
-          parts.push({ type: "image", image: att.url, mimeType: att.contentType as any });
-        }
-        return { role: "user", content: parts } as CoreMessage;
-      }
-    }
-    return {
-      role: msg.role as "user" | "assistant" | "system",
-      content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
-    } as CoreMessage;
-  });
-}
+import { parseChatBody } from "@/backend/security/chatInput";
 
 export const maxDuration = 60;
 
@@ -52,20 +28,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { messages: rawMessages, sessionId, noteId, assignmentId } = body as {
-      messages: any[];
-      sessionId: string;
-      noteId?: string;
-      assignmentId?: string;
-    };
-
-    if (!rawMessages || !Array.isArray(rawMessages)) {
-      return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
+    const parsed = parseChatBody(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-
-    // Convert UI messages (with experimental_attachments) → CoreMessages with image parts
-    const messages = toCoreMsgs(rawMessages);
+    const { sessionId, noteId, assignmentId } = parsed.data;
+    const messages: CoreMessage[] = parsed.messages;
 
     // Persist the latest user message (best-effort)
     const lastUserMessage = messages[messages.length - 1];
@@ -225,12 +193,12 @@ export async function POST(req: Request) {
       getErrorMessage: (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[/api/chat] Stream error:", msg);
-        return msg;
+        return "The assistant could not complete this request.";
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[/api/chat] Handler error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "The assistant could not complete this request." }, { status: 500 });
   }
 }

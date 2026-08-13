@@ -48,15 +48,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const membership = await verifyMember(admin, id, user.id);
   if (!membership) return NextResponse.json({ error: "Not a member" }, { status: 403 });
 
-  const { content } = await req.json();
-  if (!content?.trim()) return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const content = typeof body?.content === "string" ? body.content.trim() : "";
+  if (!content) return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+  if (content.length > 4_000) {
+    return NextResponse.json({ error: "Message cannot exceed 4,000 characters" }, { status: 400 });
+  }
 
   const { data: message, error } = await admin
     .from("group_messages")
     .insert({
       group_id:     id,
       user_id:      user.id,
-      content:      content.trim(),
+      content,
       message_type: "text",
     })
     .select("id, content, message_type, created_at, user_id, profile:profiles(full_name, avatar_url)")

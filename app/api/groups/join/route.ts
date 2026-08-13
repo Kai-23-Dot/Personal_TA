@@ -7,13 +7,16 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { inviteCode } = await req.json();
-  if (!inviteCode?.trim()) return NextResponse.json({ error: "Invite code is required" }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const inviteCode = typeof body?.inviteCode === "string" ? body.inviteCode.trim() : "";
+  if (!inviteCode || inviteCode.length > 32 || !/^[A-Za-z0-9_-]+$/.test(inviteCode)) {
+    return NextResponse.json({ error: "A valid invite code is required" }, { status: 400 });
+  }
 
   const { data: group } = await admin
     .from("study_groups")
     .select("id, name, max_members")
-    .eq("invite_code", inviteCode.trim().toUpperCase())
+    .eq("invite_code", inviteCode.toUpperCase())
     .single();
 
   if (!group) return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
