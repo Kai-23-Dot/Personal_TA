@@ -1,10 +1,10 @@
 -- ============================================================
--- PersonalTA.ai — Migration 008: Planner, analytics, focus, rubrics
+-- PersonalTA.ai — Migration 010: Planner, analytics, focus, rubrics
 -- ============================================================
 
 -- Study availability (weekly)
 CREATE TABLE IF NOT EXISTS public.study_availability (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   day_of_week     SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6), -- 0=Sunday
   start_time      TIME NOT NULL,
@@ -23,7 +23,7 @@ CREATE TRIGGER set_study_availability_updated_at BEFORE UPDATE ON public.study_a
 
 -- Study blocks (calendar-style schedule)
 CREATE TABLE IF NOT EXISTS public.study_blocks (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   plan_date       DATE NOT NULL,
   title           TEXT NOT NULL,
@@ -47,7 +47,7 @@ CREATE TRIGGER set_study_blocks_updated_at BEFORE UPDATE ON public.study_blocks
 
 -- Focus sessions (Pomodoro)
 CREATE TABLE IF NOT EXISTS public.focus_sessions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   study_block_id  UUID REFERENCES public.study_blocks(id) ON DELETE SET NULL,
   started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_focus_sessions_user ON public.focus_sessions(user
 
 -- Notifications (in-app)
 CREATE TABLE IF NOT EXISTS public.notifications (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
   body            TEXT,
@@ -80,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_i
 
 -- Quiz attempts (analytics)
 CREATE TABLE IF NOT EXISTS public.quiz_attempts (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   session_id      UUID REFERENCES public.practice_sessions(id) ON DELETE CASCADE,
   question_index  INTEGER NOT NULL,
@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_quiz_attempts_session ON public.quiz_attempts(ses
 
 -- Rubrics (teacher mode)
 CREATE TABLE IF NOT EXISTS public.rubrics (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
   title           TEXT NOT NULL,
@@ -110,7 +110,7 @@ CREATE POLICY "Users manage own rubrics" ON public.rubrics
   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS public.rubric_feedback (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   rubric_id       UUID NOT NULL REFERENCES public.rubrics(id) ON DELETE CASCADE,
   assignment_id   UUID REFERENCES public.assignments(id) ON DELETE SET NULL,

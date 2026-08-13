@@ -284,7 +284,7 @@ async function syncConnection(
           if (aErr) {
             errors.push(`Assignment upsert failed (${cw.title}): ${aErr.message}`);
             if (aErr.code === "42P10") {
-              errors.push("DB migration needed — run supabase/migrations/003_canvas_sync_fix.sql in the Supabase SQL Editor");
+              errors.push("DB migration needed — run supabase/migrations/004_canvas_sync_fix.sql in the Supabase SQL Editor");
               break;
             }
           } else {
@@ -365,7 +365,7 @@ async function syncConnection(
           if (aErr) {
             if (aErr.code === "42P10") {
               assignmentConstraintMissing = true;
-              errors.push("DB migration needed — paste supabase/migrations/003_canvas_sync_fix.sql into the Supabase SQL Editor and run it, then sync again");
+              errors.push("DB migration needed — paste supabase/migrations/004_canvas_sync_fix.sql into the Supabase SQL Editor and run it, then sync again");
               break;
             }
             errors.push(`Assignment upsert failed (${a.name}): ${aErr.message}`);
@@ -827,7 +827,7 @@ async function syncConnection(
 
           if (aErr) {
             if (aErr.code === "42P10") {
-              errors.push("DB migration needed — run supabase/migrations/004_fix_partial_indexes.sql");
+              errors.push("DB migration needed — run supabase/migrations/005_fix_partial_indexes.sql");
               break;
             }
             errors.push(`IC assignment upsert failed (${a.assignmentName}): ${aErr.message}`);
@@ -891,7 +891,7 @@ async function syncConnection(
           );
           if (aErr) {
             if (aErr.code === "42P10") {
-              errors.push("DB migration needed — run supabase/migrations/003_canvas_sync_fix.sql in Supabase SQL Editor");
+              errors.push("DB migration needed — run supabase/migrations/004_canvas_sync_fix.sql in Supabase SQL Editor");
               break;
             }
             errors.push(`MS assignment upsert failed (${a.displayName}): ${aErr.message}`);

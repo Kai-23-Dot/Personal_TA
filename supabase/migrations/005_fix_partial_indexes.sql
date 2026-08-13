@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 004: Replace partial indexes with non-partial ones
+-- Migration 005: Replace partial indexes with non-partial ones
 --
 -- ROOT CAUSE: Supabase's upsert with onConflict: "col1,col2,col3"
 -- generates: ON CONFLICT (col1, col2, col3) DO UPDATE ...

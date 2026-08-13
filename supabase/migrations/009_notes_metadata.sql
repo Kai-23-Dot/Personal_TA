@@ -1,5 +1,5 @@
 -- ============================================================
--- PersonalTA.ai — Migration 007: Notes metadata & extractions
+-- PersonalTA.ai — Migration 009: Notes metadata & extractions
 -- ============================================================
 
 -- Extend notes metadata (unit/exam) and file types
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_exam_name ON public.notes(user_id, exam_nam
 
 -- AI extractions for notes
 CREATE TABLE IF NOT EXISTS public.note_extractions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   note_id         UUID NOT NULL REFERENCES public.notes(id) ON DELETE CASCADE,
   key_concepts    TEXT[] DEFAULT '{}',

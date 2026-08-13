@@ -68,7 +68,12 @@ export default function SignupPage() {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmedUsername, email, password, captchaToken }),
+        body: JSON.stringify({
+          username: trimmedUsername,
+          email,
+          password,
+          ...(captchaToken ? { captchaToken } : {}),
+        }),
       });
       const payload = await readAuthResponse(response);
 

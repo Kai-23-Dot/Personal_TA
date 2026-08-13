@@ -1,5 +1,5 @@
 -- ============================================================
--- PersonalTA.ai — Migration 006: Profile fields + roles
+-- PersonalTA.ai — Migration 008: Profile fields + roles
 -- ============================================================
 
 ALTER TABLE public.profiles

@@ -1,21 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authUnavailableResponse, createAuthRouteClient } from "../_supabase-route";
-import { z } from "zod";
-
-const signupSchema = z.object({
-  captchaToken: z.string().max(4096).optional(),
-  email: z.string().trim().email().max(254),
-  password: z.string().min(8).max(128),
-  username: z
-    .string()
-    .trim()
-    .min(3)
-    .max(50)
-    .regex(/^[\p{L}\p{N} ._'’-]+$/u),
-}).strict();
+import { signupInputSchema } from "@/backend/security/authInput";
 
 export async function POST(request: NextRequest) {
-  const parsed = signupSchema.safeParse(await request.json().catch(() => null));
+  const parsed = signupInputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       {
@@ -43,12 +31,21 @@ export async function POST(request: NextRequest) {
         // Store the username as the profile display name so it shows across the app,
         // and keep it under `username` in metadata for clarity.
         data: { full_name: username, username },
+        emailRedirectTo: new URL("/callback?next=/dashboard", request.nextUrl.origin).toString(),
         captchaToken,
       },
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const isRateLimited = error.status === 429;
+      return NextResponse.json(
+        {
+          error: isRateLimited
+            ? "Too many signup attempts. Please wait a moment and try again."
+            : error.message,
+        },
+        { status: isRateLimited ? 429 : 400 }
+      );
     }
 
     // Supabase only returns an active session immediately when email confirmation
