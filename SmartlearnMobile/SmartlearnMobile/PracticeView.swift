@@ -26,9 +26,9 @@ struct PracticeView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .tint(ConlearnTheme.primary)
+                            .tint(SmartlearnTheme.primary)
 
-                            Divider().overlay(ConlearnTheme.border)
+                            Divider().overlay(SmartlearnTheme.border)
 
                             fieldLabel("Topic or learning goal")
                             TextField("e.g. cellular respiration", text: $topic, axis: .vertical)
@@ -36,7 +36,7 @@ struct PracticeView: View {
                                 .padding(12)
                                 .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12).stroke(ConlearnTheme.border)
+                                    RoundedRectangle(cornerRadius: 12).stroke(SmartlearnTheme.border)
                                 }
 
                             fieldLabel("Study mode")
@@ -54,14 +54,14 @@ struct PracticeView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .tint(ConlearnTheme.primary)
+                            .tint(SmartlearnTheme.primary)
 
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     fieldLabel("Questions")
                                     Text("Choose 5–25 questions")
                                         .font(.caption)
-                                        .foregroundStyle(ConlearnTheme.textSecondary)
+                                        .foregroundStyle(SmartlearnTheme.textSecondary)
                                 }
                                 Spacer()
                                 Stepper("\(questionCount)", value: $questionCount, in: 5...25, step: 5)
@@ -86,7 +86,7 @@ struct PracticeView: View {
                         HStack {
                             if isGenerating {
                                 ProgressView()
-                                    .tint(ConlearnTheme.background)
+                                    .tint(SmartlearnTheme.background)
                             } else {
                                 Image(systemName: "sparkles")
                             }
@@ -103,9 +103,9 @@ struct PracticeView: View {
                 .padding(.top, 14)
                 .padding(.bottom, 30)
             }
-            .background(ConlearnBackground())
+            .background(SmartlearnBackground())
             .navigationTitle("Practice")
-            .conlearnNavigationStyle()
+            .smartlearnNavigationStyle()
             .sheet(isPresented: $showingSession) {
                 PracticeSessionView(
                     title: effectiveTopic,
@@ -120,16 +120,16 @@ struct PracticeView: View {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: "target")
                     .font(.title)
-                    .foregroundStyle(ConlearnTheme.primary)
+                    .foregroundStyle(SmartlearnTheme.primary)
                     .frame(width: 52, height: 52)
-                    .background(ConlearnTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
+                    .background(SmartlearnTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Build a focused study session")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                     Text("Use a course, assignment, or topic to generate source-grounded questions.")
                         .font(.subheadline)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
             }
         }
@@ -138,10 +138,10 @@ struct PracticeView: View {
     private var sourceNote: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "lock.shield")
-                .foregroundStyle(ConlearnTheme.mint)
+                .foregroundStyle(SmartlearnTheme.mint)
             Text("When your server is connected, generated material can be grounded in synced course notes and Canvas files.")
                 .font(.caption)
-                .foregroundStyle(ConlearnTheme.textSecondary)
+                .foregroundStyle(SmartlearnTheme.textSecondary)
         }
         .padding(.horizontal, 4)
     }
@@ -157,7 +157,7 @@ struct PracticeView: View {
         Text(title.uppercased())
             .font(.caption2.weight(.bold))
             .tracking(1.1)
-            .foregroundStyle(ConlearnTheme.textSecondary)
+            .foregroundStyle(SmartlearnTheme.textSecondary)
     }
 }
 
@@ -245,7 +245,7 @@ private struct PracticeSessionView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                ConlearnBackground()
+                SmartlearnBackground()
                 if isFinished {
                     completion
                 } else {
@@ -259,7 +259,7 @@ private struct PracticeSessionView: View {
                     Button("Close") { dismiss() }
                 }
             }
-            .conlearnNavigationStyle()
+            .smartlearnNavigationStyle()
         }
     }
 
@@ -270,19 +270,19 @@ private struct PracticeSessionView: View {
                 HStack {
                     Text("Question \(index + 1) of \(questions.count)")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                     Spacer()
                     Text("\(score) correct")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(ConlearnTheme.mint)
+                        .foregroundStyle(SmartlearnTheme.mint)
                 }
                 ProgressView(value: Double(index + 1), total: Double(questions.count))
-                    .tint(ConlearnTheme.primary)
+                    .tint(SmartlearnTheme.primary)
 
                 SurfaceCard {
                     Text(current.prompt)
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
@@ -304,9 +304,9 @@ private struct PracticeSessionView: View {
                                 .multilineTextAlignment(.leading)
                             Spacer()
                         }
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                         .padding(14)
-                        .background(ConlearnTheme.surface, in: RoundedRectangle(cornerRadius: 15))
+                        .background(SmartlearnTheme.surface, in: RoundedRectangle(cornerRadius: 15))
                         .overlay {
                             RoundedRectangle(cornerRadius: 15)
                                 .stroke(optionColor(optionIndex).opacity(selectedAnswer == nil ? 0.15 : 0.65))
@@ -322,10 +322,10 @@ private struct PracticeSessionView: View {
                             systemImage: selectedAnswer == current.correctIndex ? "checkmark.circle.fill" : "lightbulb.fill"
                         )
                         .font(.headline)
-                        .foregroundStyle(selectedAnswer == current.correctIndex ? ConlearnTheme.mint : ConlearnTheme.orange)
+                        .foregroundStyle(selectedAnswer == current.correctIndex ? SmartlearnTheme.mint : SmartlearnTheme.orange)
                         Text(current.explanation)
                             .font(.subheadline)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                     .padding(15)
                     .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 15))
@@ -352,13 +352,13 @@ private struct PracticeSessionView: View {
         VStack(spacing: 18) {
             Image(systemName: "trophy.fill")
                 .font(.system(size: 54))
-                .foregroundStyle(ConlearnTheme.orange)
+                .foregroundStyle(SmartlearnTheme.orange)
             Text("Session complete")
                 .font(.title.weight(.bold))
-                .foregroundStyle(ConlearnTheme.textPrimary)
+                .foregroundStyle(SmartlearnTheme.textPrimary)
             Text("\(score) of \(questions.count) correct")
                 .font(.title3)
-                .foregroundStyle(ConlearnTheme.textSecondary)
+                .foregroundStyle(SmartlearnTheme.textSecondary)
             Button("Done") { dismiss() }
                 .buttonStyle(PrimaryButtonStyle())
         }
@@ -366,13 +366,13 @@ private struct PracticeSessionView: View {
     }
 
     private func optionColor(_ optionIndex: Int) -> Color {
-        guard let selectedAnswer else { return ConlearnTheme.textSecondary }
+        guard let selectedAnswer else { return SmartlearnTheme.textSecondary }
         if optionIndex == questions[index].correctIndex {
-            return ConlearnTheme.mint
+            return SmartlearnTheme.mint
         }
         if optionIndex == selectedAnswer {
-            return ConlearnTheme.danger
+            return SmartlearnTheme.danger
         }
-        return ConlearnTheme.textSecondary
+        return SmartlearnTheme.textSecondary
     }
 }

@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
  * SSR-safe: it renders `initial` on the server and during the first client
  * paint, then hydrates from storage in an effect to avoid hydration mismatches.
  *
- * @param key      Stable, namespaced storage key, e.g. "conlearn:notes:draft".
+ * @param key      Stable, namespaced storage key, e.g. "smartlearn:notes:draft".
  * @param initial  Default value used before hydration / when nothing is stored.
  * @returns        `[value, setValue, hydrated]` — `hydrated` is true once the
  *                 stored value (if any) has been loaded.

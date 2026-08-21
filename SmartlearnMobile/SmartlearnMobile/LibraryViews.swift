@@ -10,7 +10,7 @@ struct FlashcardsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                ConlearnBackground()
+                SmartlearnBackground()
                 if store.flashcards.isEmpty {
                     ContentUnavailableView(
                         "No flashcards yet",
@@ -28,7 +28,7 @@ struct FlashcardsView: View {
                 }
             }
             .navigationTitle("Flashcards")
-            .conlearnNavigationStyle()
+            .smartlearnNavigationStyle()
         }
     }
 
@@ -41,14 +41,14 @@ struct FlashcardsView: View {
             HStack {
                 Text(card.courseName)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(ConlearnTheme.primary)
+                    .foregroundStyle(SmartlearnTheme.primary)
                 Spacer()
                 Text("\(currentIndex + 1) / \(store.flashcards.count)")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(ConlearnTheme.textSecondary)
+                    .foregroundStyle(SmartlearnTheme.textSecondary)
             }
             ProgressView(value: Double(currentIndex + 1), total: Double(store.flashcards.count))
-                .tint(ConlearnTheme.primary)
+                .tint(SmartlearnTheme.primary)
         }
     }
 
@@ -61,26 +61,26 @@ struct FlashcardsView: View {
             VStack(spacing: 18) {
                 Image(systemName: isFlipped ? "text.book.closed.fill" : "questionmark.bubble.fill")
                     .font(.title)
-                    .foregroundStyle(isFlipped ? ConlearnTheme.mint : ConlearnTheme.primary)
+                    .foregroundStyle(isFlipped ? SmartlearnTheme.mint : SmartlearnTheme.primary)
                 Text(isFlipped ? "ANSWER" : "QUESTION")
                     .font(.caption2.weight(.bold))
                     .tracking(1.5)
-                    .foregroundStyle(ConlearnTheme.textSecondary)
+                    .foregroundStyle(SmartlearnTheme.textSecondary)
                 Text(isFlipped ? card.back : card.front)
                     .font(.title2.weight(.semibold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(ConlearnTheme.textPrimary)
+                    .foregroundStyle(SmartlearnTheme.textPrimary)
                 Text("Tap to \(isFlipped ? "see the question" : "reveal the answer")")
                     .font(.caption)
-                    .foregroundStyle(ConlearnTheme.textSecondary)
+                    .foregroundStyle(SmartlearnTheme.textSecondary)
             }
             .padding(26)
             .frame(maxWidth: .infinity, minHeight: 330)
             .background(
                 LinearGradient(
                     colors: [
-                        ConlearnTheme.surface,
-                        (isFlipped ? ConlearnTheme.mint : ConlearnTheme.primary).opacity(0.08)
+                        SmartlearnTheme.surface,
+                        (isFlipped ? SmartlearnTheme.mint : SmartlearnTheme.primary).opacity(0.08)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -89,7 +89,7 @@ struct FlashcardsView: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke((isFlipped ? ConlearnTheme.mint : ConlearnTheme.primary).opacity(0.24))
+                    .stroke((isFlipped ? SmartlearnTheme.mint : SmartlearnTheme.primary).opacity(0.24))
             }
         }
         .buttonStyle(.plain)
@@ -131,13 +131,13 @@ struct MoreView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     NavigationLink { CoursesView() } label: {
-                        MoreItemRow(icon: "books.vertical.fill", title: "Courses", subtitle: "Synced classes and materials", color: ConlearnTheme.primary)
+                        MoreItemRow(icon: "books.vertical.fill", title: "Courses", subtitle: "Synced classes and materials", color: SmartlearnTheme.primary)
                     }
                     NavigationLink { StudyPlanView() } label: {
-                        MoreItemRow(icon: "brain.head.profile.fill", title: "Study", subtitle: "Personal priorities and plan", color: ConlearnTheme.secondary)
+                        MoreItemRow(icon: "brain.head.profile.fill", title: "Study", subtitle: "Personal priorities and plan", color: SmartlearnTheme.secondary)
                     }
                     NavigationLink { NotesView() } label: {
-                        MoreItemRow(icon: "book.closed.fill", title: "Notes", subtitle: "Course notes and AI summaries", color: ConlearnTheme.mint)
+                        MoreItemRow(icon: "book.closed.fill", title: "Notes", subtitle: "Course notes and AI summaries", color: SmartlearnTheme.mint)
                     }
                     NavigationLink {
                         FeatureStarterView(
@@ -146,36 +146,36 @@ struct MoreView: View {
                             message: "A home for spaced review, missed questions, and mastery checks."
                         )
                     } label: {
-                        MoreItemRow(icon: "arrow.counterclockwise.circle.fill", title: "Review", subtitle: "Revisit missed concepts", color: ConlearnTheme.orange)
+                        MoreItemRow(icon: "arrow.counterclockwise.circle.fill", title: "Review", subtitle: "Revisit missed concepts", color: SmartlearnTheme.orange)
                     }
                     NavigationLink { FocusView() } label: {
-                        MoreItemRow(icon: "timer", title: "Focus", subtitle: "Distraction-free study timer", color: ConlearnTheme.primary)
+                        MoreItemRow(icon: "timer", title: "Focus", subtitle: "Distraction-free study timer", color: SmartlearnTheme.primary)
                     }
                     NavigationLink { GradesView() } label: {
-                        MoreItemRow(icon: "chart.bar.fill", title: "Grades", subtitle: "Performance and trends", color: ConlearnTheme.mint)
+                        MoreItemRow(icon: "chart.bar.fill", title: "Grades", subtitle: "Performance and trends", color: SmartlearnTheme.mint)
                     }
                     NavigationLink { GroupsView() } label: {
-                        MoreItemRow(icon: "person.3.fill", title: "Groups", subtitle: "Shared goals and study sessions", color: ConlearnTheme.secondary)
+                        MoreItemRow(icon: "person.3.fill", title: "Groups", subtitle: "Shared goals and study sessions", color: SmartlearnTheme.secondary)
                     }
                     NavigationLink {
                         FeatureStarterView(
-                            title: "Ask Conlearn",
+                            title: "Ask Smartlearn",
                             icon: "bubble.left.and.bubble.right.fill",
                             message: "Connect the existing chat endpoint here for a native, course-aware AI tutor."
                         )
                     } label: {
-                        MoreItemRow(icon: "bubble.left.and.bubble.right.fill", title: "Ask Conlearn", subtitle: "Your course-aware AI tutor", color: ConlearnTheme.orange)
+                        MoreItemRow(icon: "bubble.left.and.bubble.right.fill", title: "Ask Smartlearn", subtitle: "Your course-aware AI tutor", color: SmartlearnTheme.orange)
                     }
                     NavigationLink { SettingsView() } label: {
-                        MoreItemRow(icon: "gearshape.fill", title: "Settings", subtitle: "Backend, account, and preferences", color: ConlearnTheme.textSecondary)
+                        MoreItemRow(icon: "gearshape.fill", title: "Settings", subtitle: "Backend, account, and preferences", color: SmartlearnTheme.textSecondary)
                     }
                 }
                 .padding(16)
                 .padding(.bottom, 24)
             }
-            .background(ConlearnBackground())
+            .background(SmartlearnBackground())
             .navigationTitle("More")
-            .conlearnNavigationStyle()
+            .smartlearnNavigationStyle()
         }
     }
 }
@@ -196,20 +196,20 @@ private struct MoreItemRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(ConlearnTheme.textPrimary)
+                    .foregroundStyle(SmartlearnTheme.textPrimary)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(ConlearnTheme.textSecondary)
+                    .foregroundStyle(SmartlearnTheme.textSecondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(ConlearnTheme.textSecondary)
+                .foregroundStyle(SmartlearnTheme.textSecondary)
         }
         .padding(14)
-        .background(ConlearnTheme.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+        .background(SmartlearnTheme.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
         .overlay {
-            RoundedRectangle(cornerRadius: 16).stroke(ConlearnTheme.border)
+            RoundedRectangle(cornerRadius: 16).stroke(SmartlearnTheme.border)
         }
     }
 }
@@ -229,19 +229,19 @@ struct CoursesView: View {
                             HStack {
                                 Text(course.initials)
                                     .font(.headline.weight(.bold))
-                                    .foregroundStyle(ConlearnTheme.background)
+                                    .foregroundStyle(SmartlearnTheme.background)
                                     .frame(width: 48, height: 48)
                                     .background(Color(hex: course.color ?? "#8AB4FF"), in: RoundedRectangle(cornerRadius: 14))
                                 Spacer()
-                                StatusPill(title: (course.platform ?? "Course").capitalized, color: ConlearnTheme.textSecondary)
+                                StatusPill(title: (course.platform ?? "Course").capitalized, color: SmartlearnTheme.textSecondary)
                             }
                             Text(course.name)
                                 .font(.headline)
-                                .foregroundStyle(ConlearnTheme.textPrimary)
+                                .foregroundStyle(SmartlearnTheme.textPrimary)
                                 .lineLimit(2)
                             Text([course.section, course.teacherName].compactMap { $0 }.joined(separator: " · "))
                                 .font(.caption)
-                                .foregroundStyle(ConlearnTheme.textSecondary)
+                                .foregroundStyle(SmartlearnTheme.textSecondary)
                                 .lineLimit(1)
                             HStack {
                                 courseMetric("\(count)", "items")
@@ -254,19 +254,19 @@ struct CoursesView: View {
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Courses")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 
     private func courseMetric(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
                 .font(.headline)
-                .foregroundStyle(ConlearnTheme.textPrimary)
+                .foregroundStyle(SmartlearnTheme.textPrimary)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(ConlearnTheme.textSecondary)
+                .foregroundStyle(SmartlearnTheme.textSecondary)
         }
     }
 }
@@ -288,31 +288,31 @@ struct NotesView: View {
             LazyVStack(spacing: 12) {
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                     TextField("Search notes", text: $searchText)
                 }
                 .padding(12)
-                .background(ConlearnTheme.surface, in: RoundedRectangle(cornerRadius: 13))
+                .background(SmartlearnTheme.surface, in: RoundedRectangle(cornerRadius: 13))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 13).stroke(ConlearnTheme.border)
+                    RoundedRectangle(cornerRadius: 13).stroke(SmartlearnTheme.border)
                 }
 
                 ForEach(filteredNotes) { note in
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                StatusPill(title: note.courseName, color: ConlearnTheme.mint)
+                                StatusPill(title: note.courseName, color: SmartlearnTheme.mint)
                                 Spacer()
                                 Text(note.updatedAt.formatted(.relative(presentation: .named)))
                                     .font(.caption2)
-                                    .foregroundStyle(ConlearnTheme.textSecondary)
+                                    .foregroundStyle(SmartlearnTheme.textSecondary)
                             }
                             Text(note.title)
                                 .font(.headline)
-                                .foregroundStyle(ConlearnTheme.textPrimary)
+                                .foregroundStyle(SmartlearnTheme.textPrimary)
                             Text(note.preview)
                                 .font(.subheadline)
-                                .foregroundStyle(ConlearnTheme.textSecondary)
+                                .foregroundStyle(SmartlearnTheme.textSecondary)
                                 .lineLimit(3)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -321,9 +321,9 @@ struct NotesView: View {
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Notes")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 }
 
@@ -337,37 +337,37 @@ struct StudyPlanView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Today’s plan", systemImage: "sparkles")
                             .font(.headline)
-                            .foregroundStyle(ConlearnTheme.primary)
+                            .foregroundStyle(SmartlearnTheme.primary)
                         Text("A focused 55-minute plan based on upcoming work and mastery gaps.")
                             .font(.subheadline)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                planBlock(time: "20 min", title: "Chain Rule practice", detail: "AP Calculus AB", color: ConlearnTheme.primary)
-                planBlock(time: "25 min", title: "Cellular Respiration review", detail: "Biology 101", color: ConlearnTheme.mint)
-                planBlock(time: "10 min", title: "Essay source recall", detail: "World History", color: ConlearnTheme.secondary)
+                planBlock(time: "20 min", title: "Chain Rule practice", detail: "AP Calculus AB", color: SmartlearnTheme.primary)
+                planBlock(time: "25 min", title: "Cellular Respiration review", detail: "Biology 101", color: SmartlearnTheme.mint)
+                planBlock(time: "10 min", title: "Essay source recall", detail: "World History", color: SmartlearnTheme.secondary)
 
                 SectionHeading(title: "Why this order", subtitle: "Priority × urgency × mastery")
                     .padding(.top, 6)
                 ForEach(store.recommendations) { recommendation in
                     HStack(alignment: .top, spacing: 10) {
                         Circle()
-                            .fill(ConlearnTheme.primary)
+                            .fill(SmartlearnTheme.primary)
                             .frame(width: 6, height: 6)
                             .padding(.top, 5)
                         Text(recommendation.reason)
                             .font(.caption)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                 }
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Study")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 
     private func planBlock(time: String, title: String, detail: String, color: Color) -> some View {
@@ -381,10 +381,10 @@ struct StudyPlanView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                     Text(detail)
                         .font(.caption)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
                 Spacer()
                 Image(systemName: "play.fill")
@@ -405,20 +405,20 @@ struct FocusView: View {
             Spacer()
             ZStack {
                 Circle()
-                    .stroke(ConlearnTheme.elevatedSurface, lineWidth: 14)
+                    .stroke(SmartlearnTheme.elevatedSurface, lineWidth: 14)
                 Circle()
                     .trim(from: 0, to: progress)
-                    .stroke(ConlearnTheme.primary, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .stroke(SmartlearnTheme.primary, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 7) {
                     Text(timeString)
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                     Text(isRunning ? "FOCUSING" : "READY")
                         .font(.caption.weight(.bold))
                         .tracking(1.5)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
             }
             .frame(width: 250, height: 250)
@@ -450,9 +450,9 @@ struct FocusView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(16)
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Focus")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
         .onReceive(timer) { _ in
             guard isRunning, remaining > 0 else { return }
             remaining -= 1
@@ -474,9 +474,9 @@ struct FocusView: View {
 
 struct GradesView: View {
     private let grades = [
-        ("Biology 101", 92, ConlearnTheme.mint),
-        ("AP Calculus AB", 87, ConlearnTheme.primary),
-        ("World History", 94, ConlearnTheme.secondary)
+        ("Biology 101", 92, SmartlearnTheme.mint),
+        ("AP Calculus AB", 87, SmartlearnTheme.primary),
+        ("World History", 94, SmartlearnTheme.secondary)
     ]
 
     var body: some View {
@@ -487,15 +487,15 @@ struct GradesView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Overall average")
                                 .font(.caption)
-                                .foregroundStyle(ConlearnTheme.textSecondary)
+                                .foregroundStyle(SmartlearnTheme.textSecondary)
                             Text("91.0%")
                                 .font(.largeTitle.weight(.bold))
-                                .foregroundStyle(ConlearnTheme.textPrimary)
+                                .foregroundStyle(SmartlearnTheme.textPrimary)
                         }
                         Spacer()
                         Label("+2.4%", systemImage: "arrow.up.right")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(ConlearnTheme.mint)
+                            .foregroundStyle(SmartlearnTheme.mint)
                     }
                 }
 
@@ -505,7 +505,7 @@ struct GradesView: View {
                             HStack {
                                 Text(name)
                                     .font(.headline)
-                                    .foregroundStyle(ConlearnTheme.textPrimary)
+                                    .foregroundStyle(SmartlearnTheme.textPrimary)
                                 Spacer()
                                 Text("\(grade)%")
                                     .font(.title3.weight(.bold))
@@ -519,9 +519,9 @@ struct GradesView: View {
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Grades")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 }
 
@@ -533,13 +533,13 @@ struct GroupsView: View {
                     title: "Calculus Exam Prep",
                     members: "4 members",
                     detail: "Next check-in today at 7:00 PM",
-                    color: ConlearnTheme.primary
+                    color: SmartlearnTheme.primary
                 )
                 groupCard(
                     title: "Biology Lab Partners",
                     members: "3 members",
                     detail: "2 shared flashcard sets",
-                    color: ConlearnTheme.mint
+                    color: SmartlearnTheme.mint
                 )
 
                 Button {
@@ -551,9 +551,9 @@ struct GroupsView: View {
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Groups")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 
     private func groupCard(title: String, members: String, detail: String, color: Color) -> some View {
@@ -566,13 +566,13 @@ struct GroupsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                     Text(members)
                         .font(.caption)
                         .foregroundStyle(color)
                     Text(detail)
                         .font(.caption)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
                 Spacer()
             }
@@ -591,16 +591,16 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         Label("Data source", systemImage: "server.rack")
                             .font(.headline)
-                            .foregroundStyle(ConlearnTheme.textPrimary)
+                            .foregroundStyle(SmartlearnTheme.textPrimary)
 
                         Toggle("Use Demo Data", isOn: $store.useDemoData)
-                            .tint(ConlearnTheme.primary)
+                            .tint(SmartlearnTheme.primary)
 
                         VStack(alignment: .leading, spacing: 7) {
-                            Text("CONLEARN SERVER")
+                            Text("SMARTLEARN SERVER")
                                 .font(.caption2.weight(.bold))
                                 .tracking(1)
-                                .foregroundStyle(ConlearnTheme.textSecondary)
+                                .foregroundStyle(SmartlearnTheme.textSecondary)
                             TextField("https://your-app.vercel.app", text: $store.serverAddress)
                                 .textInputAutocapitalization(.never)
                                 .keyboardType(.URL)
@@ -608,7 +608,7 @@ struct SettingsView: View {
                                 .padding(12)
                                 .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12).stroke(ConlearnTheme.border)
+                                    RoundedRectangle(cornerRadius: 12).stroke(SmartlearnTheme.border)
                                 }
                         }
                         .disabled(store.useDemoData)
@@ -624,7 +624,7 @@ struct SettingsView: View {
                             HStack {
                                 if isTesting {
                                     ProgressView()
-                                        .tint(ConlearnTheme.background)
+                                        .tint(SmartlearnTheme.background)
                                 } else {
                                     Image(systemName: "network")
                                 }
@@ -638,7 +638,7 @@ struct SettingsView: View {
                         if let error = store.errorMessage {
                             Text(error)
                                 .font(.caption)
-                                .foregroundStyle(ConlearnTheme.orange)
+                                .foregroundStyle(SmartlearnTheme.orange)
                         }
                     }
                 }
@@ -647,30 +647,30 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Authentication handoff", systemImage: "person.badge.key.fill")
                             .font(.headline)
-                            .foregroundStyle(ConlearnTheme.textPrimary)
+                            .foregroundStyle(SmartlearnTheme.textPrimary)
                         Text("The web app currently uses Supabase cookie sessions. Add the Supabase Swift package, complete native sign-in, and attach the access token in APIClient before using production accounts.")
                             .font(.subheadline)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                 }
 
                 SurfaceCard {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Conlearn for iOS")
+                        Text("Smartlearn for iOS")
                             .font(.headline)
-                            .foregroundStyle(ConlearnTheme.textPrimary)
+                            .foregroundStyle(SmartlearnTheme.textPrimary)
                         Text("Starter version 1.0")
                             .font(.caption)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(16)
         }
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle("Settings")
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
         .onChange(of: store.useDemoData) { _, demoMode in
             if demoMode {
                 store.resetDemoData()
@@ -688,23 +688,23 @@ struct FeatureStarterView: View {
         VStack(spacing: 18) {
             Image(systemName: icon)
                 .font(.system(size: 50))
-                .foregroundStyle(ConlearnTheme.primary)
+                .foregroundStyle(SmartlearnTheme.primary)
             Text(title)
                 .font(.title.weight(.bold))
-                .foregroundStyle(ConlearnTheme.textPrimary)
+                .foregroundStyle(SmartlearnTheme.textPrimary)
             Text(message)
                 .font(.subheadline)
-                .foregroundStyle(ConlearnTheme.textSecondary)
+                .foregroundStyle(SmartlearnTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
             Text("This navigation and visual foundation is ready for the production feature.")
                 .font(.caption)
-                .foregroundStyle(ConlearnTheme.textSecondary.opacity(0.8))
+                .foregroundStyle(SmartlearnTheme.textSecondary.opacity(0.8))
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ConlearnBackground())
+        .background(SmartlearnBackground())
         .navigationTitle(title)
-        .conlearnNavigationStyle()
+        .smartlearnNavigationStyle()
     }
 }

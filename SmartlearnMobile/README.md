@@ -1,10 +1,10 @@
-# Conlearn for iOS
+# Smartlearn for iOS
 
-A standalone SwiftUI starter for turning the existing Conlearn web product into a native iPhone and iPad app.
+A standalone SwiftUI starter for turning the existing Smartlearn web product into a native iPhone and iPad app.
 
 ## Open it
 
-1. Open `ConlearnMobile.xcodeproj` in Xcode.
+1. Open `SmartlearnMobile.xcodeproj` in Xcode.
 2. Choose an iPhone simulator.
 3. Press Run.
 
@@ -18,11 +18,11 @@ The app includes a small `APIClient` that already targets the same route shapes 
 - `GET /api/courses`
 - `GET /api/assignments`
 
-In the app, open **More → Settings**, enter the deployed HTTPS address of the existing Conlearn web app, and turn off Demo Mode. Authentication is intentionally left as the next integration step because the current web app uses cookie-backed Supabase sessions. For production, add native Supabase authentication and attach the resulting access token to requests in `APIClient`.
+In the app, open **More → Settings**, enter the deployed HTTPS address of the existing Smartlearn web app, and turn off Demo Mode. Authentication is intentionally left as the next integration step because the current web app uses cookie-backed Supabase sessions. For production, add native Supabase authentication and attach the resulting access token to requests in `APIClient`.
 
 ## Starter architecture
 
-- `ConlearnMobileApp.swift` — app entry point
+- `SmartlearnMobileApp.swift` — app entry point
 - `RootView.swift` — tab navigation and launch flow
 - `AppStore.swift` — shared state, loading, and demo data
 - `APIClient.swift` — async networking boundary
@@ -33,4 +33,4 @@ In the app, open **More → Settings**, enter the deployed HTTPS address of the 
 - `PracticeView.swift` — practice-test setup
 - `LibraryViews.swift` — courses, flashcards, notes, focus, grades, groups, and settings starters
 
-No files outside this `ConlearnMobile` folder are required or modified.
+No files outside this `SmartlearnMobile` folder are required or modified.

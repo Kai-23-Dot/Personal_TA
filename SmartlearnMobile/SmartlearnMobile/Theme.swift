@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum ConlearnTheme {
+enum SmartlearnTheme {
     static let background = Color(hex: "#070A12")
     static let surface = Color(hex: "#0D1220")
     static let elevatedSurface = Color(hex: "#141B2C")
@@ -47,18 +47,18 @@ extension Color {
     }
 }
 
-struct ConlearnBackground: View {
+struct SmartlearnBackground: View {
     var body: some View {
         ZStack {
-            ConlearnTheme.background
+            SmartlearnTheme.background
             RadialGradient(
-                colors: [ConlearnTheme.primary.opacity(0.13), .clear],
+                colors: [SmartlearnTheme.primary.opacity(0.13), .clear],
                 center: UnitPoint(x: 0.14, y: 0.02),
                 startRadius: 20,
                 endRadius: 460
             )
             RadialGradient(
-                colors: [ConlearnTheme.secondary.opacity(0.08), .clear],
+                colors: [SmartlearnTheme.secondary.opacity(0.08), .clear],
                 center: UnitPoint(x: 1, y: 0.15),
                 startRadius: 10,
                 endRadius: 360
@@ -78,10 +78,10 @@ struct SurfaceCard<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .background(ConlearnTheme.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(SmartlearnTheme.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(ConlearnTheme.border, lineWidth: 1)
+                    .stroke(SmartlearnTheme.border, lineWidth: 1)
             }
     }
 }
@@ -94,17 +94,17 @@ struct BrandMark: View {
             RoundedRectangle(cornerRadius: size * 0.29, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [ConlearnTheme.primary, ConlearnTheme.secondary],
+                        colors: [SmartlearnTheme.primary, SmartlearnTheme.secondary],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
             Image(systemName: "sparkles")
                 .font(.system(size: size * 0.44, weight: .bold))
-                .foregroundStyle(ConlearnTheme.background)
+                .foregroundStyle(SmartlearnTheme.background)
         }
         .frame(width: size, height: size)
-        .shadow(color: ConlearnTheme.primary.opacity(0.25), radius: 12)
+        .shadow(color: SmartlearnTheme.primary.opacity(0.25), radius: 12)
         .accessibilityHidden(true)
     }
 }
@@ -120,18 +120,18 @@ struct SectionHeading: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(ConlearnTheme.textPrimary)
+                    .foregroundStyle(SmartlearnTheme.textPrimary)
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
             }
             Spacer()
             if let trailingTitle, let action {
                 Button(trailingTitle, action: action)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(ConlearnTheme.primary)
+                    .foregroundStyle(SmartlearnTheme.primary)
             }
         }
     }
@@ -141,10 +141,10 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(ConlearnTheme.background)
+            .foregroundStyle(SmartlearnTheme.background)
             .padding(.horizontal, 16)
             .padding(.vertical, 11)
-            .background(ConlearnTheme.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(SmartlearnTheme.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
@@ -155,13 +155,13 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(ConlearnTheme.textPrimary)
+            .foregroundStyle(SmartlearnTheme.textPrimary)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color.white.opacity(configuration.isPressed ? 0.1 : 0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(ConlearnTheme.border, lineWidth: 1)
+                    .stroke(SmartlearnTheme.border, lineWidth: 1)
             }
     }
 }
@@ -184,9 +184,9 @@ struct StatusPill: View {
 }
 
 extension View {
-    func conlearnNavigationStyle() -> some View {
-        toolbarBackground(ConlearnTheme.background.opacity(0.96), for: .navigationBar)
+    func smartlearnNavigationStyle() -> some View {
+        toolbarBackground(SmartlearnTheme.background.opacity(0.96), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .tint(ConlearnTheme.primary)
+            .tint(SmartlearnTheme.primary)
     }
 }

@@ -20,7 +20,7 @@ import {
 } from "@/backend/security/canvas";
 import { z } from "zod";
 
-const CANVAS_STATE_COOKIE = "conlearn_canvas_oauth_nonce";
+const CANVAS_STATE_COOKIE = "smartlearn_canvas_oauth_nonce";
 const canvasTokenSchema = z.object({
   access_token: z.string().trim().min(1).max(4096),
   domain: z.string().trim().min(1).max(300),

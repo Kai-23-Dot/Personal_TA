@@ -38,10 +38,10 @@ function subscription({
 describe("Stripe billing helpers", () => {
   it("uses stable, operation-scoped idempotency keys", () => {
     expect(stripeIdempotencyKey("customer", "user-1")).toBe(
-      "conlearn:customer:user-1"
+      "smartlearn:customer:user-1"
     );
     expect(stripeIdempotencyKey("checkout", "user-1", "price_pro")).toBe(
-      "conlearn:checkout:user-1:price_pro"
+      "smartlearn:checkout:user-1:price_pro"
     );
   });
 

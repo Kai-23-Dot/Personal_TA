@@ -12,7 +12,7 @@ import {
   PlugZap,
   Sparkles,
 } from "lucide-react";
-import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
+import { SmartlearnFooter } from "@/frontend/components/layout/SmartlearnFooter";
 
 /* ─── Product showcase (code-native preview) ──────────────────── */
 function AppShowcase() {
@@ -31,15 +31,15 @@ function AppShowcase() {
             <span className="showcase-dot amber" />
             <span className="showcase-dot green" />
           </div>
-          <div className="showcase-address">conlearn.app/dashboard</div>
+          <div className="showcase-address">smartlearn.app/dashboard</div>
         </div>
 
         <div className="showcase-body">
-          <div className="showcase-product-preview" aria-label="Conlearn workflow preview">
+          <div className="showcase-product-preview" aria-label="Smartlearn workflow preview">
             <aside className="showcase-preview-sidebar">
               <div className="showcase-preview-brand">
-                <Image src="/conlearn-logo.png" alt="" width={24} height={24} />
-                <span>Conlearn</span>
+                <Image src="/smartlearn-logo.png" alt="" width={24} height={24} />
+                <span>Smartlearn</span>
               </div>
               {[
                 ["01", "Courses"],
@@ -167,11 +167,11 @@ const workflow = [
     icon: PlugZap,
     title: "Connect Canvas",
     description:
-      "Sign in once and Conlearn pulls your active courses, assignments, modules, pages, and files.",
+      "Sign in once and Smartlearn pulls your active courses, assignments, modules, pages, and files.",
   },
   {
     icon: FileSearch,
-    title: "Conlearn finds your course content",
+    title: "Smartlearn finds your course content",
     description:
       "The app organizes slides, notes, pages, due dates, and learning materials by course.",
   },
@@ -202,8 +202,8 @@ export default function HomePage() {
         {/* Fixed navbar — floats over everything */}
         <nav className="landing-nav" aria-label="Site navigation">
           <Link href="/" className="landing-logo">
-            <Image src="/conlearn-logo.png" alt="Conlearn" width={28} height={28} className="object-contain" />
-            <span>Conlearn</span>
+            <Image src="/smartlearn-logo.png" alt="Smartlearn" width={28} height={28} className="object-contain" />
+            <span>Smartlearn</span>
           </Link>
 
           <ul className="landing-nav-items">
@@ -291,7 +291,7 @@ export default function HomePage() {
         {/* Features */}
         <section id="features" className="premium-section">
           <div className="premium-section-header">
-            <span className="premium-eyebrow">What Conlearn does</span>
+            <span className="premium-eyebrow">What Smartlearn does</span>
             <h2>A smoother way to turn class content into practice.</h2>
             <p>
               Everything is designed around the real classes, deadlines, and materials students
@@ -323,9 +323,9 @@ export default function HomePage() {
         <section id="workflow" className="premium-section premium-split">
           <div className="premium-rise">
             <span className="premium-eyebrow">Simple flow</span>
-            <h2>How Conlearn works.</h2>
+            <h2>How Smartlearn works.</h2>
             <p>
-              Conlearn keeps the workflow intentionally simple: connect Canvas, let the app find
+              Smartlearn keeps the workflow intentionally simple: connect Canvas, let the app find
               your real materials, then generate practice that matches your courses.
             </p>
             <Link href="/settings/setup/canvas" className="btn btn-primary mt-6">
@@ -351,7 +351,7 @@ export default function HomePage() {
 
       </div>
 
-      <ConlearnFooter />
+      <SmartlearnFooter />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Conlearn setup and deployment
+# Smartlearn setup and deployment
 
 ## 1. Configure the environment
 

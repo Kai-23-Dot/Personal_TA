@@ -34,7 +34,7 @@ export function getStripe(): Stripe {
   _stripe = new Stripe(secretKey, {
     // Pin nothing here so the SDK uses the account's default API version,
     // avoiding TS literal-version drift across stripe-node upgrades.
-    appInfo: { name: "Conlearn" },
+    appInfo: { name: "Smartlearn" },
     typescript: true,
   });
   return _stripe;
@@ -70,7 +70,7 @@ export function stripeIdempotencyKey(
   userId: string,
   priceId?: string
 ): string {
-  return ["conlearn", operation, userId, priceId].filter(Boolean).join(":");
+  return ["smartlearn", operation, userId, priceId].filter(Boolean).join(":");
 }
 
 /** Optional override; omit it to let Stripe use the mode's default portal. */

@@ -64,7 +64,7 @@ export default function SetupPlatformPage() {
       <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "780px", margin: "0 auto" }}>
         <div className="contact-form-column">
           <h2 className="contact-form-title">Connect {platformLabel}</h2>
-          <p style={{ color: "var(--gray)", marginBottom: "1rem" }}>Bring your classes into Conlearn.</p>
+          <p style={{ color: "var(--gray)", marginBottom: "1rem" }}>Bring your classes into Smartlearn.</p>
 
           {!isCanvas ? (
             <p style={{ color: "var(--gray)" }}>

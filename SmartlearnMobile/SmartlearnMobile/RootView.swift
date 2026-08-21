@@ -5,7 +5,7 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            ConlearnBackground()
+            SmartlearnBackground()
             TabView(selection: $store.selectedTab) {
                 DashboardView()
                     .tag(AppTab.home)
@@ -37,7 +37,7 @@ struct RootView: View {
                         Label("More", systemImage: "square.grid.2x2")
                     }
             }
-            .tint(ConlearnTheme.primary)
+            .tint(SmartlearnTheme.primary)
         }
         .task {
             if !store.useDemoData {

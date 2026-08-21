@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 
 export default function SignupPage() {
@@ -115,8 +115,8 @@ export default function SignupPage() {
   }
 
   return (
-    <ConlearnBackdrop>
-      <ConlearnHeader
+    <SmartlearnBackdrop>
+      <SmartlearnHeader
         links={[
           { label: "Home", href: "/" },
           { label: "About", href: "/about" },
@@ -215,6 +215,6 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
-    </ConlearnBackdrop>
+    </SmartlearnBackdrop>
   );
 }

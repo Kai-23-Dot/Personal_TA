@@ -24,7 +24,7 @@ function getPageContext(pathname: string): string {
   for (const [path, ctx] of Object.entries(PAGE_CONTEXTS)) {
     if (pathname.startsWith(path + "/")) return ctx;
   }
-  return "The student is browsing their Conlearn dashboard.";
+  return "The student is browsing their Smartlearn dashboard.";
 }
 
 export function GlobalAssistant() {

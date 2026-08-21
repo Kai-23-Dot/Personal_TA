@@ -8,13 +8,13 @@ import "./hero.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Conlearn — Your AI Teaching Assistant",
-    template: "%s | Conlearn",
+    default: "Smartlearn — Your AI Teaching Assistant",
+    template: "%s | Smartlearn",
   },
   description:
     "An AI-powered personal teaching assistant that syncs with your school platforms, tracks your assignments, and helps you study smarter.",
   keywords: ["AI tutor", "study planner", "homework help", "Google Classroom", "Canvas LMS"],
-  authors: [{ name: "Conlearn" }],
+  authors: [{ name: "Smartlearn" }],
 };
 
 export const viewport: Viewport = {
@@ -46,7 +46,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Script src="/conlearn-ui.js" strategy="lazyOnload" />
+          <Script src="/smartlearn-ui.js" strategy="lazyOnload" />
           <Toaster
             position="bottom-right"
             toastOptions={{

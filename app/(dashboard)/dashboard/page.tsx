@@ -424,7 +424,7 @@ export default function DashboardPage() {
               <QuickAction
                 href="/chat"
                 icon={<GraduationCap className="h-[1.1rem] w-[1.1rem] text-amber-300" />}
-                label="Ask Conlearn"
+                label="Ask Smartlearn"
                 desc="Chat with your AI tutor"
               />
             </div>

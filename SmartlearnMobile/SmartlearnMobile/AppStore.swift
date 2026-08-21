@@ -197,7 +197,7 @@ final class AppStore: ObservableObject {
     }
 
     private enum Keys {
-        static let demoMode = "conlearn.mobile.demoMode"
-        static let serverAddress = "conlearn.mobile.serverAddress"
+        static let demoMode = "smartlearn.mobile.demoMode"
+        static let serverAddress = "smartlearn.mobile.serverAddress"
     }
 }

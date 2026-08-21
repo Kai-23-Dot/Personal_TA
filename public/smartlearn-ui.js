@@ -1,4 +1,4 @@
-/* Conlearn UI interactions based on Chain Summit template styles */
+/* Smartlearn UI interactions based on Chain Summit template styles */
 
 function animateCounters() {
   const counters = document.querySelectorAll('.stat-number');
@@ -296,9 +296,9 @@ function setupFormHandlers() {
   });
 }
 
-function initConlearnUi() {
-  if (window.__conlearnUiInitialized) return;
-  window.__conlearnUiInitialized = true;
+function initSmartlearnUi() {
+  if (window.__smartlearnUiInitialized) return;
+  window.__smartlearnUiInitialized = true;
 
   animateCounters();
   createNeuralNetwork();
@@ -319,14 +319,14 @@ function initConlearnUi() {
   }
 }
 
-function scheduleConlearnUi() {
+function scheduleSmartlearnUi() {
   const run = () => {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(initConlearnUi, { timeout: 1500 });
+          window.requestIdleCallback(initSmartlearnUi, { timeout: 1500 });
         } else {
-          window.setTimeout(initConlearnUi, 250);
+          window.setTimeout(initSmartlearnUi, 250);
         }
       });
     });
@@ -336,4 +336,4 @@ function scheduleConlearnUi() {
   else window.addEventListener('load', run, { once: true });
 }
 
-scheduleConlearnUi();
+scheduleSmartlearnUi();

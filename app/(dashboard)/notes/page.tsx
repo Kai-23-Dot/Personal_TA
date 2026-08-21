@@ -28,7 +28,7 @@ type SavedGuide = {
   savedAt: string;
 };
 
-const STORAGE_KEY = "conlearn_study_guides";
+const STORAGE_KEY = "smartlearn_study_guides";
 
 function loadSavedGuides(): SavedGuide[] {
   try {
@@ -82,8 +82,8 @@ type ModuleItem = {
 export default function NotesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   // Draft builder state — persisted so an unfinished study guide survives exit.
-  const [courseId, setCourseId] = usePersistentState("conlearn:notes:courseId", "");
-  const [studyGuideStyle, setStudyGuideStyle] = usePersistentState("conlearn:notes:style", "bullet_points");
+  const [courseId, setCourseId] = usePersistentState("smartlearn:notes:courseId", "");
+  const [studyGuideStyle, setStudyGuideStyle] = usePersistentState("smartlearn:notes:style", "bullet_points");
   const [studyGuideLoading, setStudyGuideLoading] = useState(false);
   const [studyGuideSummary, setStudyGuideSummary] = useState<string | null>(null);
   const [studyGuideError, setStudyGuideError] = useState<string | null>(null);
@@ -91,10 +91,10 @@ export default function NotesPage() {
   const [savedGuides, setSavedGuides] = useState<SavedGuide[]>([]);
   const [viewingGuide, setViewingGuide] = useState<SavedGuide | null>(null);
   const [moduleItems, setModuleItems] = useState<ModuleItem[]>([]);
-  const [selectedModuleItems, setSelectedModuleItems] = usePersistentState<Record<string, boolean>>("conlearn:notes:selectedItems", {});
+  const [selectedModuleItems, setSelectedModuleItems] = usePersistentState<Record<string, boolean>>("smartlearn:notes:selectedItems", {});
   const [lessonFilter, setLessonFilter] = useState("");
-  const [unitName, setUnitName] = usePersistentState("conlearn:notes:unitName", "");
-  const [inputMode, setInputMode] = usePersistentState<"items" | "unit">("conlearn:notes:inputMode", "items");
+  const [unitName, setUnitName] = usePersistentState("smartlearn:notes:unitName", "");
+  const [inputMode, setInputMode] = usePersistentState<"items" | "unit">("smartlearn:notes:inputMode", "items");
 
   useEffect(() => {
     setSavedGuides(loadSavedGuides());
@@ -226,8 +226,8 @@ export default function NotesPage() {
       // Guide is done — clear the in-progress selection so the builder resets.
       setSelectedModuleItems({});
       setUnitName("");
-      clearPersistentState("conlearn:notes:selectedItems");
-      clearPersistentState("conlearn:notes:unitName");
+      clearPersistentState("smartlearn:notes:selectedItems");
+      clearPersistentState("smartlearn:notes:unitName");
       if (!data?.lessonContentIncluded) {
         setStudyGuideWarning(
           "Lesson slides could not be accessed. If the Google Slides link is private, publish or share it, or attach the PPTX file in Canvas."
@@ -382,7 +382,7 @@ export default function NotesPage() {
                     onChange={(e) => setUnitName(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Conlearn searches your Canvas pages for this unit and uses vision AI to extract diagrams, formulas, and notes.
+                    Smartlearn searches your Canvas pages for this unit and uses vision AI to extract diagrams, formulas, and notes.
                   </p>
                 </div>
               )}

@@ -9,7 +9,7 @@ type NavLink = {
   href: string;
 };
 
-type ConlearnHeaderProps = {
+type SmartlearnHeaderProps = {
   links: NavLink[];
   showSignIn?: boolean;
   signInHref?: string;
@@ -19,21 +19,21 @@ type ConlearnHeaderProps = {
 
 import { usePathname } from "next/navigation";
 
-export function ConlearnHeader({
+export function SmartlearnHeader({
   links,
   showSignIn = true,
   signInHref = "/login",
   showSignOut = false,
   signOutHref = "/logout",
-}: ConlearnHeaderProps) {
+}: SmartlearnHeaderProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <header className="premium-public-header">
       <nav className="premium-public-nav">
         <Link href="/" className="logo">
-          <Image src="/conlearn-logo.png" alt="Conlearn" width={36} height={36} className="object-contain" />
-          <span className="logo-text">Conlearn</span>
+          <Image src="/smartlearn-logo.png" alt="Smartlearn" width={36} height={36} className="object-contain" />
+          <span className="logo-text">Smartlearn</span>
         </Link>
 
         <ul className="nav-links">

@@ -25,14 +25,14 @@ vi.mock("@/backend/billing/stripe", () => ({
     "canceled",
     "incomplete_expired",
   ]),
-  appUrl: () => "https://conlearn.example",
+  appUrl: () => "https://smartlearn.example",
   getPortalConfigurationId: () => undefined,
   getOrCreateCustomer: mocks.getOrCreateCustomer,
   stripeIdempotencyKey: (
     operation: string,
     userId: string,
     priceId?: string
-  ) => ["conlearn", operation, userId, priceId].filter(Boolean).join(":"),
+  ) => ["smartlearn", operation, userId, priceId].filter(Boolean).join(":"),
 }));
 
 import { POST } from "@/app/api/billing/checkout/route";
@@ -84,7 +84,7 @@ describe("billing Checkout route", () => {
       },
     });
     expect(options).toEqual({
-      idempotencyKey: "conlearn:checkout:user-1:price_pro",
+      idempotencyKey: "smartlearn:checkout:user-1:price_pro",
     });
   });
 

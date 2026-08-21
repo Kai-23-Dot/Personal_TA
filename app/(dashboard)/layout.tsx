@@ -40,7 +40,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-background text-foreground" data-dashboard-shell>
       <Sidebar profile={profile ?? null} plan={plan} />
       <div className="min-h-screen md:pl-60">
-        <Header title="Conlearn" description="Your courses, notes, practice tests, and study sets — all in one place." />
+        <Header title="Smartlearn" description="Your courses, notes, practice tests, and study sets — all in one place." />
         {/* Legacy .app-container (chain-summit.css) is deliberately NOT used here:
             its `padding` shorthand zeroed the top padding and capped width at
             1200px, silently overriding these utilities. */}

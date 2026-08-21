@@ -18,13 +18,13 @@ export function Header({ title, description }: HeaderProps) {
       {/* Logo — visible on mobile (sidebar is hidden on mobile) */}
       <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0 md:hidden">
         <Image
-          src="/conlearn-logo.png"
-          alt="Conlearn"
+          src="/smartlearn-logo.png"
+          alt="Smartlearn"
           width={28}
           height={28}
           className="object-contain"
         />
-        <span className="text-sm font-semibold text-foreground">Conlearn</span>
+        <span className="text-sm font-semibold text-foreground">Smartlearn</span>
       </Link>
 
       <div className="flex-1 min-w-0">

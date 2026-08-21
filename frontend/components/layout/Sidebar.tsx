@@ -38,15 +38,15 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">
             <Image
-              src="/conlearn-logo.png"
-              alt="Conlearn"
+              src="/smartlearn-logo.png"
+              alt="Smartlearn"
               width={32}
               height={32}
               className="w-full h-full object-contain"
             />
           </div>
           <div>
-            <div className="text-sidebar-foreground font-semibold text-sm leading-none">Conlearn</div>
+            <div className="text-sidebar-foreground font-semibold text-sm leading-none">Smartlearn</div>
             <div className="text-sidebar-foreground/50 text-[11px] mt-0.5 tracking-wide">Study workspace</div>
           </div>
         </Link>

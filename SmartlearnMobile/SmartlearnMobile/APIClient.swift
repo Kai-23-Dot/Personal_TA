@@ -9,7 +9,7 @@ enum APIClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidServerAddress:
-            return "Enter a valid HTTPS address for the Conlearn server."
+            return "Enter a valid HTTPS address for the Smartlearn server."
         case .invalidResponse:
             return "The server returned an unreadable response."
         case .unauthorized:

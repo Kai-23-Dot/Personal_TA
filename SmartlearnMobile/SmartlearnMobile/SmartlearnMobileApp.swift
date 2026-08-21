@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ConlearnMobileApp: App {
+struct SmartlearnMobileApp: App {
     @StateObject private var store = AppStore()
 
     var body: some Scene {

@@ -177,7 +177,7 @@ COMMON ERRORS & FIXES:
 - "File very slow": Use Simplify → Remove Details, or externally reference large sub-assemblies.
 --- END CAD KNOWLEDGE ---`;
 
-const BASE_SYSTEM_PROMPT = `You are Conlearn — an expert, supportive AI Teaching Assistant for a high school student.
+const BASE_SYSTEM_PROMPT = `You are Smartlearn — an expert, supportive AI Teaching Assistant for a high school student.
 
 PERSONALITY: Encouraging, clear, and student-friendly. Like the best TA you've ever had.
 

@@ -47,7 +47,7 @@ struct AssignmentsView: View {
                             systemImage: "checkmark.circle",
                             description: Text("Try another filter or enjoy the breathing room.")
                         )
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                         .padding(.top, 44)
                     } else {
                         ForEach(filteredAssignments) { assignment in
@@ -63,9 +63,9 @@ struct AssignmentsView: View {
                 .padding(.top, 14)
                 .padding(.bottom, 30)
             }
-            .background(ConlearnBackground())
+            .background(SmartlearnBackground())
             .navigationTitle("Assignments")
-            .conlearnNavigationStyle()
+            .smartlearnNavigationStyle()
         }
     }
 
@@ -74,16 +74,16 @@ struct AssignmentsView: View {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: "checklist")
                     .font(.title2)
-                    .foregroundStyle(ConlearnTheme.primary)
+                    .foregroundStyle(SmartlearnTheme.primary)
                     .frame(width: 46, height: 46)
-                    .background(ConlearnTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+                    .background(SmartlearnTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Stay ahead of every deadline")
                         .font(.headline)
-                        .foregroundStyle(ConlearnTheme.textPrimary)
+                        .foregroundStyle(SmartlearnTheme.textPrimary)
                     Text("Assignments from Canvas appear here when the mobile app is connected.")
                         .font(.caption)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                 }
             }
         }
@@ -93,16 +93,16 @@ struct AssignmentsView: View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(ConlearnTheme.textSecondary)
+                    .foregroundStyle(SmartlearnTheme.textSecondary)
                 TextField("Search", text: $searchText)
                     .textInputAutocapitalization(.never)
-                    .foregroundStyle(ConlearnTheme.textPrimary)
+                    .foregroundStyle(SmartlearnTheme.textPrimary)
             }
             .padding(.horizontal, 12)
             .frame(height: 44)
-            .background(ConlearnTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .background(SmartlearnTheme.surface, in: RoundedRectangle(cornerRadius: 12))
             .overlay {
-                RoundedRectangle(cornerRadius: 12).stroke(ConlearnTheme.border)
+                RoundedRectangle(cornerRadius: 12).stroke(SmartlearnTheme.border)
             }
 
             Menu {
@@ -113,9 +113,9 @@ struct AssignmentsView: View {
             } label: {
                 Image(systemName: "line.3.horizontal.decrease")
                     .frame(width: 44, height: 44)
-                    .background(ConlearnTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+                    .background(SmartlearnTheme.surface, in: RoundedRectangle(cornerRadius: 12))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12).stroke(ConlearnTheme.border)
+                        RoundedRectangle(cornerRadius: 12).stroke(SmartlearnTheme.border)
                     }
             }
             .accessibilityLabel("Filter by course")
@@ -142,18 +142,18 @@ private struct AssignmentCard: View {
                     Button(action: toggleCompletion) {
                         Image(systemName: assignment.isCompleted ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundStyle(assignment.isCompleted ? ConlearnTheme.mint : ConlearnTheme.textSecondary)
+                            .foregroundStyle(assignment.isCompleted ? SmartlearnTheme.mint : SmartlearnTheme.textSecondary)
                     }
                     .accessibilityLabel(assignment.isCompleted ? "Mark incomplete" : "Mark complete")
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text(assignment.title)
                             .font(.headline)
-                            .foregroundStyle(ConlearnTheme.textPrimary)
+                            .foregroundStyle(SmartlearnTheme.textPrimary)
                             .strikethrough(assignment.isCompleted)
                         Text(assignment.courseName)
                             .font(.caption)
-                            .foregroundStyle(ConlearnTheme.textSecondary)
+                            .foregroundStyle(SmartlearnTheme.textSecondary)
                     }
                     Spacer()
                     if let color = assignment.course?.color {
@@ -166,14 +166,14 @@ private struct AssignmentCard: View {
                 if let description = assignment.description {
                     Text(description)
                         .font(.subheadline)
-                        .foregroundStyle(ConlearnTheme.textSecondary)
+                        .foregroundStyle(SmartlearnTheme.textSecondary)
                         .lineLimit(2)
                 }
 
                 HStack {
                     StatusPill(
                         title: (assignment.assignmentType ?? "Assignment").capitalized,
-                        color: ConlearnTheme.primary
+                        color: SmartlearnTheme.primary
                     )
                     Spacer()
                     Label(
@@ -181,7 +181,7 @@ private struct AssignmentCard: View {
                         systemImage: "calendar"
                     )
                     .font(.caption)
-                    .foregroundStyle(assignment.urgency == .today ? ConlearnTheme.orange : ConlearnTheme.textSecondary)
+                    .foregroundStyle(assignment.urgency == .today ? SmartlearnTheme.orange : SmartlearnTheme.textSecondary)
                 }
             }
         }

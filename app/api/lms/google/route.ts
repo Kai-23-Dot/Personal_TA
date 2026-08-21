@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { createOAuthNonce, verifyOAuthNonce } from "@/backend/security/oauthState";
 
-const GOOGLE_STATE_COOKIE = "conlearn_google_oauth_state";
+const GOOGLE_STATE_COOKIE = "smartlearn_google_oauth_state";
 
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",

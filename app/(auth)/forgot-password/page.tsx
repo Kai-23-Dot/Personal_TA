@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -33,8 +33,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <ConlearnBackdrop>
-      <ConlearnHeader links={[{ label: "Home", href: "/" }]} showSignIn={false} />
+    <SmartlearnBackdrop>
+      <SmartlearnHeader links={[{ label: "Home", href: "/" }]} showSignIn={false} />
       <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "120px 1.5rem 4rem" }}>
         <section className="contact-form-column" style={{ width: "100%", maxWidth: 420, background: "rgba(255, 255, 255, 0.04)", borderRadius: 20 }}>
           <h1 className="contact-form-title">Reset your password</h1>
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <form className="contact-form" onSubmit={submit}>
               <p style={{ color: "var(--gray)" }}>
-                Enter the email used for your Conlearn account.
+                Enter the email used for your Smartlearn account.
               </p>
               <div className="form-field">
                 <label htmlFor="reset-email">Email</label>
@@ -69,6 +69,6 @@ export default function ForgotPasswordPage() {
           )}
         </section>
       </main>
-    </ConlearnBackdrop>
+    </SmartlearnBackdrop>
   );
 }

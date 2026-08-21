@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
-import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
+import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
+import { SmartlearnFooter } from "@/frontend/components/layout/SmartlearnFooter";
 
 export const metadata: Metadata = {
   title: "Website overview",
-  description: "An overview of the Conlearn platform, roadmap, and release milestones.",
+  description: "An overview of the Smartlearn platform, roadmap, and release milestones.",
 };
 
 const navLinks = [
@@ -17,8 +17,8 @@ const navLinks = [
 
 export default function WebsitePage() {
   return (
-    <ConlearnBackdrop>
-      <ConlearnHeader links={navLinks} showSignIn />
+    <SmartlearnBackdrop>
+      <SmartlearnHeader links={navLinks} showSignIn />
       <section className="section" style={{ paddingTop: "120px" }}>
         <h1 className="animate-on-scroll">Website overview</h1>
         <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
@@ -30,7 +30,7 @@ export default function WebsitePage() {
           </div>
         </div>
       </section>
-      <ConlearnFooter />
-    </ConlearnBackdrop>
+      <SmartlearnFooter />
+    </SmartlearnBackdrop>
   );
 }
