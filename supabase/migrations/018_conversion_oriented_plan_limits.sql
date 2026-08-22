@@ -1,5 +1,5 @@
 -- ============================================================
--- Smartlearn — Migration 017: Conversion-oriented plan limits
+-- Smartlearn — Migration 018: Conversion-oriented plan limits
 -- ============================================================
 -- Keep the database's concurrency-safe AI ceilings aligned with the reduced
 -- allowances in backend/billing/plans.ts.

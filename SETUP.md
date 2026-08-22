@@ -25,7 +25,7 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npm run db:push
 ```
 
-Do not paste only `001_initial.sql`; later migrations contain required constraints, RLS fixes, storage policies, Canvas connection support, and production hardening. Migration 014 creates the private `notes` bucket and restricts each object path to its owning user.
+Do not paste only `001_initial.sql`; later migrations contain required constraints, RLS fixes, storage policies, Canvas connection support, and production hardening. Migration 015 creates the private `notes` bucket and restricts each object path to its owning user.
 
 For local Supabase:
 

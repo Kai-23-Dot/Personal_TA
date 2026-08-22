@@ -1,4 +1,4 @@
--- 004_multi_canvas.sql
+-- 006_multi_canvas.sql
 -- Allow multiple Canvas accounts per user (one per domain) and fix
 -- course uniqueness so the same Canvas course ID from two different
 -- institutions doesn't conflict.

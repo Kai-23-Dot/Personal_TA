@@ -1,7 +1,7 @@
 -- ============================================================
--- Smartlearn — Migration 021: Repair production billing runtime
+-- Smartlearn — Migration 022: Repair production billing runtime
 -- ============================================================
--- Migration 016 was applied to production before the four-tier billing SQL
+-- An earlier four-tier billing migration was applied to production before this SQL
 -- reached its current form. Re-apply the runtime schema explicitly so older
 -- projects receive the same constraints and concurrency-safe credit RPCs.
 

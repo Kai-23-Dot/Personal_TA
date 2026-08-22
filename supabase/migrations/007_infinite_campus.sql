@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 005: Add Infinite Campus as a supported LMS platform
+-- Migration 007: Add Infinite Campus as a supported LMS platform
 -- Run in Supabase SQL Editor
 -- ============================================================
 

@@ -59,7 +59,7 @@ CREATE TRIGGER on_auth_user_created
 -- LMS CONNECTIONS (OAuth tokens per platform)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.lms_connections (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   platform        TEXT NOT NULL CHECK (platform IN ('google_classroom', 'canvas', 'microsoft_teams')),
   access_token    TEXT NOT NULL,
@@ -85,7 +85,7 @@ CREATE POLICY "Users manage own lms_connections" ON public.lms_connections
 -- COURSES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.courses (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   connection_id   UUID REFERENCES public.lms_connections(id) ON DELETE SET NULL,
   platform        TEXT NOT NULL CHECK (platform IN ('google_classroom', 'canvas', 'microsoft_teams', 'manual')),
@@ -114,7 +114,7 @@ CREATE INDEX idx_courses_user_id ON public.courses(user_id);
 -- ASSIGNMENTS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.assignments (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   platform_id     TEXT,
@@ -145,7 +145,7 @@ CREATE INDEX idx_assignments_due_date ON public.assignments(due_date);
 -- SUBMISSIONS & GRADE EVENTS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.submissions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   assignment_id   UUID NOT NULL REFERENCES public.assignments(id) ON DELETE CASCADE,
   platform_id     TEXT,
@@ -163,7 +163,7 @@ CREATE POLICY "Users manage own submissions" ON public.submissions
   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS public.grade_events (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   submission_id   UUID REFERENCES public.submissions(id) ON DELETE SET NULL,
@@ -183,7 +183,7 @@ CREATE POLICY "Users manage own grade_events" ON public.grade_events
 -- NOTES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.notes (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
   title           TEXT NOT NULL,
@@ -215,7 +215,7 @@ CREATE INDEX idx_notes_embedding ON public.notes USING ivfflat (embedding vector
 -- NOTE SUMMARIES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.note_summaries (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   note_id         UUID REFERENCES public.notes(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
@@ -242,7 +242,7 @@ CREATE INDEX idx_summaries_embedding ON public.note_summaries USING ivfflat (emb
 -- STUDY PLANS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.study_plans (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   plan_date       DATE NOT NULL,
   status          TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
@@ -266,7 +266,7 @@ CREATE INDEX idx_study_plans_user_date ON public.study_plans(user_id, plan_date)
 -- PRACTICE SESSIONS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.practice_sessions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
   topic           TEXT NOT NULL,
@@ -291,7 +291,7 @@ CREATE INDEX idx_practice_sessions_user_id ON public.practice_sessions(user_id);
 -- PERFORMANCE METRICS (aggregated weak area tracking)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.performance_metrics (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
   topic           TEXT NOT NULL,
@@ -319,7 +319,7 @@ CREATE INDEX idx_perf_metrics_accuracy ON public.performance_metrics(user_id, ac
 -- CHAT MESSAGES (persisted conversation history)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.chat_messages (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   session_id      UUID NOT NULL,
   role            TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system', 'tool')),

@@ -21,7 +21,7 @@ ALTER TABLE public.study_groups
 
 -- 2. Recurring meeting slots
 CREATE TABLE IF NOT EXISTS public.group_meetings (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id    UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6), -- 0 = Sunday
   start_time  TIME NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.group_meetings (
 
 -- 3. One-tap daily check-ins
 CREATE TABLE IF NOT EXISTS public.group_checkins (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id     UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   checkin_date DATE NOT NULL DEFAULT CURRENT_DATE,

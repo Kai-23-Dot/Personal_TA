@@ -1,20 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authUnavailableResponse, createAuthRouteClient } from "../_supabase-route";
-import { z } from "zod";
-
-const signupSchema = z.object({
-  // Older clients sent null when Turnstile was not configured. Accept and
-  // normalize it so signup is not blocked before reaching Supabase.
-  captchaToken: z.string().max(4096).nullish(),
-  email: z.string().trim().email().max(254),
-  password: z.string().min(8).max(128),
-  username: z
-    .string()
-    .trim()
-    .min(3)
-    .max(50)
-    .regex(/^[\p{L}\p{N} ._'’-]+$/u),
-}).strict();
+import { signupInputSchema } from "@/backend/security/authInput";
 
 const USERNAME_TAKEN_MESSAGE =
   "That username is already taken. Please choose another one.";
@@ -24,7 +10,7 @@ function isUsernameConflict(message: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const parsed = signupSchema.safeParse(await request.json().catch(() => null));
+  const parsed = signupInputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       {
@@ -87,7 +73,15 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const isRateLimited = error.status === 429;
+      return NextResponse.json(
+        {
+          error: isRateLimited
+            ? "Too many signup attempts. Please wait a moment and try again."
+            : error.message,
+        },
+        { status: isRateLimited ? 429 : 400 }
+      );
     }
 
     // Supabase only returns an active session immediately when email confirmation

@@ -1,5 +1,5 @@
 -- ============================================================
--- Smartlearn — Migration 016: Four-tier, cost-weighted billing
+-- Smartlearn — Migration 017: Four-tier, cost-weighted billing
 -- ============================================================
 
 ALTER TABLE public.profiles

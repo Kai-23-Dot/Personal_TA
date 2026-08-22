@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 003: Fix Canvas sync + Canvas pages as notes
+-- Migration 004: Fix Canvas sync + Canvas pages as notes
 -- Run in Supabase SQL Editor
 -- ============================================================
 

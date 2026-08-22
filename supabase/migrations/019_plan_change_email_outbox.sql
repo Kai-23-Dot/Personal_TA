@@ -1,5 +1,5 @@
 -- ============================================================
--- Smartlearn — Migration 018: Transactional plan-change email outbox
+-- Smartlearn — Migration 019: Transactional plan-change email outbox
 -- ============================================================
 -- Record a notification in the same transaction that applies a Stripe plan
 -- change. The webhook can then retry delivery without losing the transition or

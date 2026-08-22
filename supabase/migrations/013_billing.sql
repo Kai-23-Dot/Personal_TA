@@ -1,5 +1,5 @@
 -- ============================================================
--- Smartlearn — Migration 012: Stripe billing + usage metering
+-- Smartlearn — Migration 013: Stripe billing + usage metering
 -- ============================================================
 
 -- ---- Subscription fields on profiles ----
@@ -24,7 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_profiles_stripe_customer_id
 --          'practice_test' | 'note' → `amount` is 1 (audit trail; weekly
 --          counts are derived from practice_sessions / notes tables).
 CREATE TABLE IF NOT EXISTS public.usage_events (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   kind        TEXT NOT NULL CHECK (kind IN ('tokens', 'practice_test', 'note')),
   amount      INTEGER NOT NULL DEFAULT 1,

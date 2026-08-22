@@ -1,12 +1,12 @@
 -- ============================================================
--- PersonalTA.ai — Migration 002: Flashcards, GPA, Study Groups
+-- PersonalTA.ai — Migration 003: Flashcards, GPA, Study Groups
 -- ============================================================
 
 -- ============================================================
 -- FLASHCARDS (Spaced Repetition System)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.flashcards (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   course_id       UUID REFERENCES public.courses(id) ON DELETE SET NULL,
   note_id         UUID REFERENCES public.notes(id) ON DELETE SET NULL,
@@ -44,7 +44,7 @@ CREATE TRIGGER set_flashcards_updated_at BEFORE UPDATE ON public.flashcards
 -- policy is added AFTER group_members is created below.
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.study_groups (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   description     TEXT,
@@ -69,7 +69,7 @@ CREATE TRIGGER set_study_groups_updated_at BEFORE UPDATE ON public.study_groups
 -- GROUP MEMBERS (must exist before study_groups member policy)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.group_members (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id        UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   role            TEXT DEFAULT 'member' CHECK (role IN ('owner', 'member')),
@@ -103,7 +103,7 @@ CREATE POLICY "Members can view their groups" ON public.study_groups
 -- GROUP MESSAGES (Realtime chat)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.group_messages (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id        UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content         TEXT NOT NULL,
@@ -132,7 +132,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.group_messages;
 -- SHARED NOTES (group note sharing)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.group_shared_notes (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id        UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   note_id         UUID NOT NULL REFERENCES public.notes(id) ON DELETE CASCADE,
   shared_by       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

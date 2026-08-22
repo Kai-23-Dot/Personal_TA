@@ -1,10 +1,10 @@
 -- ============================================================
--- Migration 010: Group flashcard sharing + chapter assignments
+-- Migration 011: Group flashcard sharing + chapter assignments
 -- ============================================================
 
 -- Flashcard decks shared inside a study group
 CREATE TABLE IF NOT EXISTS public.group_shared_flashcards (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id        UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,                            -- deck label (e.g. "Chapter 3 – Cell Division")
   flashcard_ids   UUID[] NOT NULL DEFAULT '{}',            -- IDs of flashcards in the deck
@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_group_shared_flashcards_group
 
 -- Track assignment coverage per member (which chapter each person "owns")
 CREATE TABLE IF NOT EXISTS public.group_chapter_assignments (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id        UUID NOT NULL REFERENCES public.study_groups(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   chapter         TEXT NOT NULL,
