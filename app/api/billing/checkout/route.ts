@@ -2,41 +2,53 @@ import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 import {
   stripe,
-  PRO_PRICE_ID,
   TERMINAL_SUBSCRIPTION_STATUSES,
   appUrl,
+  getConfiguredPlanPrices,
   getPortalConfigurationId,
   getOrCreateCustomer,
+  getPriceIdForPlan,
   stripeIdempotencyKey,
 } from "@/backend/billing/stripe";
+import { isPaidPlan } from "@/backend/billing/plans";
 
 /**
- * Create a Stripe hosted Checkout Session for the Pro subscription and return
+ * Create a Stripe hosted Checkout Session for a paid subscription and return
  * its URL. The client redirects the browser to it.
  */
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!PRO_PRICE_ID) {
-      return NextResponse.json({ error: "Billing is not configured (missing STRIPE_PRO_PRICE_ID)." }, { status: 500 });
+    const body = await req.json().catch(() => ({}));
+    const selectedPlan = isPaidPlan(body?.plan) ? body.plan : "pro";
+    let priceId: string;
+    try {
+      priceId = getPriceIdForPlan(selectedPlan);
+    } catch {
+      return NextResponse.json(
+        { error: `Billing is not configured for the ${selectedPlan} plan.` },
+        { status: 500 }
+      );
     }
 
     const customerId = await getOrCreateCustomer(user.id, user.email ?? null);
     const base = appUrl();
 
-    // Do not create a second recoverable/active Pro subscription. A stale UI or
-    // a retried click should take the customer to management instead.
+    // Do not create a second recoverable Smartlearn subscription. Existing paid
+    // customers change tiers through the Billing Portal.
+    const configuredPriceIds = new Set(Object.values(getConfiguredPlanPrices()));
     const existing = await stripe.subscriptions.list({
       customer: customerId,
-      price: PRO_PRICE_ID,
       status: "all",
       limit: 100,
     });
     const hasRecoverableSubscription = existing.data.some(
-      (subscription) => !TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status)
+      (subscription) =>
+        !TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status) &&
+        subscription.items.data.some((item) => configuredPriceIds.has(item.price.id))
     );
     if (hasRecoverableSubscription) {
       const configuration = getPortalConfigurationId();
@@ -54,11 +66,10 @@ export async function POST() {
         mode: "subscription",
         customer: customerId,
         client_reference_id: user.id,
-        line_items: [{ price: PRO_PRICE_ID, quantity: 1 }],
-        allow_promotion_codes: true,
-        metadata: { supabase_user_id: user.id, plan: "pro" },
+        line_items: [{ price: priceId, quantity: 1 }],
+        metadata: { supabase_user_id: user.id, plan: selectedPlan },
         subscription_data: {
-          metadata: { supabase_user_id: user.id, plan: "pro" },
+          metadata: { supabase_user_id: user.id, plan: selectedPlan },
         },
         success_url: `${base}/settings?checkout=success`,
         cancel_url: `${base}/pricing?checkout=cancelled`,
@@ -67,7 +78,7 @@ export async function POST() {
         idempotencyKey: stripeIdempotencyKey(
           "checkout",
           user.id,
-          PRO_PRICE_ID
+          priceId
         ),
       }
     );

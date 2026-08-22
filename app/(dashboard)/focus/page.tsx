@@ -86,10 +86,10 @@ export default function FocusPage() {
   const [seconds, setSeconds] = useState(MODES[0].seconds);
   const [running, setRunning] = useState(false);
   // Persisted so what you're focusing on (and today's count) survives exit.
-  const [task, setTask] = usePersistentState("conlearn:focus:task", "");
+  const [task, setTask] = usePersistentState("smartlearn:focus:task", "");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
-  const [sessionCount, setSessionCount] = usePersistentState("conlearn:focus:sessionCount", 0);
+  const [sessionCount, setSessionCount] = usePersistentState("smartlearn:focus:sessionCount", 0);
 
   const mode: Mode = MODES[modeIdx];
   const totalSeconds = mode.seconds;

@@ -47,7 +47,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid Canvas course ID on this course record. Re-sync courses." }, { status: 400 });
   }
 
-  const modules = await fetchCanvasModules(connection.canvas_domain, connection.access_token, canvasCourseId);
+  const modules = await fetchCanvasModules(
+    connection.canvas_domain,
+    connection.access_token,
+    canvasCourseId
+  ).catch((error: unknown) => {
+    console.warn("[canvas-module-items] Modules unavailable; returning other course content.", error);
+    return [];
+  });
 
   const items = await Promise.all(
     modules.map(async (module) => {
@@ -56,7 +63,10 @@ export async function GET(req: Request) {
         connection.access_token,
         canvasCourseId,
         module.id
-      );
+      ).catch((error: unknown) => {
+        console.warn(`[canvas-module-items] Module ${module.id} items unavailable.`, error);
+        return [];
+      });
       return moduleItems.map((item) => ({
         itemKey: `ModuleItem:${item.id}`,
         moduleId: module.id,
@@ -78,10 +88,19 @@ export async function GET(req: Request) {
     connection.access_token,
     canvasCourseId,
     1000
-  );
+  ).catch((error: unknown) => {
+    console.warn("[canvas-module-items] Files unavailable.", error);
+    return [];
+  });
   const [pages, assignments] = await Promise.all([
-    fetchCanvasPages(connection.canvas_domain, connection.access_token, canvasCourseId),
-    fetchCanvasAssignments(connection.canvas_domain, connection.access_token, canvasCourseId),
+    fetchCanvasPages(connection.canvas_domain, connection.access_token, canvasCourseId).catch((error: unknown) => {
+      console.warn("[canvas-module-items] Pages unavailable.", error);
+      return [];
+    }),
+    fetchCanvasAssignments(connection.canvas_domain, connection.access_token, canvasCourseId).catch((error: unknown) => {
+      console.warn("[canvas-module-items] Assignments unavailable.", error);
+      return [];
+    }),
   ]);
 
   const fileBackfill = files.map((file) => ({

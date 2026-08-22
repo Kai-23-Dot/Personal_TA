@@ -19,9 +19,10 @@ export async function GET() {
     .from("assignments")
     .select(`
       id, due_date, estimated_minutes, assignment_type, points_possible, weight,
-      course:courses(id, name, color)
+      course:courses!inner(id, name, color, is_active)
     `)
     .eq("user_id", user.id)
+    .eq("course.is_active", true)
     .eq("is_completed", false)
     .gte("due_date", since.toISOString())
     .lte("due_date", until.toISOString())

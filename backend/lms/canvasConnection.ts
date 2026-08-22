@@ -27,6 +27,7 @@ export async function getCanvasCourseContext(
     .select("id, name, platform, platform_id, connection_id")
     .eq("id", courseId)
     .eq("user_id", userId)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (

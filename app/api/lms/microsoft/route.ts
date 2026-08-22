@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 import { createOAuthNonce, verifyOAuthNonce } from "@/backend/security/oauthState";
 
-const MICROSOFT_STATE_COOKIE = "conlearn_microsoft_oauth_state";
+const MICROSOFT_STATE_COOKIE = "smartlearn_microsoft_oauth_state";
 
 const MS_SCOPES = [
   "openid",

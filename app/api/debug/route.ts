@@ -26,7 +26,7 @@ export async function GET() {
     { count: noteCount },
     { data: connections },
   ] = await Promise.all([
-    supabase.from("courses").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("courses").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_active", true),
     supabase.from("assignments").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("submissions").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("grade_events").select("*", { count: "exact", head: true }).eq("user_id", user.id),

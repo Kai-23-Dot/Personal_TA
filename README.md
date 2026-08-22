@@ -1,6 +1,6 @@
-# Conlearn
+# Smartlearn
 
-Conlearn is an AI study assistant built with Next.js 15, Supabase/Postgres, Canvas and other LMS integrations, OpenAI-powered study tools, and Stripe billing.
+Smartlearn is an AI study assistant built with Next.js 15, Supabase/Postgres, Canvas and other LMS integrations, OpenAI-powered study tools, and Stripe billing.
 
 ## Local development
 

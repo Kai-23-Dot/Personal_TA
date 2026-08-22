@@ -50,7 +50,9 @@ const rawQuestionSchema = z.object({
 });
 
 const rawQuizEnvelopeSchema = z.object({
-  questions: z.array(rawQuestionSchema).max(100),
+  // Validate each question independently below. A single malformed model item
+  // must not cause the entire otherwise-valid quiz envelope to be discarded.
+  questions: z.array(z.unknown()).max(100),
 });
 
 type QuizValidationOptions = {
@@ -100,7 +102,10 @@ export function normalizeGeneratedQuizQuestions(
   const seenQuestions = new Set<string>();
   const normalized: QuizQuestion[] = [];
 
-  for (const question of parsed.data.questions) {
+  for (const rawQuestion of parsed.data.questions) {
+    const parsedQuestion = rawQuestionSchema.safeParse(rawQuestion);
+    if (!parsedQuestion.success) continue;
+    const question = parsedQuestion.data;
     if (
       question.topic.localeCompare(options.topic, undefined, {
         sensitivity: "accent",

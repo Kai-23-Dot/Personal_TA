@@ -11,7 +11,7 @@ const eslintConfig = [
       ".next/**",
       ".next-*/**",
       ".next-build/**",
-      "ConlearnMobile/**",
+      "SmartlearnMobile/**",
       "coverage/**",
       "next-env.d.ts",
       "node_modules/**",

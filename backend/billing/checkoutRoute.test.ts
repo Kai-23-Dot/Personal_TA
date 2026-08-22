@@ -20,22 +20,35 @@ vi.mock("@/backend/billing/stripe", () => ({
     checkout: { sessions: { create: mocks.createCheckout } },
     billingPortal: { sessions: { create: mocks.createPortal } },
   },
-  PRO_PRICE_ID: "price_pro",
+  getConfiguredPlanPrices: () => ({
+    plus: "price_plus",
+    pro: "price_pro",
+    max: "price_max",
+  }),
+  getPriceIdForPlan: (plan: "plus" | "pro" | "max") => `price_${plan}`,
   TERMINAL_SUBSCRIPTION_STATUSES: new Set([
     "canceled",
     "incomplete_expired",
   ]),
-  appUrl: () => "https://conlearn.example",
+  appUrl: () => "https://smartlearn.example",
   getPortalConfigurationId: () => undefined,
   getOrCreateCustomer: mocks.getOrCreateCustomer,
   stripeIdempotencyKey: (
     operation: string,
     userId: string,
     priceId?: string
-  ) => ["conlearn", operation, userId, priceId].filter(Boolean).join(":"),
+  ) => ["smartlearn", operation, userId, priceId].filter(Boolean).join(":"),
 }));
 
 import { POST } from "@/app/api/billing/checkout/route";
+
+function checkoutRequest(plan = "pro") {
+  return new Request("https://smartlearn.example/api/billing/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plan }),
+  });
+}
 
 describe("billing Checkout route", () => {
   beforeEach(() => {
@@ -56,14 +69,14 @@ describe("billing Checkout route", () => {
   it("requires an authenticated user", async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null } });
 
-    const response = await POST();
+    const response = await POST(checkoutRequest());
 
     expect(response.status).toBe(401);
     expect(mocks.createCheckout).not.toHaveBeenCalled();
   });
 
   it("creates one metadata-linked, idempotent Pro Checkout session", async () => {
-    const response = await POST();
+    const response = await POST(checkoutRequest("plus"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -77,23 +90,29 @@ describe("billing Checkout route", () => {
       mode: "subscription",
       customer: "cus_1",
       client_reference_id: "user-1",
-      line_items: [{ price: "price_pro", quantity: 1 }],
-      metadata: { supabase_user_id: "user-1", plan: "pro" },
+      line_items: [{ price: "price_plus", quantity: 1 }],
+      metadata: { supabase_user_id: "user-1", plan: "plus" },
       subscription_data: {
-        metadata: { supabase_user_id: "user-1", plan: "pro" },
+        metadata: { supabase_user_id: "user-1", plan: "plus" },
       },
     });
     expect(options).toEqual({
-      idempotencyKey: "conlearn:checkout:user-1:price_pro",
+      idempotencyKey: "smartlearn:checkout:user-1:price_plus",
     });
   });
 
   it("opens the portal instead of creating a duplicate subscription", async () => {
     mocks.listSubscriptions.mockResolvedValue({
-      data: [{ id: "sub_1", status: "past_due" }],
+      data: [
+        {
+          id: "sub_1",
+          status: "past_due",
+          items: { data: [{ price: { id: "price_pro" } }] },
+        },
+      ],
     });
 
-    const response = await POST();
+    const response = await POST(checkoutRequest());
     const body = await response.json();
 
     expect(body.destination).toBe("portal");
@@ -104,10 +123,16 @@ describe("billing Checkout route", () => {
 
   it("allows a fresh Checkout after a terminal subscription", async () => {
     mocks.listSubscriptions.mockResolvedValue({
-      data: [{ id: "sub_old", status: "canceled" }],
+      data: [
+        {
+          id: "sub_old",
+          status: "canceled",
+          items: { data: [{ price: { id: "price_pro" } }] },
+        },
+      ],
     });
 
-    const response = await POST();
+    const response = await POST(checkoutRequest());
 
     expect(response.status).toBe(200);
     expect(mocks.createCheckout).toHaveBeenCalledTimes(1);

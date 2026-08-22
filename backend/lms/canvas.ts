@@ -160,8 +160,14 @@ export interface CanvasCourse {
   course_code: string;
   enrollment_term_id: number;
   teachers?: Array<{ display_name: string; login_id: string }>;
-  start_at?: string;
-  end_at?: string;
+  start_at?: string | null;
+  end_at?: string | null;
+  term?: {
+    id?: number;
+    name?: string | null;
+    start_at?: string | null;
+    end_at?: string | null;
+  } | null;
   syllabus_body?: string;
 }
 
@@ -640,7 +646,7 @@ export async function fetchCanvasCourses(
   domain: string,
   accessToken: string
 ): Promise<CanvasCourse[]> {
-  const url = `https://${domain}/api/v1/courses?enrollment_state=active&include[]=teachers&include[]=syllabus_body&per_page=50`;
+  const url = `https://${domain}/api/v1/courses?enrollment_state=active&include[]=teachers&include[]=term&include[]=syllabus_body&per_page=50`;
   
   try {
     return await fetchAllPages<CanvasCourse>(domain, accessToken, url);

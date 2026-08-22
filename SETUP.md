@@ -1,4 +1,4 @@
-# Conlearn setup and deployment
+# Smartlearn setup and deployment
 
 ## 1. Configure the environment
 
@@ -7,11 +7,11 @@ Copy `.env.example` to `.env.local`. The build runs `npm run validate:env`; Verc
 Core services:
 
 - Supabase URL, anon key, and service-role key
-- OpenAI API key
-- Sarvam API key for audio transcription
+- OpenAI API key for text, vision, audio transcription, and embeddings
 - public application URL
 - Vercel Cron secret
 - Stripe secret, price, and webhook signing secret
+- a server-only owner allowlist (`ADMIN_EMAILS` and/or `ADMIN_USER_IDS`)
 
 LMS credentials are optional in pairs. Configure only the integrations you expose in production. Canvas personal access tokens work without Canvas OAuth credentials. Custom Canvas OAuth domains outside `*.instructure.com` must be listed in `CANVAS_ALLOWED_DOMAINS`.
 
@@ -74,7 +74,13 @@ Use least-privilege scopes at each provider. Rotate credentials immediately if a
 
 ## 5. Configure Stripe
 
-Create the recurring Pro price referenced by `STRIPE_PRO_PRICE_ID`. Configure the webhook endpoint:
+Create three recurring monthly Stripe prices and configure their ids:
+
+- Plus ($4.99) as `STRIPE_PLUS_PRICE_ID`;
+- Pro ($19.99) as `STRIPE_PRO_PRICE_ID`;
+- Max ($29.99) as `STRIPE_MAX_PRICE_ID`.
+
+Configure the webhook endpoint:
 
 ```text
 https://YOUR_APP/api/billing/webhook
@@ -91,11 +97,26 @@ Subscribe it only to these events:
 
 Store that endpoint's signing secret as `STRIPE_WEBHOOK_SECRET`. In both Stripe
 test mode and live mode, configure the customer portal with subscription
-cancellation, payment-method updates, and invoice history, then preview it with
+cancellation, plan changes between all three prices, payment-method updates,
+and invoice history, then preview it with
 a test customer. Keep each environment's secret key, price, webhook secret, and
 portal configuration in the same Stripe mode.
 
-## 6. Deploy
+## 6. Configure transactional billing email
+
+Create a Resend account, verify a sending domain or subdomain, and create an API
+key. Configure:
+
+- `RESEND_API_KEY` with the server-only API key;
+- `RESEND_FROM_EMAIL` with a branded sender such as
+  `Smartlearn <billing@updates.your-domain.com>`;
+- optionally, `RESEND_REPLY_TO` with a monitored support inbox.
+
+Smartlearn queues upgrade and downgrade confirmations atomically with each Stripe
+plan change. Delivery uses the Stripe event id as an idempotency key, so webhook
+retries do not send duplicate messages.
+
+## 7. Deploy
 
 Add the variables from `.env.example` to Vercel and deploy. `vercel.json` runs an authenticated daily GET request to `/api/sync`; Vercel supplies `Authorization: Bearer $CRON_SECRET`.
 
@@ -111,6 +132,21 @@ npm run build
 ```
 
 After promotion, perform a smoke test with a non-admin account: sign up/sign in, connect Canvas, sync one course, import a PDF and PPTX, generate and submit a practice session, verify analytics, and complete a Stripe test checkout/webhook cycle.
+
+## Owner analytics
+
+The private `/admin` workspace is denied by default. Add the owner's normalized
+email to `ADMIN_EMAILS`, or preferably their immutable Supabase user UUID to
+`ADMIN_USER_IDS`. Both variables are server-only, accept comma-separated values,
+and must never use a `NEXT_PUBLIC_` prefix. Non-allowlisted users receive a 404
+from both the page and `/api/admin/overview` even if they guess the URL.
+
+Stripe revenue, subscriptions, balance transactions, fees, refunds, and balances
+use `STRIPE_SECRET_KEY`. Exact organization-wide OpenAI tokens, requests, model
+usage, and cost line items require a separate organization Admin API key in
+`OPENAI_ADMIN_KEY`; the normal project `OPENAI_API_KEY` cannot read those admin
+endpoints. Without it, the dashboard uses Smartlearn's local cost-weighted metering
+as an explicitly labeled estimate.
 
 ## Operational notes
 

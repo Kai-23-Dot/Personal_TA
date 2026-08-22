@@ -18,13 +18,27 @@ import {
   normalizeCanvasDomain,
   verifyCanvasOAuthState,
 } from "@/backend/security/canvas";
+import {
+  asMetadataRecord,
+  CANVAS_CONNECTION_AGREEMENT_VERSION,
+  hasCurrentCanvasConnectionAgreement,
+} from "@/backend/lms/canvasAgreement";
 import { z } from "zod";
 
-const CANVAS_STATE_COOKIE = "conlearn_canvas_oauth_nonce";
+const CANVAS_STATE_COOKIE = "smartlearn_canvas_oauth_nonce";
 const canvasTokenSchema = z.object({
   access_token: z.string().trim().min(1).max(4096),
   domain: z.string().trim().min(1).max(300),
 }).strict();
+const canvasAgreementSchema = z.object({
+  accepted: z.literal(true),
+  connectionId: z.string().uuid(),
+}).strict();
+
+type CanvasConnectionResult = {
+  agreementRequired: boolean;
+  id: string | null;
+};
 
 /** Upsert a Canvas connection keyed by (user_id, canvas_domain). */
 async function upsertCanvasConnection(
@@ -37,19 +51,40 @@ async function upsertCanvasConnection(
     platform_user_id?: string | null;
     platform_email?: string | null;
     scopes?: string[];
+    requireAgreement?: boolean;
   }
-): Promise<string | null> {
-  const { canvas_domain, access_token, refresh_token, platform_user_id, platform_email, scopes } = fields;
+): Promise<CanvasConnectionResult> {
+  const {
+    canvas_domain,
+    access_token,
+    refresh_token,
+    platform_user_id,
+    platform_email,
+    scopes,
+    requireAgreement = false,
+  } = fields;
 
   // Check for an existing connection with this domain
   const { data: existing, error: lookupError } = await supabase
     .from("lms_connections")
-    .select("id")
+    .select("id, metadata")
     .eq("user_id", userId)
     .eq("platform", "canvas")
     .eq("canvas_domain", canvas_domain)
     .maybeSingle();
   if (lookupError) throw lookupError;
+
+  const agreementRequired = requireAgreement && !hasCurrentCanvasConnectionAgreement(existing?.metadata);
+  const now = new Date().toISOString();
+  const metadata = asMetadataRecord(existing?.metadata);
+  if (agreementRequired) {
+    metadata.canvas_connection_agreement = {
+      connection_method: "personal_access_token",
+      presented_at: now,
+      status: "pending",
+      version: CANVAS_CONNECTION_AGREEMENT_VERSION,
+    };
+  }
 
   if (existing?.id) {
     const { error: updateError } = await supabase
@@ -60,12 +95,13 @@ async function upsertCanvasConnection(
         platform_user_id: platform_user_id ?? null,
         platform_email: platform_email ?? null,
         scopes: scopes ?? null,
-        is_active: true,
-        updated_at: new Date().toISOString(),
+        is_active: !agreementRequired,
+        metadata,
+        updated_at: now,
       })
       .eq("id", existing.id);
     if (updateError) throw updateError;
-    return existing.id;
+    return { agreementRequired, id: existing.id };
   }
 
   const { data: newConn, error: insertError } = await supabase
@@ -79,13 +115,14 @@ async function upsertCanvasConnection(
       platform_user_id: platform_user_id ?? null,
       platform_email: platform_email ?? null,
       scopes: scopes ?? null,
-      is_active: true,
+      is_active: !agreementRequired,
+      metadata,
     })
     .select("id")
     .single();
   if (insertError) throw insertError;
 
-  return newConn?.id ?? null;
+  return { agreementRequired, id: newConn?.id ?? null };
 }
 
 export async function GET(req: NextRequest) {
@@ -149,7 +186,7 @@ export async function GET(req: NextRequest) {
     });
     const profile = profileRes.ok ? await profileRes.json() : {};
 
-    const connId = await upsertCanvasConnection(supabase, user.id, {
+    const connection = await upsertCanvasConnection(supabase, user.id, {
       canvas_domain: canvasDomain,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token ?? null,
@@ -158,7 +195,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Pass the connection ID so the settings page can auto-trigger sync
-    const syncParam = connId ? `&sync_id=${connId}` : "";
+    const syncParam = connection.id ? `&sync_id=${connection.id}` : "";
     const response = NextResponse.redirect(
       new URL(`/settings?connected=canvas${syncParam}`, req.url)
     );
@@ -229,6 +266,8 @@ export async function POST(req: Request) {
     }
     let domain: string;
     try {
+      // Only Instructure-hosted or administrator-allowlisted Canvas domains may
+      // receive a user's password-equivalent personal access token.
       domain = normalizeCanvasDomain(parsedBody.data.domain, { forOAuth: true });
     } catch (domainError) {
       return NextResponse.json(
@@ -241,21 +280,91 @@ export async function POST(req: Request) {
     // Validate token by fetching user profile from Canvas.
     const profile = await fetchCanvasUserProfile(domain, accessToken);
     if (!profile) {
-      return NextResponse.json({ error: "Canvas token validation failed. Check domain/token and try again." }, { status: 400 });
+      return NextResponse.json({ error: "Canvas could not verify that token. Make sure the school address is correct, copy the entire token, and confirm the token has not expired." }, { status: 400 });
     }
 
-    const connId = await upsertCanvasConnection(supabase, user.id, {
+    const connection = await upsertCanvasConnection(supabase, user.id, {
       canvas_domain: domain,
       access_token: accessToken,
       refresh_token: null,
       platform_user_id: profile.id ? String(profile.id) : null,
       platform_email: profile.login_id ?? profile.primary_email ?? null,
       scopes: ["personal_access_token"],
+      requireAgreement: true,
     });
 
-    return NextResponse.json({ success: true, connectionId: connId });
+    return NextResponse.json({
+      success: true,
+      agreementRequired: connection.agreementRequired,
+      agreementVersion: CANVAS_CONNECTION_AGREEMENT_VERSION,
+      connectionId: connection.id,
+    });
   } catch (err) {
     console.error("[Canvas] Connection failed:", err);
     return NextResponse.json({ error: "Failed to connect Canvas." }, { status: 500 });
+  }
+}
+
+/**
+ * Activate a validated personal-token connection only after the user accepts
+ * the versioned Canvas connection agreement.
+ */
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const parsedBody = canvasAgreementSchema.safeParse(
+      await req.json().catch(() => null)
+    );
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "A valid Canvas connection and explicit agreement are required." },
+        { status: 400 }
+      );
+    }
+
+    const { data: connection, error: lookupError } = await supabase
+      .from("lms_connections")
+      .select("id, metadata, scopes")
+      .eq("id", parsedBody.data.connectionId)
+      .eq("user_id", user.id)
+      .eq("platform", "canvas")
+      .maybeSingle();
+
+    if (lookupError || !connection || !connection.scopes?.includes("personal_access_token")) {
+      return NextResponse.json({ error: "Canvas connection not found." }, { status: 404 });
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const metadata = asMetadataRecord(connection.metadata);
+    metadata.canvas_connection_agreement = {
+      accepted_at: acceptedAt,
+      connection_method: "personal_access_token",
+      status: "accepted",
+      version: CANVAS_CONNECTION_AGREEMENT_VERSION,
+    };
+
+    const { error: updateError } = await supabase
+      .from("lms_connections")
+      .update({
+        is_active: true,
+        metadata,
+        updated_at: acceptedAt,
+      })
+      .eq("id", connection.id)
+      .eq("user_id", user.id);
+    if (updateError) throw updateError;
+
+    return NextResponse.json({
+      success: true,
+      acceptedAt,
+      agreementVersion: CANVAS_CONNECTION_AGREEMENT_VERSION,
+      connectionId: connection.id,
+    });
+  } catch (err) {
+    console.error("[Canvas] Agreement acceptance failed:", err);
+    return NextResponse.json({ error: "Failed to save the Canvas agreement." }, { status: 500 });
   }
 }

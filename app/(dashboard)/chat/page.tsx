@@ -320,7 +320,7 @@ export default function ChatPage() {
               onPaste={handlePaste}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
-              placeholder="Message Conlearn... (paste screenshot with Ctrl+V)"
+              placeholder="Message Smartlearn... (paste screenshot with Ctrl+V)"
               rows={1}
               style={{
                 resize: "none",

@@ -4,21 +4,41 @@ import { generateFlashcardsFromContent } from "@/backend/ai/generateFlashcards";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
+const flashcardUnitSchema = z.object({
+  moduleId: z.number().int().positive().nullable(),
+  moduleName: z.string().trim().min(1).max(300),
+  source: z.enum(["canvas", "generated"]),
+  assignmentIds: z.array(z.string().uuid()).max(100),
+  noteIds: z.array(z.string().uuid()).max(100),
+}).strict();
+
 const flashcardGenerationSchema = z.object({
   noteId: z.string().uuid().optional(),
+  noteIds: z.array(z.string().uuid()).max(100).optional(),
   courseId: z.string().uuid().optional(),
   topic: z.string().trim().min(1).max(200).optional(),
+  units: z.array(flashcardUnitSchema).min(1).max(12).optional(),
   count: z.number().int().min(1).max(30).default(10),
   difficulty: z.enum(["easy", "medium", "hard", "mixed"]).default("mixed"),
 }).strict().superRefine((value, context) => {
-  if (!value.noteId && (!value.topic || !value.courseId)) {
+  const hasSelectedContent = Boolean(
+    value.noteId || value.noteIds?.length || value.units?.length
+  );
+  if (!hasSelectedContent && (!value.topic || !value.courseId)) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Provide a note, or both a course and topic.",
+    });
+  }
+  if ((value.noteIds?.length || value.units?.length) && !value.courseId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A course is required for selected notes or units.",
     });
   }
 });
@@ -29,7 +49,7 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    const tokenCheck = await assertWithinLimit(user.id, "ai_credits");
     if (!tokenCheck.ok) {
       return NextResponse.json(
         { success: false, error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
@@ -50,18 +70,20 @@ export async function POST(req: Request) {
       );
     }
     let { courseId } = parsed.data;
-    const { noteId, topic, count, difficulty } = parsed.data;
+    const { noteId, noteIds, topic, units = [], count, difficulty } = parsed.data;
 
     let content = "";
     let courseName: string | undefined;
     let derivedTopic = topic;
+    const contentBlocks: Array<{ text: string; moduleName?: string }> = [];
 
     if (noteId) {
       const { data: note } = await supabase
         .from("notes")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("id", noteId)
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .single();
 
       if (!note || !note.content) {
@@ -75,7 +97,7 @@ export async function POST(req: Request) {
         );
       }
       courseId = note.course_id ?? courseId;
-      content = note.content;
+      contentBlocks.push({ text: `## ${note.title}\n${note.content}` });
       courseName = (note as { course?: { name: string } }).course?.name;
       derivedTopic = topic || note.title;
     }
@@ -86,6 +108,7 @@ export async function POST(req: Request) {
         .select("name")
         .eq("id", courseId)
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .single();
       if (!course) {
         return NextResponse.json(
@@ -96,27 +119,121 @@ export async function POST(req: Request) {
       courseName = course?.name;
     }
 
-    // If no note content, use canvasDeepFetch to pull the most relevant course content
-    if (!content && topic && courseId) {
+    const selectedUnitNames = units.map((unit) => unit.moduleName);
+    derivedTopic = derivedTopic || selectedUnitNames.join(", ").slice(0, 200);
+    const selectedUnitChars = selectedUnitNames.length > 1
+      ? Math.max(900, Math.floor(18_000 / selectedUnitNames.length))
+      : 4_000;
+    const selectedCanvasUnits = units.filter((unit) => unit.source === "canvas");
+    const noteUnitNames = new Map<string, string>();
+    const assignmentUnitNames = new Map<string, string>();
+    for (const unit of units) {
+      for (const id of unit.noteIds) {
+        if (!noteUnitNames.has(id)) noteUnitNames.set(id, unit.moduleName);
+      }
+      for (const id of unit.assignmentIds) {
+        if (!assignmentUnitNames.has(id)) assignmentUnitNames.set(id, unit.moduleName);
+      }
+    }
+
+    const requestedNoteIds = [
+      ...new Set([
+        ...(noteIds ?? []),
+        ...units.flatMap((unit) => unit.noteIds),
+      ]),
+    ].slice(0, 120);
+    if (courseId && requestedNoteIds.length > 0) {
+      const { data: selectedNotes, error: selectedNotesError } = await supabase
+        .from("notes")
+        .select("id, title, content")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .in("id", requestedNoteIds)
+        .not("content", "is", null);
+      if (selectedNotesError) {
+        throw new Error("Failed to load selected course notes.");
+      }
+      for (const note of selectedNotes ?? []) {
+        const unitName = noteUnitNames.get(note.id);
+        contentBlocks.push({
+          moduleName: unitName,
+          text: `## ${note.title}${unitName ? ` (${unitName})` : ""}\n${String(note.content).slice(0, unitName ? selectedUnitChars : 4_000)}`,
+        });
+      }
+    }
+
+    const requestedAssignmentIds = [
+      ...new Set(units.flatMap((unit) => unit.assignmentIds)),
+    ].slice(0, 120);
+    if (courseId && requestedAssignmentIds.length > 0) {
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from("assignments")
+        .select("id, title, description")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .in("id", requestedAssignmentIds);
+      if (assignmentsError) {
+        throw new Error("Failed to load selected unit assignments.");
+      }
+      for (const assignment of assignments ?? []) {
+        const description = assignment.description?.trim();
+        if (!description) continue;
+        const unitName = assignmentUnitNames.get(assignment.id);
+        contentBlocks.push({
+          moduleName: unitName,
+          text: `## ${assignment.title}${unitName ? ` (${unitName})` : ""}\n${description.slice(0, Math.min(1_800, selectedUnitChars))}`,
+        });
+      }
+    }
+
+    // Pull Canvas sources for every selected Canvas unit. For legacy requests
+    // without explicit content, retain topic-based whole-course retrieval.
+    if (topic && courseId && (selectedCanvasUnits.length > 0 || contentBlocks.length === 0)) {
       const retrieval = await canvasDeepFetch({
         userId: user.id,
         courseId,
         topic,
-        limit: 10,
+        moduleIds: selectedCanvasUnits
+          .map((unit) => unit.moduleId)
+          .filter((id): id is number => id !== null),
+        moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
+        limit: Math.min(24, Math.max(10, selectedCanvasUnits.length * 4)),
       });
 
       if (retrieval.ranked.length > 0) {
-        // Use direct content if available, otherwise style-hint content
-        const sources = retrieval.hasDirectContent
+        // Explicit module membership is already a strong relevance signal.
+        // Confidence only gates older, unscoped topic searches.
+        const sources = selectedCanvasUnits.length > 0
+          ? retrieval.ranked
+          : retrieval.hasDirectContent
           ? retrieval.ranked.filter((r) => r.confidence >= 0.3)
           : retrieval.ranked;
-
-        content = sources
-          .slice(0, 8)
-          .map((r) => `## ${r.chunk.title}\n${r.chunk.text.slice(0, 3000)}`)
-          .join("\n\n---\n\n");
+        const balancedSources = selectBalancedModuleSources(
+          sources,
+          selectedCanvasUnits.map((unit) => unit.moduleName),
+          Math.min(16, Math.max(8, selectedCanvasUnits.length * 3))
+        );
+        for (const source of balancedSources) {
+          contentBlocks.push({
+            moduleName: source.chunk.moduleName ?? undefined,
+            text: `## ${source.chunk.title}${source.chunk.moduleName ? ` (${source.chunk.moduleName})` : ""}\n${source.chunk.text.slice(0, Math.min(3_000, selectedUnitChars))}`,
+          });
+        }
       }
     }
+
+    const orderedContent = selectBalancedModuleSources(
+      contentBlocks.map((block) => ({
+        chunk: { moduleName: block.moduleName },
+        block,
+      })),
+      selectedUnitNames,
+      contentBlocks.length
+    );
+    content = orderedContent
+      .map(({ block }) => block.text)
+      .join("\n\n---\n\n")
+      .slice(0, 80_000);
 
     // Final fallback: recent summaries for the topic
     if (!content && topic) {

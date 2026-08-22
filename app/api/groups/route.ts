@@ -37,7 +37,7 @@ export async function GET() {
   const [groupsRes, countsRes, meetingsRes, checkinsRes] = await Promise.all([
     admin
       .from("study_groups")
-      .select("*, course:courses(name)")
+      .select("*, course:courses(name,is_active)")
       .in("id", groupIds)
       .order("created_at", { ascending: false }),
     admin.from("group_members").select("group_id").in("group_id", groupIds),
@@ -68,9 +68,14 @@ export async function GET() {
   });
 
   const today = toUtcDateString(now);
+  const visibleGroups = (groupsRes.data ?? []).filter((group) => {
+    if (!group.course_id) return true;
+    const course = Array.isArray(group.course) ? group.course[0] : group.course;
+    return course?.is_active === true;
+  });
 
   return NextResponse.json({
-    groups: (groupsRes.data ?? []).map((g) => {
+    groups: visibleGroups.map((g) => {
       const meetings = meetingsByGroup[g.id] ?? [];
       const checkins = checkinsByGroup[g.id] ?? [];
       const { health, goalStatus, nextMeetingAt } = deriveGroupSignals(
@@ -107,6 +112,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validated.error }, { status: 400 });
   }
   const { name, description, courseId, goal, targetEndDate, meetings } = validated.value;
+
+  if (courseId) {
+    const { data: course } = await admin
+      .from("courses")
+      .select("id")
+      .eq("id", courseId)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!course) {
+      return NextResponse.json({ error: "Course is no longer active." }, { status: 400 });
+    }
+  }
 
   // Use admin for the entire create+select to avoid the study_groups SELECT
   // policy triggering the recursive group_members RLS check.

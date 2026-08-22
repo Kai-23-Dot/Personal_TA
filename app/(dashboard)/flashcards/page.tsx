@@ -21,11 +21,11 @@ type SavedSet = { topic: string; count: number; cards: Flashcard[] };
 export default function FlashcardsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   // Draft form state — persisted so a half-configured set survives exit.
-  const [courseId, setCourseId] = usePersistentState("conlearn:flashcards:courseId", "");
+  const [courseId, setCourseId] = usePersistentState("smartlearn:flashcards:courseId", "");
   const [noteId] = useState("");
-  const [topic, setTopic] = usePersistentState("conlearn:flashcards:topic", "");
-  const [count, setCount] = usePersistentState("conlearn:flashcards:count", 10);
-  const [difficulty, setDifficulty] = usePersistentState<"mixed" | "easy" | "medium" | "hard">("conlearn:flashcards:difficulty", "mixed");
+  const [topic, setTopic] = usePersistentState("smartlearn:flashcards:topic", "");
+  const [count, setCount] = usePersistentState("smartlearn:flashcards:count", 10);
+  const [difficulty, setDifficulty] = usePersistentState<"mixed" | "easy" | "medium" | "hard">("smartlearn:flashcards:difficulty", "mixed");
   const [loading, setLoading] = useState(false);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);

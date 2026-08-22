@@ -3,7 +3,9 @@ import { authUnavailableResponse, createAuthRouteClient } from "../_supabase-rou
 import { z } from "zod";
 
 const loginSchema = z.object({
-  captchaToken: z.string().max(4096).optional(),
+  // Older clients sent null when Turnstile was not configured. Accept and
+  // normalize it so authentication is not blocked before reaching Supabase.
+  captchaToken: z.string().max(4096).nullish(),
   email: z.string().trim().email().max(254),
   password: z.string().min(1).max(1024),
 }).strict();
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
   const { email, password } = parsed.data;
   // Turnstile token — verified by Supabase when CAPTCHA protection is enabled
   // in the project's Auth settings; ignored otherwise.
-  const captchaToken = parsed.data.captchaToken;
+  const captchaToken = parsed.data.captchaToken ?? undefined;
 
   const authClient = createAuthRouteClient(request);
   if ("errorResponse" in authClient) {

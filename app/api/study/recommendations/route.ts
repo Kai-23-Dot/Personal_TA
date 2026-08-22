@@ -25,23 +25,34 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Fetch weak topics from performance_metrics
-  const { data: metrics } = await supabase
-    .from("performance_metrics")
-    .select("topic, course_id, accuracy_pct")
+  const { data: activeCourses } = await supabase
+    .from("courses")
+    .select("id")
     .eq("user_id", user.id)
-    .order("accuracy_pct", { ascending: true })
-    .limit(20);
+    .eq("is_active", true);
+  const activeCourseIds = (activeCourses ?? []).map((course) => course.id);
+  if (activeCourseIds.length === 0) return NextResponse.json([]);
 
-  // Fetch upcoming incomplete assignments (for grade impact + topic seeding)
-  const { data: rawAssignments } = await supabase
-    .from("assignments")
-    .select(`id, title, assignment_type, due_date, weight, points_possible, is_completed, course:courses(id, name)`)
-    .eq("user_id", user.id)
-    .eq("is_completed", false)
-    .or(`due_date.is.null,due_date.gte.${new Date().toISOString()}`)
-    .order("due_date", { ascending: true, nullsFirst: false })
-    .limit(30);
+  // Both weakness signals and assignment fallbacks must belong to a current course.
+  const [{ data: metrics }, { data: rawAssignments }] = await Promise.all([
+    supabase
+      .from("performance_metrics")
+      .select("topic, course_id, accuracy_pct")
+      .eq("user_id", user.id)
+      .in("course_id", activeCourseIds)
+      .order("accuracy_pct", { ascending: true })
+      .limit(20),
+    supabase
+      .from("assignments")
+      .select(`id, title, assignment_type, due_date, weight, points_possible, is_completed, course:courses!inner(id, name, is_active)`)
+      .eq("user_id", user.id)
+      .eq("course.is_active", true)
+      .in("course_id", activeCourseIds)
+      .eq("is_completed", false)
+      .or(`due_date.is.null,due_date.gte.${new Date().toISOString()}`)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(30),
+  ]);
 
   const assignments = ((rawAssignments ?? []) as any[]).map((a) => {
     const c = Array.isArray(a.course) ? a.course[0] : a.course;

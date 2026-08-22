@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { getActiveCourseIds, retainActiveCourseRows } from "@/backend/lms/activeCourses";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -19,9 +20,12 @@ export async function GET(req: Request) {
   if (from) query = query.gte("start_time", from);
   if (to) query = query.lte("start_time", to);
 
-  const { data, error } = await query;
+  const [{ data, error }, activeCourseIds] = await Promise.all([
+    query,
+    getActiveCourseIds(supabase, user.id),
+  ]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(retainActiveCourseRows(data ?? [], activeCourseIds));
 }
 
 export async function POST(req: Request) {

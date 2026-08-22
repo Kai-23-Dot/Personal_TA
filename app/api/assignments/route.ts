@@ -18,6 +18,8 @@ const assignmentTypeSchema = z.enum([
   "project",
   "lab",
   "essay",
+  "discussion",
+  "reading",
   "other",
 ]);
 const dateSchema = z.string().max(64).refine(
@@ -55,8 +57,9 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("assignments")
-    .select("*, course:courses(id, name, color)")
+    .select("*, course:courses!inner(id, name, color, is_active)")
     .eq("user_id", user.id)
+    .eq("course.is_active", true)
     .or(`due_date.is.null,due_date.gte.${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()}`)
     .order("due_date", { ascending: false, nullsFirst: false });
 
@@ -164,6 +167,7 @@ export async function PATCH(req: Request) {
       .select("id")
       .eq("id", validatedUpdates.course_id)
       .eq("user_id", user.id)
+      .eq("is_active", true)
       .maybeSingle();
     if (!destinationCourse) {
       return NextResponse.json({ error: "Destination course not found." }, { status: 404 });

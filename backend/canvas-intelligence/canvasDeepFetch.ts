@@ -37,6 +37,11 @@ import {
   fuzzyTitleScore,
 } from "./rankingModel";
 import { explainSourceChoice } from "./sourceExplainer";
+import {
+  buildModuleAwarePageInventory,
+  buildSelectedModuleFileInventory,
+} from "./moduleScope";
+import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
 import type {
   CanvasContentItem,
   DocumentChunk,
@@ -94,6 +99,7 @@ type NoteRow = {
 type AssignmentRow = {
   id: string;
   course_id: string;
+  platform_id: string | null;
   title: string;
   description: string | null;
   due_date: string | null;
@@ -143,7 +149,7 @@ function assignmentRowToContentItem(a: AssignmentRow): CanvasContentItem {
     updatedAt: a.updated_at,
     linkedFromModule: false,
     linkedFrom: null,
-    metadata: {},
+    metadata: { platformId: a.platform_id },
   };
 }
 
@@ -263,11 +269,34 @@ export async function canvasDeepFetch(params: {
   userId: string;
   courseId: string;
   topic: string;
+  moduleId?: number;
+  moduleName?: string;
+  moduleIds?: readonly number[];
+  moduleNames?: readonly string[];
   limit?: number;
   testDate?: string;
 }): Promise<CanvasDeepFetchResult> {
-  const { userId, courseId, topic, limit = 12, testDate } = params;
+  const {
+    userId,
+    courseId,
+    topic,
+    moduleId,
+    moduleName,
+    moduleIds = [],
+    moduleNames: requestedModuleNames = [],
+    limit = 12,
+    testDate,
+  } = params;
   const supabase = createServiceClient();
+  const requestedModuleIdSet = new Set([
+    ...moduleIds,
+    ...(moduleId === undefined ? [] : [moduleId]),
+  ]);
+  const requestedModuleNameKeys = new Set(
+    [...requestedModuleNames, ...(moduleName ? [moduleName] : [])]
+      .map((name) => name.trim().toLowerCase())
+      .filter(Boolean)
+  );
 
   // Precompute topic words once (used throughout)
   const topicWords = topic
@@ -294,7 +323,7 @@ export async function canvasDeepFetch(params: {
       .limit(150),
     supabase
       .from("assignments")
-      .select("id, course_id, title, description, due_date, updated_at")
+      .select("id, course_id, platform_id, title, description, due_date, updated_at")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .not("description", "is", null)
@@ -311,6 +340,11 @@ export async function canvasDeepFetch(params: {
 
   const moduleNames: string[] = [];
   const warnings: string[] = [];
+  let resolvedSelectedModuleNames = new Set(
+    [...requestedModuleNames, ...(moduleName ? [moduleName] : [])]
+      .map((name) => name.trim())
+      .filter(Boolean)
+  );
 
   // ── Step 2: Live Canvas deep-crawl ────────────────────────────────────────
   if (connection?.access_token && connection.canvas_domain && course?.platform_id) {
@@ -363,7 +397,18 @@ export async function canvasDeepFetch(params: {
       moduleNames.push(...modules.map((m) => m.name));
 
       // ── 2a: Fetch module items → build page→module map ──────────────────
-      const moduleSlice = modules.slice(0, MAX_MODULES_FOR_ITEM_FETCH);
+      const requestedModules = modules.filter(
+        (module) =>
+          requestedModuleIdSet.has(module.id) ||
+          requestedModuleNameKeys.has(module.name.trim().toLowerCase())
+      );
+      const requestedModuleIds = new Set(requestedModules.map((module) => module.id));
+      // Always include the explicitly selected module, even in courses with
+      // more modules than the crawl cap.
+      const moduleSlice = [
+        ...requestedModules,
+        ...modules.filter((module) => !requestedModuleIds.has(module.id)),
+      ].slice(0, MAX_MODULES_FOR_ITEM_FETCH);
       const moduleItemsResults = await Promise.all(
         moduleSlice.map((m) =>
           fetchCanvasModuleItems(canvas_domain, access_token, canvasCourseId, m.id)
@@ -379,11 +424,57 @@ export async function canvasDeepFetch(params: {
         )
       );
 
-      const pageToModule = new Map<string, string>();
-      for (const { module, items } of moduleItemsResults) {
+      const selectedModuleNames = new Set(requestedModules.map((module) => module.name));
+      if (selectedModuleNames.size > 0) {
+        resolvedSelectedModuleNames = new Set(selectedModuleNames);
+      }
+      const selectedModuleResults = moduleItemsResults.filter(({ module }) =>
+        selectedModuleNames.has(module.name)
+      );
+      const selectedModuleFileIds = new Set(
+        selectedModuleResults
+          .flatMap(({ items }) => items
+            .filter((item) => item.type === "File" && item.content_id)
+            .map((item) => String(item.content_id)))
+      );
+      const selectedModuleAssignmentIds = new Set(
+        selectedModuleResults
+          .flatMap(({ items }) => items
+            .filter((item) => item.type === "Assignment" && item.content_id)
+            .map((item) => String(item.content_id)))
+      );
+      const selectedFileModuleNames = new Map<string, string>();
+      const selectedAssignmentModuleNames = new Map<string, string>();
+      for (const { module, items } of selectedModuleResults) {
         for (const item of items) {
-          if (item.type === "Page" && item.page_url) {
-            pageToModule.set(item.page_url, module.name);
+          if (item.type === "File" && item.content_id) {
+            selectedFileModuleNames.set(String(item.content_id), module.name);
+          }
+          if (item.type === "Assignment" && item.content_id) {
+            selectedAssignmentModuleNames.set(
+              String(item.content_id),
+              module.name
+            );
+          }
+        }
+      }
+
+      // Some Canvas installations return 404/empty for the course-wide Pages
+      // endpoint while still exposing Page items inside modules. Treat module
+      // items as the authoritative page inventory so those pages remain usable.
+      const { pages: availablePages, pageToModule } =
+        buildModuleAwarePageInventory(pages, moduleItemsResults);
+
+      // Synced assignments are loaded before module membership is known. Tag
+      // them now so an exact module selection does not discard their content.
+      if (selectedModuleAssignmentIds.size > 0) {
+        for (const item of contentItems) {
+          const platformId = item.metadata?.platformId;
+          if (item.type === "assignment" && selectedModuleAssignmentIds.has(String(platformId ?? ""))) {
+            item.moduleName =
+              selectedAssignmentModuleNames.get(String(platformId ?? "")) ??
+              null;
+            item.linkedFromModule = true;
           }
         }
       }
@@ -391,7 +482,9 @@ export async function canvasDeepFetch(params: {
       // ── 2b: Score modules against topic ────────────────────────────────
       const moduleScores = new Map<string, number>();
       for (const m of modules) {
-        moduleScores.set(m.name, moduleTopicScore(m.name, topicWords));
+        moduleScores.set(m.name, selectedModuleNames.size > 0
+          ? (selectedModuleNames.has(m.name) ? 1 : 0)
+          : moduleTopicScore(m.name, topicWords));
       }
       const highMatchModules = new Set(
         [...moduleScores.entries()]
@@ -404,20 +497,20 @@ export async function canvasDeepFetch(params: {
       // Priority 2: pages whose title keyword-matches the topic
       // All pages not already fully synced to DB are eligible
 
-      const pagesByPriority: Array<{ page: (typeof pages)[number]; moduleName: string | null }> = [];
-      const seenPageIds = new Set<number>();
+      const pagesByPriority: Array<{ page: (typeof availablePages)[number]; moduleName: string | null }> = [];
+      const seenPageUrls = new Set<string>();
 
       // Priority 1: module-matched pages (ALL of them, regardless of title)
-      for (const page of pages) {
+      for (const page of availablePages) {
         const modName = pageToModule.get(page.url) ?? null;
         if (modName && highMatchModules.has(modName)) {
-          pagesByPriority.unshift({ page, moduleName: modName }); // front
-          seenPageIds.add(page.page_id);
+          pagesByPriority.push({ page, moduleName: modName });
+          seenPageUrls.add(page.url);
         }
       }
 
       // Priority 2: remaining pages with title keyword match
-      const remaining = pages.filter((p) => !seenPageIds.has(p.page_id));
+      const remaining = availablePages.filter((page) => !seenPageUrls.has(page.url));
       const titleScored = remaining
         .map((p) => ({
           page: p,
@@ -429,12 +522,12 @@ export async function canvasDeepFetch(params: {
       pagesByPriority.push(...titleScored.map(({ page, moduleName }) => ({ page, moduleName })));
 
       // Priority 3: pages that belong to ANY module (structural relevance), not yet included
-      for (const page of pages) {
-        if (seenPageIds.has(page.page_id)) continue;
+      for (const page of availablePages) {
+        if (seenPageUrls.has(page.url)) continue;
         const modName = pageToModule.get(page.url);
         if (modName) {
           pagesByPriority.push({ page, moduleName: modName });
-          seenPageIds.add(page.page_id);
+          seenPageUrls.add(page.url);
         }
       }
 
@@ -481,6 +574,7 @@ export async function canvasDeepFetch(params: {
           updatedAt: result.updatedAt,
           linkedFromModule: result.moduleName !== null,
           linkedFrom: null,
+          sourceUrl: `https://${canvas_domain}/courses/${canvasCourseId}/pages/${result.slug}`,
           moduleName: result.moduleName,
           metadata: { sourceFileId: `canvas_page_${result.pageId}` },
         });
@@ -491,7 +585,10 @@ export async function canvasDeepFetch(params: {
         topicWords.filter((w) => w.length > 3).join("|"),
         "i"
       );
-      const relevantFiles = files.filter((f) => {
+      // Module file items often remain downloadable even when the course-wide
+      // Files listing is forbidden. Merge their signed URLs into the inventory.
+      const availableFiles = buildSelectedModuleFileInventory(files, selectedModuleResults);
+      const relevantFiles = availableFiles.filter((f) => {
         const name = `${f.display_name ?? ""} ${(f as unknown as { filename?: string }).filename ?? ""}`;
         const mimeType = (f as unknown as { "content-type"?: string; content_type?: string })["content-type"]
           ?? (f as unknown as { "content-type"?: string; content_type?: string }).content_type
@@ -499,7 +596,8 @@ export async function canvasDeepFetch(params: {
         const fileType = detectFileType(mimeType, name);
         if (!fileType) return false; // skip unsupported types
         // Match either topic words or high-value study terms
-        return (topicWords.length > 0 && topicFilePattern.test(name)) ||
+        return selectedModuleFileIds.has(String(f.id)) ||
+          (topicWords.length > 0 && topicFilePattern.test(name)) ||
           HIGH_VALUE_FILE_TERMS.test(name);
       });
 
@@ -510,7 +608,9 @@ export async function canvasDeepFetch(params: {
           score: keywordScore(f.display_name ?? "", topicWords) + fuzzyTitleScore(f.display_name ?? "", topicWords),
         }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, MAX_FILE_DOWNLOADS);
+        .slice(0, selectedModuleFileIds.size > 0
+          ? Math.min(24, Math.max(MAX_FILE_DOWNLOADS, selectedModuleFileIds.size))
+          : MAX_FILE_DOWNLOADS);
 
       const fileResults = await Promise.allSettled(
         filesScored.map(async ({ f }) => {
@@ -554,6 +654,9 @@ export async function canvasDeepFetch(params: {
           textContent: v.text,
           linkedFromModule: false,
           linkedFrom: null,
+          moduleName: selectedModuleFileIds.has(v.id.replace("canvas_file_", ""))
+            ? selectedFileModuleNames.get(v.id.replace("canvas_file_", "")) ?? null
+            : null,
           metadata: { fileName: v.fileName, mimeType: v.mimeType },
         });
       }
@@ -575,8 +678,11 @@ export async function canvasDeepFetch(params: {
           dueAt: a.due_at,
           dueDate: a.due_at,
           updatedAt: a.due_at ?? new Date().toISOString(),
-          linkedFromModule: false,
+          linkedFromModule: selectedModuleAssignmentIds.has(String(a.id)),
           linkedFrom: null,
+          moduleName: selectedModuleAssignmentIds.has(String(a.id))
+            ? selectedAssignmentModuleNames.get(String(a.id)) ?? null
+            : null,
           metadata: {},
         });
       }
@@ -617,10 +723,30 @@ export async function canvasDeepFetch(params: {
 
   // Sort descending; take top MAX_CANDIDATE_CHUNKS
   scoredChunks.sort((a, b) => b.w - a.w);
-  const candidates =
-    scoredChunks.filter((x) => x.w > 0).length >= 5
-      ? scoredChunks.filter((x) => x.w > 0).slice(0, MAX_CANDIDATE_CHUNKS).map((x) => x.c)
-      : scoredChunks.slice(0, MAX_CANDIDATE_CHUNKS).map((x) => x.c);
+  const positiveScoredChunks = scoredChunks.filter((item) => item.w > 0);
+  const baseCandidates = positiveScoredChunks.length >= 5 ? positiveScoredChunks : scoredChunks;
+  const selectedModuleKeys = new Set(
+    [...resolvedSelectedModuleNames].map((name) => name.trim().toLowerCase())
+  );
+  const isSelectedModuleChunk = (chunk: DocumentChunk) => Boolean(
+    selectedModuleKeys.size > 0 &&
+      selectedModuleKeys.has(chunk.moduleName?.trim().toLowerCase() ?? "")
+  );
+  const selectedCandidates = selectedModuleKeys.size > 0
+    ? scoredChunks.filter((item) => isSelectedModuleChunk(item.c))
+    : [];
+  const balancedSelectedCandidates = selectBalancedModuleSources(
+    selectedCandidates.map((item) => ({ chunk: item.c, item })),
+    [...resolvedSelectedModuleNames],
+    MAX_CANDIDATE_CHUNKS
+  ).map(({ item }) => item);
+  const selectedCandidateIds = new Set(
+    balancedSelectedCandidates.map((item) => item.c.id)
+  );
+  const candidates = [
+    ...balancedSelectedCandidates,
+    ...baseCandidates.filter((item) => !selectedCandidateIds.has(item.c.id)),
+  ].slice(0, MAX_CANDIDATE_CHUNKS).map((item) => item.c);
 
   // ── Step 5: Embed + multi-signal rank ────────────────────────────────────
   const embeddings = await embedTexts([
@@ -675,9 +801,21 @@ export async function canvasDeepFetch(params: {
   }
 
   ranked.sort((a, b) => b.score - a.score);
-  const top = ranked.slice(0, limit);
+  // An explicit Canvas module selection is a stronger relevance signal than
+  // semantic similarity to a generic module title. Never replace it with
+  // higher-scoring content from another unit.
+  const rankedPool = selectedModuleKeys.size > 0
+    ? ranked.filter((result) => isSelectedModuleChunk(result.chunk))
+    : ranked;
+  const top = selectBalancedModuleSources(
+    rankedPool,
+    [...resolvedSelectedModuleNames],
+    limit
+  );
   const confidence = scoreConfidence(top);
-  const hasDirectContent = top.some((r) => r.confidence >= 0.3);
+  const hasDirectContent = selectedModuleKeys.size > 0
+    ? top.length > 0
+    : top.some((r) => r.confidence >= 0.3);
 
   // ── Step 6: Style hint when no direct content ─────────────────────────────
   let styleHint: string | undefined;

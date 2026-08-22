@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    const tokenCheck = await assertWithinLimit(user.id, "ai_credits");
     if (!tokenCheck.ok) {
       return NextResponse.json(
         { error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
@@ -61,8 +61,9 @@ export async function POST(req: Request) {
     ] = await Promise.all([
       supabase
         .from("assignments")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .gte("due_date", today)
         .lte("due_date", twoWeeksOut)
         .eq("is_completed", false)
@@ -71,8 +72,9 @@ export async function POST(req: Request) {
 
       supabase
         .from("assignments")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .in("assignment_type", ["test", "exam", "quiz"])
         .gte("due_date", today)
         .lte("due_date", twoWeeksOut)
@@ -82,8 +84,9 @@ export async function POST(req: Request) {
 
       supabase
         .from("performance_metrics")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .lt("accuracy_pct", 70)
         .order("accuracy_pct", { ascending: true })
         .limit(5),

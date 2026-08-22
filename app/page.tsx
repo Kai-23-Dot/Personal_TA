@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -7,12 +5,15 @@ import {
   BookOpenCheck,
   Brain,
   CalendarCheck2,
+  Clock3,
   FileSearch,
   Layers3,
   PlugZap,
   Sparkles,
 } from "lucide-react";
-import { ConlearnFooter } from "@/frontend/components/layout/ConlearnFooter";
+import { SmartlearnFooter } from "@/frontend/components/layout/SmartlearnFooter";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
+import { createClient } from "@/backend/supabase/server";
 
 /* ─── Product showcase (code-native preview) ──────────────────── */
 function AppShowcase() {
@@ -31,15 +32,15 @@ function AppShowcase() {
             <span className="showcase-dot amber" />
             <span className="showcase-dot green" />
           </div>
-          <div className="showcase-address">conlearn.app/dashboard</div>
+          <div className="showcase-address">smartlearn.app/dashboard</div>
         </div>
 
         <div className="showcase-body">
-          <div className="showcase-product-preview" aria-label="Conlearn workflow preview">
+          <div className="showcase-product-preview" aria-label="Smartlearn workflow preview">
             <aside className="showcase-preview-sidebar">
               <div className="showcase-preview-brand">
-                <Image src="/conlearn-logo.png" alt="" width={24} height={24} />
-                <span>Conlearn</span>
+                <Image src="/smartlearn-logo.png" alt="" width={24} height={24} />
+                <span>Smartlearn</span>
               </div>
               {[
                 ["01", "Courses"],
@@ -167,11 +168,11 @@ const workflow = [
     icon: PlugZap,
     title: "Connect Canvas",
     description:
-      "Sign in once and Conlearn pulls your active courses, assignments, modules, pages, and files.",
+      "Sign in once and Smartlearn pulls your active courses, assignments, modules, pages, and files.",
   },
   {
     icon: FileSearch,
-    title: "Conlearn finds your course content",
+    title: "Smartlearn finds your course content",
     description:
       "The app organizes slides, notes, pages, due dates, and learning materials by course.",
   },
@@ -185,103 +186,120 @@ const workflow = [
 
 /* ─── Page ─────────────────────────────────────────────────────── */
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <div className="landing-root">
+      <SmartlearnHeader
+        showSignIn={!user}
+        actionLabel={user ? "Open workspace" : undefined}
+        actionHref={user ? "/dashboard" : undefined}
+      />
       {/* ══════════════════════════════════════════════════════════
-          HERO — full-viewport Spline 3D bg, content bottom-left
+          HERO — editorial copy + live learning intelligence console
           ══════════════════════════════════════════════════════════ */}
       <section className="hero-section">
-
-        {/* Hero background */}
         <div className="hero-spline-bg hero-spline-fallback" aria-hidden="true" />
-
-        {/* Dark overlay so text stays readable */}
         <div className="hero-overlay" aria-hidden="true" />
 
-        {/* Fixed navbar — floats over everything */}
-        <nav className="landing-nav" aria-label="Site navigation">
-          <Link href="/" className="landing-logo">
-            <Image src="/conlearn-logo.png" alt="Conlearn" width={28} height={28} className="object-contain" />
-            <span>Conlearn</span>
-          </Link>
-
-          <ul className="landing-nav-items">
-            <li>
-              <a href="#features" className="landing-nav-link">Features</a>
-            </li>
-            <li>
-              <a href="#workflow" className="landing-nav-link">How it works</a>
-            </li>
-            <li>
-              <a href="/about" className="landing-nav-link">About</a>
-            </li>
-            <li>
-              <a href="/contact" className="landing-nav-link">Contact</a>
-            </li>
-          </ul>
-
-          <Link href="/signup" className="landing-signup-btn">
-            Get Started
-          </Link>
-        </nav>
-
-        {/* Two-column hero grid */}
         <div className="hero-grid">
-          {/* Left — eyebrow + title + taglines */}
           <div className="hero-left">
-            <p
-              className="hero-eyebrow hero-animate"
-              style={{ animationDelay: "0.1s" }}
-            >
-              AI Teaching Assistant
-            </p>
             <h1
               className="hero-title hero-animate"
-              style={{ animationDelay: "0.2s" }}
+              style={{ animationDelay: "0.12s" }}
             >
-              Power <span className="hero-title-accent">AI</span>
+              Move through your semester <span className="hero-title-accent">with clarity.</span>
             </h1>
             <p
-              className="hero-subheading hero-animate"
-              style={{ animationDelay: "0.4s" }}
-            >
-              Your AI Teaching Assistant.
-            </p>
-            <p
               className="hero-subtitle hero-animate"
-              style={{ animationDelay: "0.55s" }}
+              style={{ animationDelay: "0.28s" }}
             >
-              Connect Canvas, find your class materials, and generate practice tests based on what
-              you&apos;re actually learning — all in one workspace.
+              Smartlearn connects Canvas, coursework, deadlines, and performance into one clear plan—so
+              every study session starts with purpose.
             </p>
+
+            <div className="hero-actions hero-animate" style={{ animationDelay: "0.4s" }}>
+              <Link href={user ? "/dashboard" : "/signup"} className="hero-cta-btn">
+                {user ? "Open my workspace" : "Build my workspace"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <a href="#workflow" className="hero-ghost-btn">
+                Explore the system <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+
+            <dl className="hero-metrics hero-animate" style={{ animationDelay: "0.52s" }}>
+              <div><dt>01</dt><dd>One connected workspace</dd></div>
+              <div><dt>24/7</dt><dd>Study signals online</dd></div>
+              <div><dt>Zero</dt><dd>Generic practice</dd></div>
+            </dl>
           </div>
 
-          {/* Right — CTA card */}
-          <div className="hero-right">
-            <div
-              className="hero-cta-card hero-animate"
-              style={{ animationDelay: "0.65s" }}
-            >
-              <div className="hero-actions">
-                <Link href="/settings/setup/canvas" className="hero-cta-btn">
-                  Connect Canvas <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <a href="#workflow" className="hero-ghost-btn">
-                  See how it works
-                </a>
+          <div className="hero-right hero-animate" style={{ animationDelay: "0.48s" }} aria-label="Smartlearn learning intelligence preview">
+            <div className="hero-console">
+              <div className="hero-console-head">
+                <div>
+                  <span className="console-overline">LIVE STUDY PLAN</span>
+                  <strong>Your next study move</strong>
+                </div>
+                <span className="console-live"><i /> CANVAS SYNCED</span>
               </div>
-              <p className="hero-trust">
-                AI-powered · Syncs with Canvas · Built for students
-              </p>
+
+              <div className="hero-signal-flow" aria-label="Signals used to build the recommendation">
+                <div className="hero-signal-card">
+                  <BookOpenCheck aria-hidden="true" />
+                  <span>Course</span>
+                  <strong>Calculus II</strong>
+                </div>
+                <ArrowRight className="hero-signal-arrow" aria-hidden="true" />
+                <div className="hero-signal-card">
+                  <Clock3 aria-hidden="true" />
+                  <span>Next deadline</span>
+                  <strong>Tomorrow</strong>
+                </div>
+                <ArrowRight className="hero-signal-arrow" aria-hidden="true" />
+                <div className="hero-signal-card is-plan">
+                  <Sparkles aria-hidden="true" />
+                  <span>Study plan</span>
+                  <strong>42 minutes</strong>
+                </div>
+              </div>
+
+              <div className="hero-recommendation">
+                <div className="hero-recommendation-copy">
+                  <span className="console-overline">RECOMMENDED FOCUS</span>
+                  <strong>Review integration techniques</strong>
+                  <p>Recent practice accuracy is lower here, and the topic appears on tomorrow&apos;s quiz.</p>
+                </div>
+                <div className="hero-mastery">
+                  <div>
+                    <span>Current mastery</span>
+                    <strong>68%</strong>
+                  </div>
+                  <div className="hero-mastery-track" aria-label="Current mastery: 68 percent">
+                    <span style={{ width: "68%" }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="console-command">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                <span><strong>Start targeted practice</strong><small>8 questions · adapts as you answer</small></span>
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </div>
             </div>
           </div>
         </div>
+
+        <div className="hero-edge-label" aria-hidden="true">SMARTLEARN / SYSTEM 2.0</div>
       </section>
 
 
       {/* ══════════════════════════════════════════════════════════
-          BELOW-HERO — features, workflow, CTA (unchanged)
+          BELOW-HERO — product preview, features, and workflow
           ══════════════════════════════════════════════════════════ */}
       <div className="landing-below-hero">
 
@@ -291,7 +309,7 @@ export default function HomePage() {
         {/* Features */}
         <section id="features" className="premium-section">
           <div className="premium-section-header">
-            <span className="premium-eyebrow">What Conlearn does</span>
+            <span className="premium-eyebrow">What Smartlearn does</span>
             <h2>A smoother way to turn class content into practice.</h2>
             <p>
               Everything is designed around the real classes, deadlines, and materials students
@@ -323,9 +341,9 @@ export default function HomePage() {
         <section id="workflow" className="premium-section premium-split">
           <div className="premium-rise">
             <span className="premium-eyebrow">Simple flow</span>
-            <h2>How Conlearn works.</h2>
+            <h2>How Smartlearn works.</h2>
             <p>
-              Conlearn keeps the workflow intentionally simple: connect Canvas, let the app find
+              Smartlearn keeps the workflow intentionally simple: connect Canvas, let the app find
               your real materials, then generate practice that matches your courses.
             </p>
             <Link href="/settings/setup/canvas" className="btn btn-primary mt-6">
@@ -351,7 +369,7 @@ export default function HomePage() {
 
       </div>
 
-      <ConlearnFooter />
+      <SmartlearnFooter />
     </div>
   );
 }

@@ -3,10 +3,16 @@
  * it relies on STRIPE_SECRET_KEY which must stay server-only.
  */
 import Stripe from "stripe";
+import {
+  PAID_PLAN_IDS,
+  PLAN_RANK,
+  type PaidPlan,
+  type Plan,
+} from "@/backend/billing/plans";
 
 let _stripe: Stripe | null = null;
 
-/** Subscription states that are entitled to Pro features. */
+/** Subscription states that grant access to a paid Smartlearn plan. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   "active",
   "trialing",
@@ -34,7 +40,7 @@ export function getStripe(): Stripe {
   _stripe = new Stripe(secretKey, {
     // Pin nothing here so the SDK uses the account's default API version,
     // avoiding TS literal-version drift across stripe-node upgrades.
-    appInfo: { name: "Conlearn" },
+    appInfo: { name: "Smartlearn" },
     typescript: true,
   });
   return _stripe;
@@ -51,8 +57,37 @@ export const stripe: Stripe = new Proxy({} as Stripe, {
   },
 });
 
-/** The recurring price id for the Pro plan ($20/mo). */
-export const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID ?? "";
+const PRICE_ENV_BY_PLAN: Record<PaidPlan, string> = {
+  plus: "STRIPE_PLUS_PRICE_ID",
+  pro: "STRIPE_PRO_PRICE_ID",
+  max: "STRIPE_MAX_PRICE_ID",
+};
+
+export type ConfiguredPlanPrices = Partial<Record<PaidPlan, string>>;
+
+/** Read configured recurring Stripe prices at request time. */
+export function getConfiguredPlanPrices(): ConfiguredPlanPrices {
+  const prices: ConfiguredPlanPrices = {};
+  const seen = new Set<string>();
+  for (const plan of PAID_PLAN_IDS) {
+    const priceId = process.env[PRICE_ENV_BY_PLAN[plan]]?.trim();
+    if (!priceId) continue;
+    if (seen.has(priceId)) {
+      throw new Error(`[billing] Stripe price ids must be unique (${priceId})`);
+    }
+    prices[plan] = priceId;
+    seen.add(priceId);
+  }
+  return prices;
+}
+
+export function getPriceIdForPlan(plan: PaidPlan): string {
+  const priceId = getConfiguredPlanPrices()[plan];
+  if (!priceId) {
+    throw new Error(`[billing] ${PRICE_ENV_BY_PLAN[plan]} is not set`);
+  }
+  return priceId;
+}
 
 /** Absolute base URL for Checkout / Portal redirect targets. */
 export function appUrl(): string {
@@ -70,7 +105,7 @@ export function stripeIdempotencyKey(
   userId: string,
   priceId?: string
 ): string {
-  return ["conlearn", operation, userId, priceId].filter(Boolean).join(":");
+  return ["smartlearn", operation, userId, priceId].filter(Boolean).join(":");
 }
 
 /** Optional override; omit it to let Stripe use the mode's default portal. */
@@ -98,31 +133,45 @@ export function subscriptionPeriodEnd(
 }
 
 export interface SubscriptionEntitlement {
-  plan: "free" | "pro";
+  plan: Plan;
   subscriptionId: string | null;
   status: Stripe.Subscription.Status | null;
   currentPeriodEnd: number | null;
 }
 
 /**
- * Resolve access from all subscriptions for the configured price. This avoids
- * downgrading a customer when an older duplicate subscription is canceled.
+ * Resolve access from all subscriptions for the configured Smartlearn prices.
+ * If duplicate paid subscriptions exist, an active higher tier wins.
  */
 export function resolveSubscriptionEntitlement(
   subscriptions: Stripe.Subscription[],
-  priceId: string
+  prices: ConfiguredPlanPrices
 ): SubscriptionEntitlement {
-  const matching = subscriptions.filter((subscription) =>
-    subscriptionHasPrice(subscription, priceId)
-  );
+  const planForSubscription = (subscription: Stripe.Subscription): PaidPlan | null => {
+    const matchingPlans = PAID_PLAN_IDS.filter((plan) => {
+      const priceId = prices[plan];
+      return Boolean(priceId && subscriptionHasPrice(subscription, priceId));
+    });
+    return matchingPlans.sort((a, b) => PLAN_RANK[b] - PLAN_RANK[a])[0] ?? null;
+  };
+  const matching = subscriptions
+    .map((subscription) => ({ subscription, plan: planForSubscription(subscription) }))
+    .filter(
+      (entry): entry is { subscription: Stripe.Subscription; plan: PaidPlan } =>
+        entry.plan !== null
+    );
   const ranked = [...matching].sort((a, b) => {
-    const aActive = ACTIVE_SUBSCRIPTION_STATUSES.has(a.status) ? 1 : 0;
-    const bActive = ACTIVE_SUBSCRIPTION_STATUSES.has(b.status) ? 1 : 0;
+    const aActive = ACTIVE_SUBSCRIPTION_STATUSES.has(a.subscription.status) ? 1 : 0;
+    const bActive = ACTIVE_SUBSCRIPTION_STATUSES.has(b.subscription.status) ? 1 : 0;
     if (aActive !== bActive) return bActive - aActive;
+    const planDifference = PLAN_RANK[b.plan] - PLAN_RANK[a.plan];
+    if (planDifference) return planDifference;
+    const aPriceId = prices[a.plan] as string;
+    const bPriceId = prices[b.plan] as string;
     const periodDifference =
-      (subscriptionPeriodEnd(b, priceId) ?? 0) -
-      (subscriptionPeriodEnd(a, priceId) ?? 0);
-    return periodDifference || b.created - a.created;
+      (subscriptionPeriodEnd(b.subscription, bPriceId) ?? 0) -
+      (subscriptionPeriodEnd(a.subscription, aPriceId) ?? 0);
+    return periodDifference || b.subscription.created - a.subscription.created;
   });
   const selected = ranked[0];
   if (!selected) {
@@ -135,10 +184,15 @@ export function resolveSubscriptionEntitlement(
   }
 
   return {
-    plan: ACTIVE_SUBSCRIPTION_STATUSES.has(selected.status) ? "pro" : "free",
-    subscriptionId: selected.id,
-    status: selected.status,
-    currentPeriodEnd: subscriptionPeriodEnd(selected, priceId),
+    plan: ACTIVE_SUBSCRIPTION_STATUSES.has(selected.subscription.status)
+      ? selected.plan
+      : "free",
+    subscriptionId: selected.subscription.id,
+    status: selected.subscription.status,
+    currentPeriodEnd: subscriptionPeriodEnd(
+      selected.subscription,
+      prices[selected.plan] as string
+    ),
   };
 }
 

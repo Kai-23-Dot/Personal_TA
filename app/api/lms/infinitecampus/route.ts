@@ -22,7 +22,7 @@ import {
   verifyInfiniteCampusState,
 } from "@/backend/security/infiniteCampus";
 
-const IC_STATE_COOKIE = "conlearn_ic_oauth_nonce";
+const IC_STATE_COOKIE = "smartlearn_ic_oauth_nonce";
 function icBase(domain: string) {
   return `https://${normalizeInfiniteCampusDomain(domain)}/campus`;
 }

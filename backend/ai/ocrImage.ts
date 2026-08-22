@@ -1,11 +1,9 @@
 /**
- * OCR for handwritten notes and images using Sarvam Vision (sarvam-30b).
- *
- * Sarvam-m reads images via the OpenAI-compatible chat completions API.
+ * OCR for handwritten notes and images using GPT-4o vision.
  * Accepts JPEG, PNG, GIF, WebP. Max file size ~5 MB per image.
  */
 import { generateText } from "ai";
-import { chatModel } from "./provider";
+import { visionModel } from "./provider";
 
 export type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -17,7 +15,7 @@ export interface OCRResult {
 }
 
 /**
- * Extract text from an image buffer using Claude's vision capability.
+ * Extract text from an image buffer using GPT-4o vision.
  * @param imageBuffer  Raw image bytes
  * @param mediaType    MIME type of the image
  * @param context      Optional context hint (e.g. "chemistry notes", "math homework")
@@ -49,7 +47,7 @@ Your job:
     : "Please extract all text from this image.";
 
   const { text } = await generateText({
-    model: chatModel,
+    model: visionModel,
     system: systemPrompt,
     messages: [
       {

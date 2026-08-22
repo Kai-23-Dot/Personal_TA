@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Conlearn",
-    short_name: "Conlearn",
+    name: "Smartlearn",
+    short_name: "Smartlearn",
     description: "Your AI personal teaching assistant for study planning, practice, and notes.",
     start_url: "/dashboard",
     display: "standalone",
@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0a0a0f",
     icons: [
       {
-        src: "/conlearn-logo.png",
+        src: "/smartlearn-logo.png",
         sizes: "any",
         type: "image/png",
       },

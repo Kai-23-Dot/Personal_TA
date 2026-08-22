@@ -18,6 +18,8 @@ import {
 import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { extractFromGoogleLink } from "@/backend/canvas-intelligence/contentExtractor";
 import type { SummaryType } from "@/types";
+import { assertWithinLimit, UsageLimitError } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 90;
 const IMAGE_TYPES: Record<string, ImageMediaType> = {
@@ -153,6 +155,15 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const creditCheck = await assertWithinLimit(user.id, "ai_credits");
+    if (!creditCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: creditCheck.reason, code: "LIMIT_REACHED" },
+        { status: 402 }
+      );
+    }
+
+    return runWithUsageContext(user.id, async () => {
 
     const parsed = studyGuideSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -175,6 +186,7 @@ export async function POST(req: Request) {
       .select("id, platform, platform_id, name")
       .eq("id", courseId)
       .eq("user_id", user.id)
+      .eq("is_active", true)
       .single();
 
     if (!course || course.platform !== "canvas" || !course.platform_id) {
@@ -672,8 +684,15 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, summary, lessonContentIncluded });
+    });
   } catch (err) {
     console.error("[/api/notes/study-guide] Error:", err);
+    if (err instanceof UsageLimitError) {
+      return NextResponse.json(
+        { success: false, error: err.message, code: err.code },
+        { status: 402 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: "Could not generate the study guide." },
       { status: 500 }

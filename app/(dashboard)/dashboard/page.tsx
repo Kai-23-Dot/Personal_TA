@@ -91,8 +91,8 @@ export default function DashboardPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
 
-  async function loadDashboardData() {
-    setLoadState("loading");
+  async function loadDashboardData(showLoading = true) {
+    if (showLoading) setLoadState("loading");
     try {
       const [aR, cR, crR, pR, fR, prR, nR, ntsR, recR] = await Promise.all([
         fetch("/api/assignments"),
@@ -132,7 +132,12 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => { loadDashboardData(); }, []);
+  useEffect(() => {
+    void loadDashboardData();
+    const handleSyncComplete = () => void loadDashboardData(false);
+    window.addEventListener("smartlearn:sync-complete", handleSyncComplete);
+    return () => window.removeEventListener("smartlearn:sync-complete", handleSyncComplete);
+  }, []);
 
   const canvasConnection = connections.find((c) => c.platform === "canvas" && c.is_active);
 
@@ -185,12 +190,12 @@ export default function DashboardPage() {
     setSyncMessage(null);
     setSyncing(true);
     try {
-      const res = await fetch("/api/sync/all", { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await fetch("/api/sync/all?mode=quick", { method: "POST", headers: { "Content-Type": "application/json" } });
       const data = await res.json();
       if (!res.ok || data?.success === false) {
-        setSyncMessage(data?.error || "Sync failed. Check your LMS connection.");
+        setSyncMessage(data?.error || data?.errors?.[0] || "Sync failed. Check your LMS connection.");
       } else {
-        setSyncMessage("Sync complete — latest course content is now indexed.");
+        setSyncMessage("Sync complete — your latest courses and assignments are ready.");
         await loadDashboardData();
       }
     } catch (err) {
@@ -230,17 +235,17 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <a
               href={emptyNoConnection ? "/settings/setup/canvas" : "/practice"}
-              className="btn btn-primary inline-flex items-center gap-2"
+              className="btn btn-primary !inline-flex !flex-row !items-center !justify-center !gap-2"
             >
-              <Zap className="h-3.5 w-3.5" />
+              <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {emptyNoConnection ? "Connect Canvas" : "Practice Test"}
             </a>
             <button
-              className="btn btn-secondary inline-flex items-center gap-2"
+              className="btn btn-secondary !inline-flex !flex-row !items-center !justify-center !gap-2"
               onClick={handleSync}
               disabled={syncing}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${syncing ? "animate-spin" : ""}`} aria-hidden="true" />
               {syncing ? "Syncing…" : "Sync"}
             </button>
           </div>
@@ -295,7 +300,6 @@ export default function DashboardPage() {
               value={upcomingAssignments.length}
               tone={urgentCount > 0 ? "orange" : "sky"}
               sub={urgentCount > 0 ? `${urgentCount} due within 48h` : "No urgent deadlines"}
-              gradientBar
             />
             <StatTile
               className="animate-fade-in"
@@ -424,7 +428,7 @@ export default function DashboardPage() {
               <QuickAction
                 href="/chat"
                 icon={<GraduationCap className="h-[1.1rem] w-[1.1rem] text-amber-300" />}
-                label="Ask Conlearn"
+                label="Ask Smartlearn"
                 desc="Chat with your AI tutor"
               />
             </div>
@@ -556,32 +560,6 @@ export default function DashboardPage() {
                 </ul>
               )}
             </SectionCard>
-          </div>
-
-          {/* Status footer */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/2 px-5 py-3.5">
-            <span className="flex items-center gap-2 text-xs text-slate-500">
-              <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-sky-400" : "bg-orange-400"}`} />
-              Canvas: {canvasConnection
-                ? `${canvasConnection.canvas_domain} · last sync ${canvasConnection.last_synced_at ? format(new Date(canvasConnection.last_synced_at), "MMM d, p") : "never"}`
-                : "Not connected"}
-            </span>
-            {retrievalConfidence.label === "Low" && canvasConnection ? (
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="flex items-center gap-1.5 text-xs font-medium text-orange-300 hover:text-orange-200 transition-colors"
-              >
-                <span className={`h-1.5 w-1.5 rounded-full bg-orange-400 ${syncing ? "animate-pulse" : ""}`} />
-                {syncing ? "Indexing…" : "Index more course files →"}
-              </button>
-            ) : (
-              <span className={`text-xs font-medium ${retrievalConfidence.tone}`}>
-                {retrievalConfidence.label === "High"
-                  ? `${notesCount} items indexed — questions are grounded in your actual class`
-                  : `Retrieval: ${retrievalConfidence.label} · ${retrievalConfidence.pct}%`}
-              </span>
-            )}
           </div>
 
           {/* Notifications — only when present */}

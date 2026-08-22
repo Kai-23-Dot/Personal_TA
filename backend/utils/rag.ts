@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/backend/supabase/server";
 import { generateEmbedding } from "./embeddings";
+import { getActiveCourseIds, retainActiveCourseRows } from "@/backend/lms/activeCourses";
 
 export interface RagResult {
   id: string;
@@ -23,6 +24,7 @@ export async function retrieveRelevantContext(
   const embeddingStr = `[${embedding.join(",")}]`;
 
   const supabase = createServiceClient();
+  const activeCourseIds = await getActiveCourseIds(supabase, userId);
 
   const [
     { data: notes, error: notesError },
@@ -76,7 +78,7 @@ export async function retrieveRelevantContext(
     source: "summary" as const,
   }));
 
-  return [...noteResults, ...summaryResults]
+  return retainActiveCourseRows([...noteResults, ...summaryResults], activeCourseIds)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit);
 }

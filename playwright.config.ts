@@ -25,7 +25,12 @@ export default defineConfig({
     // the dev script so build artifacts stay out of `.next`.
     command: `npx next dev --port ${PORT}`,
     url: BASE_URL,
-    env: { NEXT_DIST_DIR: ".next-dev" },
+    env: {
+      NEXT_DIST_DIR: ".next-dev",
+      // The signed-in beta fixture is the owner account. This exercises the
+      // same explicit allowlist path as production without hard-coding an email.
+      ADMIN_EMAILS: process.env.E2E_EMAIL ?? "",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

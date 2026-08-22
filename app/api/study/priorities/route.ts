@@ -19,9 +19,10 @@ export async function GET() {
     .select(`
       id, title, assignment_type, description, due_date,
       points_possible, weight, is_completed, estimated_minutes,
-      course:courses(id, name, color)
+      course:courses!inner(id, name, color, is_active)
     `)
     .eq("user_id", user.id)
+    .eq("course.is_active", true)
     .eq("is_completed", false)
     .or(`due_date.is.null,due_date.gte.${new Date().toISOString()}`)
     .order("due_date", { ascending: true, nullsFirst: false })

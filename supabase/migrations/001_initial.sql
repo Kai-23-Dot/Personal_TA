@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS public.assignments (
   platform_id     TEXT,
   title           TEXT NOT NULL,
   description     TEXT,
-  assignment_type TEXT CHECK (assignment_type IN ('homework', 'quiz', 'test', 'exam', 'project', 'lab', 'essay', 'other')) DEFAULT 'homework',
+  assignment_type TEXT CHECK (assignment_type IN ('homework', 'quiz', 'test', 'exam', 'project', 'lab', 'essay', 'discussion', 'reading', 'other')) DEFAULT 'homework',
   due_date        TIMESTAMPTZ,
   available_from  TIMESTAMPTZ,
   points_possible NUMERIC(10, 2),
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS public.notes (
   file_size_bytes BIGINT,
   storage_path    TEXT, -- Supabase storage path if uploaded
   topic_tags      TEXT[] DEFAULT '{}',
-  embedding       vector(1536), -- OpenAI/Anthropic embedding
+  embedding       vector(1536), -- OpenAI embedding
   is_processed    BOOLEAN DEFAULT FALSE,
   word_count      INTEGER,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS public.note_summaries (
   key_concepts    TEXT[] DEFAULT '{}',
   embedding       vector(1536),
   custom_instruction TEXT,
-  model_used      TEXT DEFAULT 'claude-sonnet-4-6',
+  model_used      TEXT DEFAULT 'gpt-4.1-mini',
   tokens_used     INTEGER,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()

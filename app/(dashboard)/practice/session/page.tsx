@@ -305,25 +305,6 @@ export default function PracticeSessionPage() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{parsedQ.prompt}</ReactMarkdown>
                 </div>
                 {parsedQ.code ? <CodeBlock code={parsedQ.code} /> : null}
-                {q.source_title && (
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground/75">From:</span>
-                    {q.source_url ? (
-                      <a
-                        href={q.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-sky-400 underline-offset-2 hover:underline"
-                      >
-                        {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {q.source_title}{q.source_module ? ` · ${q.source_module}` : ""}
-                      </span>
-                    )}
-                  </div>
-                )}
                 <FeedbackBox
                   selected={userAnswer || "(no answer)"}
                   correctAnswer={q.correct_answer}
@@ -366,26 +347,6 @@ export default function PracticeSessionPage() {
               <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{parsedQuestion.prompt}</ReactMarkdown>
               {parsedQuestion.code ? <CodeBlock code={parsedQuestion.code} /> : null}
             </div>
-
-            {current.source_title && (
-              <div className="mt-2 flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground/75">From:</span>
-                {current.source_url ? (
-                  <a
-                    href={current.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-sky-400 underline-offset-2 hover:underline"
-                  >
-                    {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {current.source_title}{current.source_module ? ` · ${current.source_module}` : ""}
-                  </span>
-                )}
-              </div>
-            )}
 
             {current.options && current.options.length > 0 ? (
               <OptionsList

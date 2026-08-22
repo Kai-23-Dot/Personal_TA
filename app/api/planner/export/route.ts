@@ -44,7 +44,7 @@ export async function GET(req: Request) {
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Conlearn//Study Planner//EN",
+    "PRODID:-//Smartlearn//Study Planner//EN",
     ...events,
     "END:VCALENDAR",
   ].join("\n");
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
   return new NextResponse(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": "attachment; filename=conlearn-study-plan.ics",
+      "Content-Disposition": "attachment; filename=smartlearn-study-plan.ics",
     },
   });
 }

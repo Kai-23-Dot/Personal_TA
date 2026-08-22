@@ -75,4 +75,23 @@ describe("generated quiz validation", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("keeps valid questions when another model item is malformed", () => {
+    const validQuestion = {
+      ...baseQuestion,
+      question: "What role does a base case play in a recursive method?",
+    };
+    const result = normalizeGeneratedQuizQuestions(
+      {
+        questions: [
+          { ...baseQuestion, difficulty: "adaptive" },
+          validQuestion,
+        ],
+      },
+      { questionCount: 2, sourceCount: 1, topic: "Recursion" }
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].question).toBe(validQuestion.question);
+  });
 });

@@ -1,5 +1,5 @@
 -- ============================================================
--- Conlearn — Migration 012: Stripe billing + usage metering
+-- Smartlearn — Migration 012: Stripe billing + usage metering
 -- ============================================================
 
 -- ---- Subscription fields on profiles ----

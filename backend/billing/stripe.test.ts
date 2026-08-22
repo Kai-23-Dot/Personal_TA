@@ -36,12 +36,18 @@ function subscription({
 }
 
 describe("Stripe billing helpers", () => {
+  const prices = {
+    plus: "price_plus",
+    pro: "price_pro",
+    max: "price_max",
+  } as const;
+
   it("uses stable, operation-scoped idempotency keys", () => {
     expect(stripeIdempotencyKey("customer", "user-1")).toBe(
-      "conlearn:customer:user-1"
+      "smartlearn:customer:user-1"
     );
     expect(stripeIdempotencyKey("checkout", "user-1", "price_pro")).toBe(
-      "conlearn:checkout:user-1:price_pro"
+      "smartlearn:checkout:user-1:price_pro"
     );
   });
 
@@ -77,7 +83,7 @@ describe("Stripe billing helpers", () => {
           periodEnd: 200,
         }),
       ],
-      "price_pro"
+      prices
     );
 
     expect(entitlement).toEqual({
@@ -104,7 +110,7 @@ describe("Stripe billing helpers", () => {
           periodEnd: 400,
         }),
       ],
-      "price_pro"
+      prices
     );
 
     expect(entitlement).toEqual({
@@ -122,7 +128,7 @@ describe("Stripe billing helpers", () => {
       created: 20,
       periodEnd: 500,
     });
-    expect(resolveSubscriptionEntitlement([trial], "price_pro").plan).toBe(
+    expect(resolveSubscriptionEntitlement([trial], prices).plan).toBe(
       "pro"
     );
 
@@ -133,11 +139,39 @@ describe("Stripe billing helpers", () => {
       periodEnd: 600,
     });
     expect(
-      resolveSubscriptionEntitlement([canceled], "price_pro")
+      resolveSubscriptionEntitlement([canceled], prices)
     ).toMatchObject({
       plan: "free",
       subscriptionId: "sub_canceled",
       status: "canceled",
+    });
+  });
+
+  it("selects the highest active configured tier", () => {
+    const entitlement = resolveSubscriptionEntitlement(
+      [
+        subscription({
+          id: "sub_plus",
+          status: "active",
+          created: 30,
+          priceId: "price_plus",
+          periodEnd: 500,
+        }),
+        subscription({
+          id: "sub_max",
+          status: "active",
+          created: 10,
+          priceId: "price_max",
+          periodEnd: 400,
+        }),
+      ],
+      prices
+    );
+
+    expect(entitlement).toMatchObject({
+      plan: "max",
+      subscriptionId: "sub_max",
+      status: "active",
     });
   });
 });

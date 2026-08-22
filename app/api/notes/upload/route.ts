@@ -4,7 +4,11 @@ import { generateEmbedding } from "@/backend/utils/embeddings";
 import { generateText } from "ai";
 import { visionModel } from "@/backend/ai/provider";
 import { v4 as uuidv4 } from "uuid";
-import { assertWithinLimits } from "@/backend/billing/limits";
+import {
+  assertWithinLimit,
+  assertWithinLimits,
+  UsageLimitError,
+} from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { extractFileText } from "@/backend/utils/extractFileText";
 import { validateNoteUpload } from "@/backend/utils/uploadValidation";
@@ -47,7 +51,7 @@ async function extractTextFromFile(file: File, buffer: Buffer): Promise<string> 
     return structuredNotes;
   }
 
-  // Handwritten or typed image notes — use Gemini Vision
+  // Handwritten or typed image notes — use GPT-4o vision.
   if (IMAGE_MIME_TYPES.has(mimeType) || /\.(jpe?g|png|webp|gif)$/i.test(fileName)) {
     const resolvedMime = IMAGE_MIME_TYPES.has(mimeType) ? mimeType : "image/jpeg";
     const { text } = await generateText({
@@ -91,7 +95,11 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     // Plan limits: block Free users at the weekly note cap or daily token cap.
-    const limitCheck = await assertWithinLimits(user.id, ["note", "tokens"]);
+    const limitCheck = await assertWithinLimits(user.id, [
+      "note",
+      "ai_credits",
+      "storage_bytes",
+    ]);
     if (!limitCheck.ok) {
       return NextResponse.json(
         { success: false, error: limitCheck.reason, code: "LIMIT_REACHED", feature: limitCheck.feature, limit: limitCheck.limit, used: limitCheck.used },
@@ -125,6 +133,25 @@ export async function POST(req: Request) {
       );
     }
 
+    const storageCheck = await assertWithinLimit(
+      user.id,
+      "storage_bytes",
+      file.size
+    );
+    if (!storageCheck.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: storageCheck.reason,
+          code: "LIMIT_REACHED",
+          feature: storageCheck.feature,
+          limit: storageCheck.limit,
+          used: storageCheck.used,
+        },
+        { status: 402 }
+      );
+    }
+
     let verifiedCourseId: string | null = null;
     if (courseId) {
       const parsedCourseId = z.string().uuid().safeParse(courseId);
@@ -139,6 +166,7 @@ export async function POST(req: Request) {
         .select("id")
         .eq("id", parsedCourseId.data)
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .maybeSingle();
       if (!course) {
         return NextResponse.json(
@@ -160,6 +188,12 @@ export async function POST(req: Request) {
       if (!content.trim()) throw new Error("No readable text was found.");
     } catch (err) {
       console.warn("[notes/upload] Extraction failed:", err);
+      if (err instanceof UsageLimitError) {
+        return NextResponse.json(
+          { success: false, error: err.message, code: err.code },
+          { status: 402 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: "Could not extract readable text from this file." },
         { status: 400 }

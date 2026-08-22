@@ -1,15 +1,19 @@
 /**
  * POST /api/notes/transcribe
  *
- * Upload an audio file (MP3, M4A, WAV, etc.) and transcribe it via Gemini,
- * then structure it as lecture notes.
+ * Upload an audio file (MP3, M4A, WAV, etc.), transcribe it with OpenAI GPT,
+ * and structure it as lecture notes.
  */
 import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
 import { transcribeAudio } from "@/backend/ai/transcribeAudio";
 import { generateEmbedding } from "@/backend/utils/embeddings";
 import { v4 as uuidv4 } from "uuid";
-import { assertWithinLimits } from "@/backend/billing/limits";
+import {
+  assertWithinLimit,
+  assertWithinLimits,
+  UsageLimitError,
+} from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { validateNoteUpload } from "@/backend/utils/uploadValidation";
 import { z } from "zod";
@@ -21,7 +25,12 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    const limitCheck = await assertWithinLimits(user.id, ["note", "tokens"]);
+    const limitCheck = await assertWithinLimits(user.id, [
+      "note",
+      "ai_credits",
+      "audio_seconds",
+      "storage_bytes",
+    ]);
     if (!limitCheck.ok) {
       return NextResponse.json(
         { success: false, error: limitCheck.reason, code: "LIMIT_REACHED" },
@@ -52,6 +61,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const storageCheck = await assertWithinLimit(
+      user.id,
+      "storage_bytes",
+      file.size
+    );
+    if (!storageCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: storageCheck.reason, code: "LIMIT_REACHED" },
+        { status: 402 }
+      );
+    }
+
     // Fetch course name for context
     let courseName: string | undefined;
     let verifiedCourseId: string | null = null;
@@ -63,6 +84,7 @@ export async function POST(req: Request) {
             .select("id, name")
             .eq("id", parsedCourseId.data)
             .eq("user_id", user.id)
+            .eq("is_active", true)
             .maybeSingle()
         : { data: null };
       if (!course) {
@@ -121,7 +143,7 @@ export async function POST(req: Request) {
         content: structuredNotes,
         source_type: "upload",
         file_name: safeFileName,
-        file_type: "other",
+        file_type: "audio",
         file_size_bytes: file.size,
         storage_path: storagePath,
         word_count: wordCount,
@@ -152,6 +174,12 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[/api/notes/transcribe] Error:", err);
+    if (err instanceof UsageLimitError) {
+      return NextResponse.json(
+        { success: false, error: err.message, code: err.code },
+        { status: 402 }
+      );
+    }
     return NextResponse.json({ success: false, error: "Audio transcription failed." }, { status: 500 });
   }
 }

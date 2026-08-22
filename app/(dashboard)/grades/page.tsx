@@ -41,8 +41,9 @@ export default async function GradesPage() {
       .order("name"),
     supabase
       .from("grade_events")
-      .select("id, course_id, points_earned, points_possible, occurred_at, notes, course:courses(name, color)")
+      .select("id, course_id, points_earned, points_possible, occurred_at, notes, course:courses!inner(name, color, is_active)")
       .eq("user_id", user!.id)
+      .eq("course.is_active", true)
       .order("occurred_at", { ascending: false }),
   ]);
 
@@ -85,7 +86,7 @@ export default async function GradesPage() {
         <EmptyState
           icon={BarChart3}
           title="No synced grades yet"
-          description="Your courses are available, but Conlearn has not received graded submissions from Canvas yet."
+          description="Your courses are available, but Smartlearn has not received graded submissions from Canvas yet."
           action={<Link href="/dashboard" className="btn btn-primary">Sync from dashboard</Link>}
         />
       ) : (

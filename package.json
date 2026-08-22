@@ -1,5 +1,5 @@
 {
-  "name": "conlearn",
+  "name": "smartlearn",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -46,10 +46,12 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "date-fns": "^4.1.0",
+    "dompurify": "^3.4.13",
     "framer-motion": "^11.15.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.469.0",
     "mammoth": "^1.8.0",
+    "music-metadata": "^11.14.0",
     "next": "^15.5.23",
     "next-themes": "^0.4.4",
     "openai": "^4.77.0",

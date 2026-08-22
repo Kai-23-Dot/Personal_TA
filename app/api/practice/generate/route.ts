@@ -5,17 +5,35 @@ import type { QuizSource } from "@/backend/ai/generateQuiz";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
 import type { Difficulty } from "@/types";
-import { assertWithinLimits } from "@/backend/billing/limits";
+import {
+  assertWithinLimits,
+  UsageLimitError,
+} from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
+import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
 import { z } from "zod";
 
 export const maxDuration = 60;
 const lowTokenMode = process.env.LOW_TOKEN_TEST_MODE === "true";
+const practiceUnitSchema = z.object({
+  moduleId: z.number().int().positive().nullable(),
+  moduleName: z.string().trim().min(1).max(300),
+  source: z.enum(["canvas", "generated"]),
+  assignmentIds: z.array(z.string().uuid()).max(100),
+  noteIds: z.array(z.string().uuid()).max(100),
+}).strict();
 const generatePracticeSchema = z.object({
   topic: z.string().trim().min(1).max(200),
   courseId: z.string().uuid(),
+  moduleId: z.number().int().positive().optional(),
+  moduleName: z.string().trim().min(1).max(300).optional(),
+  moduleSource: z.enum(["canvas", "generated"]).default("canvas"),
+  unitAssignmentIds: z.array(z.string().uuid()).max(100).optional(),
+  unitNoteIds: z.array(z.string().uuid()).max(100).optional(),
+  units: z.array(practiceUnitSchema).min(1).max(12).optional(),
   difficulty: z.enum(["easy", "medium", "hard", "adaptive"]).default("adaptive"),
   questionCount: z.number().int().min(1).max(20).default(5),
+  mode: z.enum(["quiz", "mixed"]).default("quiz"),
   noteIds: z.array(z.string().uuid()).max(30).optional(),
   pdfContext: z.string().trim().max(20_000).optional(),
   assignmentId: z.string().uuid().nullable().optional(),
@@ -59,7 +77,7 @@ export async function POST(req: Request) {
     // Plan limits: block Free users who've hit the weekly test cap or daily token cap.
     const limitCheck = await assertWithinLimits(user.id, [
       "practice_test",
-      "tokens",
+      "ai_credits",
     ]);
     if (!limitCheck.ok) {
       return NextResponse.json(
@@ -80,6 +98,12 @@ export async function POST(req: Request) {
     const {
       topic,
       courseId,
+      moduleId,
+      moduleName,
+      moduleSource,
+      unitAssignmentIds,
+      unitNoteIds,
+      units,
       difficulty,
       questionCount,
       noteIds,
@@ -107,6 +131,7 @@ export async function POST(req: Request) {
       .select("name")
       .eq("id", courseId)
       .eq("user_id", user.id)
+      .eq("is_active", true)
       .single();
     if (courseError || !course) {
       return NextResponse.json(
@@ -127,37 +152,155 @@ export async function POST(req: Request) {
       ? 2500
       : 3500;
 
-    if (noteIds && noteIds.length > 0) {
+    const selectedUnits = units ?? (
+      moduleId || moduleName || unitAssignmentIds?.length || unitNoteIds?.length
+        ? [{
+            moduleId: moduleId ?? null,
+            moduleName: moduleName ?? "Selected unit",
+            source: moduleSource,
+            assignmentIds: unitAssignmentIds ?? [],
+            noteIds: unitNoteIds ?? [],
+          }]
+        : []
+    );
+    const selectedUnitNames = selectedUnits.map((unit) => unit.moduleName);
+    const selectedUnitChars = selectedUnitNames.length > 1
+      ? lowTokenMode
+        ? Math.max(350, Math.floor(4_200 / selectedUnitNames.length))
+        : Math.max(800, Math.floor(12_000 / selectedUnitNames.length))
+      : charsPerNote;
+    const selectedCanvasUnits = selectedUnits.filter(
+      (unit) => unit.source === "canvas"
+    );
+    const assignmentUnitName = new Map<string, string>();
+    for (const unit of selectedUnits) {
+      for (const id of unit.assignmentIds) {
+        if (!assignmentUnitName.has(id)) {
+          assignmentUnitName.set(id, unit.moduleName);
+        }
+      }
+    }
+
+    const requestedNoteIds = [
+      ...new Set([
+        ...(noteIds ?? []),
+        ...(unitNoteIds ?? []),
+        ...selectedUnits.flatMap((unit) => unit.noteIds),
+      ]),
+    ];
+    if (requestedNoteIds.length > 0) {
       // Use client-selected specific notes (overrides auto-fetch)
       const { data: selectedNotes, error: notesError } = await supabase
         .from("notes")
-        .select("title, content")
+        .select("id, title, content")
         .eq("user_id", user.id)
         .eq("course_id", courseId)
-        .in("id", noteIds)
+        .in("id", requestedNoteIds)
         .not("content", "is", null);
       if (notesError) {
         throw new Error("Failed to load selected course notes.");
       }
       for (const note of selectedNotes ?? []) {
-        addSource(note.title, (note.content as string).slice(0, charsPerNote));
+        const noteUnit = selectedUnits.find((unit) => unit.noteIds.includes(note.id));
+        addSource(
+          note.title,
+          (note.content as string).slice(0, noteUnit ? selectedUnitChars : charsPerNote),
+          { moduleName: noteUnit?.moduleName }
+        );
       }
-    } else {
+    }
+
+    const requestedAssignmentIds = [
+      ...new Set([
+        ...(unitAssignmentIds ?? []),
+        ...selectedUnits.flatMap((unit) => unit.assignmentIds),
+      ]),
+    ];
+    if (requestedAssignmentIds.length > 0) {
+      const { data: unitAssignments, error: unitAssignmentsError } = await supabase
+        .from("assignments")
+        .select("id, title, description")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .in("id", requestedAssignmentIds);
+      if (unitAssignmentsError) {
+        throw new Error("Failed to load the selected unit's assignments.");
+      }
+      for (const assignment of unitAssignments ?? []) {
+        const description = assignment.description?.trim();
+        if (!description) continue;
+        addSource(
+          `Unit Assignment: ${assignment.title}`,
+          description.slice(
+            0,
+            Math.min(selectedUnitChars, lowTokenMode ? 500 : 1600)
+          ),
+          { moduleName: assignmentUnitName.get(assignment.id) ?? moduleName }
+        );
+      }
+    }
+
+    const shouldRetrieveCanvas =
+      selectedCanvasUnits.length > 0 || sourceBlocks.length === 0;
+    if (shouldRetrieveCanvas) {
       const retrieval = await canvasDeepFetch({
         userId: user.id,
         courseId,
         topic,
-        limit: 12,
+        moduleIds: selectedCanvasUnits
+          .map((unit) => unit.moduleId)
+          .filter((id): id is number => id !== null),
+        moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
+        limit: lowTokenMode
+          ? 8
+          : Math.min(24, Math.max(12, selectedCanvasUnits.length * 4)),
       });
 
+      const availableModuleNames = new Set(
+        retrieval.moduleNames.map((name) => name.trim().toLowerCase())
+      );
+      const missingCanvasUnit = selectedCanvasUnits.find(
+        (unit) =>
+          !availableModuleNames.has(unit.moduleName.trim().toLowerCase())
+      );
+      if (missingCanvasUnit) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `${missingCanvasUnit.moduleName} is no longer available in Canvas. Refresh the course units and select again.`,
+          },
+          { status: 400 }
+        );
+      }
+
       // Use content with sufficient confidence for direct question generation
-      const directSources = retrieval.ranked.filter((r) => r.confidence >= 0.3);
+      const selectedCanvasNameKeys = new Set(
+        selectedCanvasUnits.map((unit) => unit.moduleName.trim().toLowerCase())
+      );
+      const moduleSources = selectedCanvasNameKeys.size > 0
+        ? retrieval.ranked.filter((result) =>
+            selectedCanvasNameKeys.has(
+              result.chunk.moduleName?.trim().toLowerCase() ?? ""
+            )
+          )
+        : retrieval.ranked;
+      // A user-selected Canvas module is already an exact structural match;
+      // semantic confidence should only gate unscoped topic searches.
+      const directSources = selectedCanvasNameKeys.size > 0
+        ? moduleSources
+        : moduleSources.filter((r) => r.confidence >= 0.3);
       if (directSources.length > 0) {
-        const capped = directSources.slice(0, lowTokenMode ? 5 : 12);
+        const capped = selectBalancedModuleSources(
+          directSources,
+          selectedCanvasUnits.map((unit) => unit.moduleName),
+          lowTokenMode
+            ? 8
+            : Math.min(24, Math.max(12, selectedCanvasUnits.length * 4))
+        );
         for (const result of capped) {
           addSource(
             result.chunk.title,
-            result.chunk.text.slice(0, charsPerNote),
+            result.chunk.text.slice(0, selectedUnitChars),
             {
               moduleName: result.chunk.moduleName,
               sourceUrl: result.chunk.sourceUrl,
@@ -196,7 +339,27 @@ export async function POST(req: Request) {
         pdfContext.slice(0, lowTokenMode ? 1800 : 6000)
       );
     }
-    const courseNotes = sourceBlocks.join("\n\n---\n\n") || undefined;
+    const orderedSources = selectBalancedModuleSources(
+      quizSources.map((source, index) => ({
+        chunk: { moduleName: source.moduleName },
+        source,
+        block: sourceBlocks[index],
+      })),
+      selectedUnitNames,
+      quizSources.length
+    );
+    quizSources.splice(
+      0,
+      quizSources.length,
+      ...orderedSources.map(({ source }, index) => ({ ...source, idx: index }))
+    );
+    const courseNotes = orderedSources.length > 0
+      ? orderedSources
+          .map(({ block }, index) =>
+            block.replace(/^### \[\d+\]/, `### [${index}]`)
+          )
+          .join("\n\n---\n\n")
+      : undefined;
 
     // Fetch recent weak topics for adaptive targeting
     const { data: metrics } = await supabase
@@ -235,7 +398,9 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "No Canvas course content found yet. Sync Canvas or upload notes for this course, then try again.",
+          error: selectedUnitNames.length > 0
+            ? "The selected units do not contain readable pages, assignments, or supported files yet. Choose other units or add course notes."
+            : "No Canvas course content found yet. Sync Canvas or upload notes for this course, then try again.",
         },
         { status: 400 }
       );
@@ -295,6 +460,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, sessionId, questions });
   } catch (err) {
     console.error("[/api/practice/generate] Error:", err);
+    // The atomic reservation can reject a concurrent request even when the
+    // earlier snapshot check passed. Preserve the actionable upgrade response
+    // instead of turning that valid limit result into a generic 500.
+    if (err instanceof UsageLimitError) {
+      return NextResponse.json(
+        { success: false, error: err.message, code: err.code },
+        { status: 402 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: "Practice test generation failed. Please try again." },
       { status: 500 }

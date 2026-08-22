@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 
 export default function LoginPage() {
@@ -55,11 +55,22 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, captchaToken }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(captchaToken ? { captchaToken } : {}),
+        }),
       });
       await readAuthResponse(response);
 
-      router.push("/dashboard");
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const safeNext =
+        requestedNext?.startsWith("/") &&
+        !requestedNext.startsWith("//") &&
+        !requestedNext.includes("\\")
+          ? requestedNext
+          : "/dashboard";
+      router.push(safeNext);
       router.refresh();
     } catch (error) {
       showAuthFailure(error);
@@ -90,21 +101,17 @@ export default function LoginPage() {
   }
 
   return (
-    <ConlearnBackdrop>
-      <ConlearnHeader
-        links={[
-          { label: "Home", href: "/" },
-          { label: "About", href: "/about" },
-          { label: "Website", href: "/website" },
-          { label: "Contact", href: "/contact" },
-        ]}
+    <SmartlearnBackdrop>
+      <SmartlearnHeader
         showSignIn={false}
+        actionLabel="Create account"
+        actionHref="/signup"
       />
 
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
-            <h2 className="contact-form-title">Sign in to Conlearn</h2>
+            <h2 className="contact-form-title">Sign in to Smartlearn</h2>
 
             {otherProviders.length > 0 ? (
               <>
@@ -182,6 +189,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </ConlearnBackdrop>
+    </SmartlearnBackdrop>
   );
 }

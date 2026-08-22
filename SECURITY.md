@@ -1,6 +1,6 @@
-# Conlearn security
+# Smartlearn security
 
-Conlearn uses layered controls because no application-level check can stop a
+Smartlearn uses layered controls because no application-level check can stop a
 volumetric distributed denial-of-service attack on its own.
 
 ## Implemented controls

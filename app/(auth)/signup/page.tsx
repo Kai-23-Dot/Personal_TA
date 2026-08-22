@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ConlearnBackdrop } from "@/frontend/components/layout/ConlearnBackdrop";
-import { ConlearnHeader } from "@/frontend/components/layout/ConlearnHeader";
+import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
+import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 
 export default function SignupPage() {
@@ -68,18 +68,23 @@ export default function SignupPage() {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmedUsername, email, password, captchaToken }),
+        body: JSON.stringify({
+          username: trimmedUsername,
+          email,
+          password,
+          ...(captchaToken ? { captchaToken } : {}),
+        }),
       });
       const payload = await readAuthResponse(response);
 
       if (payload?.hasSession) {
         // Email confirmation is off for this project, so signup already returned
         // an active session — go straight in instead of making them log in again.
-        router.push("/dashboard");
+        router.push("/onboarding?welcome=1");
         router.refresh();
       } else {
-        toast.success("Account created! Check your email to confirm.");
-        router.push("/login");
+        toast.success("Account created! Confirm your email, then sign in to connect Canvas.");
+        router.push("/login?created=1&next=%2Fonboarding%3Fwelcome%3D1");
       }
     } catch (error) {
       showAuthFailure(error);
@@ -94,7 +99,10 @@ export default function SignupPage() {
       const response = await fetch("/api/auth/oauth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, redirectTo: `${window.location.origin}/callback` }),
+        body: JSON.stringify({
+          provider,
+          redirectTo: `${window.location.origin}/callback?next=${encodeURIComponent("/onboarding?welcome=1")}`,
+        }),
       });
       const payload = await readAuthResponse(response);
       if (typeof payload?.url === "string") {
@@ -110,15 +118,9 @@ export default function SignupPage() {
   }
 
   return (
-    <ConlearnBackdrop>
-      <ConlearnHeader
-        links={[
-          { label: "Home", href: "/" },
-          { label: "About", href: "/about" },
-          { label: "Website", href: "/website" },
-          { label: "Contact", href: "/contact" },
-        ]}
-        showSignIn={false}
+    <SmartlearnBackdrop>
+      <SmartlearnHeader
+        showSignIn
       />
 
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
@@ -169,6 +171,8 @@ export default function SignupPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   minLength={3}
+                  maxLength={50}
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -210,6 +214,6 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
-    </ConlearnBackdrop>
+    </SmartlearnBackdrop>
   );
 }

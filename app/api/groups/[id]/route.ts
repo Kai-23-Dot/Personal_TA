@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const checkinFloor = toUtcDateString(new Date(now.getTime() - 28 * 86_400_000));
 
   const [groupRes, membersRes, notesRes, flashcardsRes, meetingsRes, checkinsRes] = await Promise.all([
-    admin.from("study_groups").select("*, course:courses(id, name)").eq("id", id).single(),
+    admin.from("study_groups").select("*, course:courses(id, name, is_active)").eq("id", id).single(),
     admin.from("group_members").select("user_id, role, joined_at, profile:profiles(full_name, avatar_url)").eq("group_id", id),
     admin.from("group_shared_notes").select("id, note_id, shared_by, shared_at, note:notes(title, file_type, word_count)").eq("group_id", id).order("shared_at", { ascending: false }).limit(20),
     admin.from("group_shared_flashcards").select("*").eq("group_id", id).order("shared_at", { ascending: false }),
@@ -41,6 +41,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const group = groupRes.data;
   if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
+  const course = Array.isArray(group.course) ? group.course[0] : group.course;
+  if (group.course_id && course?.is_active !== true) {
+    return NextResponse.json({ error: "Group not found" }, { status: 404 });
+  }
 
   const members  = membersRes.data ?? [];
   const meetings = meetingsRes.data ?? [];

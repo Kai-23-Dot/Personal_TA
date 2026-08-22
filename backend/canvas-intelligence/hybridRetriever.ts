@@ -6,6 +6,7 @@ import { embedTexts, cosineSimilarity } from "./embeddingIndexer";
 import { dateProximityScore, scoreChunk, keywordScore, fuzzyTitleScore } from "./rankingModel";
 import { explainSourceChoice } from "./sourceExplainer";
 import type { CanvasContentItem, DocumentChunk, ExtractedDocument, RankedSource, RetrievalQuery } from "./types";
+import { getActiveCourseIds, retainActiveCourseRows } from "@/backend/lms/activeCourses";
 
 type NoteRow = {
   id: string;
@@ -106,6 +107,10 @@ export async function retrieveRankedSources(query: RetrievalQuery): Promise<{
 }> {
   const supabase = createServiceClient();
   const limit = query.limit ?? 8;
+  const activeCourseIds = await getActiveCourseIds(supabase, query.userId);
+  if (query.courseId && !activeCourseIds.includes(query.courseId)) {
+    return { ranked: [], confidence: scoreConfidence([]) };
+  }
 
   const noteQ = supabase
     .from("notes")
@@ -113,7 +118,7 @@ export async function retrieveRankedSources(query: RetrievalQuery): Promise<{
     .eq("user_id", query.userId)
     .not("content", "is", null)
     .order("updated_at", { ascending: false })
-    .limit(120);
+    .limit(250);
 
   const assignmentQ = supabase
     .from("assignments")
@@ -121,7 +126,7 @@ export async function retrieveRankedSources(query: RetrievalQuery): Promise<{
     .eq("user_id", query.userId)
     .not("description", "is", null)
     .order("updated_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (query.courseId) {
     noteQ.eq("course_id", query.courseId);
@@ -129,9 +134,11 @@ export async function retrieveRankedSources(query: RetrievalQuery): Promise<{
   }
 
   const [{ data: notes }, { data: assignments }] = await Promise.all([noteQ, assignmentQ]);
+  const activeNotes = retainActiveCourseRows((notes ?? []) as NoteRow[], activeCourseIds);
+  const activeAssignments = retainActiveCourseRows((assignments ?? []) as AssignmentRow[], activeCourseIds);
   const items: CanvasContentItem[] = [
-    ...((notes ?? []) as NoteRow[]).map(toCanvasItemFromNote),
-    ...((assignments ?? []) as AssignmentRow[]).map(toCanvasItemFromAssignment),
+    ...activeNotes.map(toCanvasItemFromNote),
+    ...activeAssignments.map(toCanvasItemFromAssignment),
   ];
 
   const docs = items.map(toExtractedDocument).filter((d): d is ExtractedDocument => Boolean(d));

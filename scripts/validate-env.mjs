@@ -9,20 +9,22 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_SUPABASE_URL",
   "OPENAI_API_KEY",
+  "STRIPE_MAX_PRICE_ID",
+  "STRIPE_PLUS_PRICE_ID",
   "STRIPE_PRO_PRICE_ID",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
-const optional = ["SARVAM_API_KEY"];
 const paired = [
   ["CANVAS_CLIENT_ID", "CANVAS_CLIENT_SECRET"],
   ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   ["INFINITE_CAMPUS_CLIENT_ID", "INFINITE_CAMPUS_CLIENT_SECRET"],
   ["MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET"],
+  ["RESEND_API_KEY", "RESEND_FROM_EMAIL"],
 ];
 const placeholderPattern =
-  /^(your-|replace-|changeme|example|sk_test_\.\.\.|whsec_\.\.\.|price_\.\.\.)/i;
+  /^(your-|replace-|changeme|example|sk_test_\.\.\.|whsec_\.\.\.|price_\.\.\.|re_\.\.\.|re_your-)/i;
 const errors = [];
 const warnings = [];
 
@@ -33,11 +35,8 @@ for (const name of required) {
   }
 }
 
-for (const name of optional) {
-  const value = process.env[name]?.trim();
-  if (!value || placeholderPattern.test(value)) {
-    warnings.push(`${name} is not configured; its related feature will be unavailable`);
-  }
+if (!process.env.ADMIN_EMAILS?.trim() && !process.env.ADMIN_USER_IDS?.trim()) {
+  (strict ? errors : warnings).push("ADMIN_EMAILS or ADMIN_USER_IDS is not configured");
 }
 
 for (const pair of paired) {

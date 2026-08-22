@@ -5,10 +5,10 @@ import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { cn } from "@/backend/utils";
 
 const TONE_STYLES = {
-  sky:     { ring: "border-sky-400/20",     bg: "bg-sky-400/8",     icon: "text-sky-300" },
-  orange:  { ring: "border-orange-400/20",  bg: "bg-orange-500/8",  icon: "text-orange-300" },
-  violet:  { ring: "border-violet-400/20",  bg: "bg-violet-500/8",  icon: "text-violet-300" },
-  emerald: { ring: "border-emerald-400/20", bg: "bg-emerald-500/8", icon: "text-emerald-300" },
+  sky:     { bg: "bg-sky-400/8",     icon: "text-sky-300",     accent: "bg-sky-400" },
+  orange:  { bg: "bg-orange-500/8",  icon: "text-orange-300",  accent: "bg-orange-400" },
+  violet:  { bg: "bg-violet-500/8",  icon: "text-violet-300",  accent: "bg-violet-400" },
+  emerald: { bg: "bg-emerald-500/8", icon: "text-emerald-300", accent: "bg-emerald-400" },
 } as const;
 
 export type StatTileTone = keyof typeof TONE_STYLES;
@@ -43,7 +43,6 @@ export function StatTile({
   tone = "sky",
   sub,
   animate: animateValue = true,
-  gradientBar = false,
   className,
   style,
 }: {
@@ -54,8 +53,6 @@ export function StatTile({
   tone?: StatTileTone;
   sub?: string;
   animate?: boolean;
-  /** Adds a thin accent gradient bar across the top — for the single emphasis tile in a grid. */
-  gradientBar?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -67,15 +64,18 @@ export function StatTile({
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       style={style}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-5 backdrop-blur transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]",
-        t.ring,
+        "group relative overflow-hidden rounded-2xl border border-white/8 p-5 backdrop-blur transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]",
         t.bg,
         className
       )}
     >
-      {gradientBar && (
-        <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-sky-400 via-cyan-300 to-sky-400" />
-      )}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 opacity-0 transition-[transform,opacity] duration-200 group-hover:scale-x-100 group-hover:opacity-100",
+          t.accent
+        )}
+      />
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
         <span className={cn(t.icon, "opacity-70 transition-opacity duration-200 group-hover:opacity-100")}>

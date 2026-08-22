@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { summarizeNotes } from "@/backend/ai/summarizeNotes";
 import { generateEmbedding } from "@/backend/utils/embeddings";
 import type { SummaryType } from "@/types";
+import {
+  assertWithinLimit,
+  UsageLimitError,
+} from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export const maxDuration = 60;
 
@@ -11,6 +16,13 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const creditCheck = await assertWithinLimit(user.id, "ai_credits");
+    if (!creditCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: creditCheck.reason, code: "LIMIT_REACHED" },
+        { status: 402 }
+      );
+    }
 
     const body = await req.json();
     const { noteId, summaryType = "bullet_points", customInstruction } = body as {
@@ -26,9 +38,10 @@ export async function POST(req: Request) {
     // Fetch note
     const { data: note, error: noteError } = await supabase
       .from("notes")
-      .select("*, course:courses(name)")
+      .select("*, course:courses!inner(name,is_active)")
       .eq("id", noteId)
       .eq("user_id", user.id)
+      .eq("course.is_active", true)
       .single();
 
     if (noteError || !note) {
@@ -40,13 +53,17 @@ export async function POST(req: Request) {
     }
 
     // Generate summary
-    const { summary, keyConcepts, tokensUsed } = await summarizeNotes({
-      content: note.content,
-      title: note.title,
-      summaryType,
-      customInstruction,
-      courseName: (note as { course?: { name: string } }).course?.name,
-    });
+    const { summary, keyConcepts, tokensUsed } = await runWithUsageContext(
+      user.id,
+      () =>
+        summarizeNotes({
+          content: note.content,
+          title: note.title,
+          summaryType,
+          customInstruction,
+          courseName: (note as { course?: { name: string } }).course?.name,
+        })
+    );
 
     // Generate embedding for summary
     let embedding: number[] | null = null;
@@ -80,6 +97,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, summary: savedSummary });
   } catch (err) {
     console.error("[/api/notes/summarize] Error:", err);
+    if (err instanceof UsageLimitError) {
+      return NextResponse.json(
+        { success: false, error: err.message, code: err.code },
+        { status: 402 }
+      );
+    }
     return NextResponse.json({ success: false, error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }

@@ -11,6 +11,8 @@ import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import { chatModel } from "@/backend/ai/provider";
 import { createClient } from "@/backend/supabase/server";
+import { assertWithinLimit, UsageLimitError } from "@/backend/billing/limits";
+import { runWithUsageContext } from "@/backend/billing/usageContext";
 
 export interface ParsedAssignment {
   title: string;
@@ -50,6 +52,13 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const creditCheck = await assertWithinLimit(user.id, "ai_credits");
+  if (!creditCheck.ok) {
+    return NextResponse.json(
+      { error: creditCheck.reason, code: "LIMIT_REACHED" },
+      { status: 402 }
+    );
+  }
 
   const { text, course_name } = await req.json();
 
@@ -68,18 +77,26 @@ export async function POST(req: Request) {
     .join("\n");
 
   try {
-    const { text: raw } = await generateText({
-      model: chatModel,
-      system: SYSTEM_PROMPT,
-      prompt: userPrompt,
-      maxTokens: 2048,
-    });
+    const { text: raw } = await runWithUsageContext(user.id, () =>
+      generateText({
+        model: chatModel,
+        system: SYSTEM_PROMPT,
+        prompt: userPrompt,
+        maxTokens: 2048,
+      })
+    );
 
     const cleaned = raw.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const assignments: ParsedAssignment[] = JSON.parse(cleaned);
 
     return NextResponse.json({ assignments });
   } catch (err) {
+    if (err instanceof UsageLimitError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code },
+        { status: 402 }
+      );
+    }
     console.error("Assignment parse error:", err);
     return NextResponse.json({ error: "Failed to parse assignments from text" }, { status: 500 });
   }

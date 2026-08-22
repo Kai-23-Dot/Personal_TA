@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
   stripe,
-  PRO_PRICE_ID,
+  getConfiguredPlanPrices,
   resolveSubscriptionEntitlement,
 } from "@/backend/billing/stripe";
+import { sendPlanChangeNotification } from "@/backend/email/planChange";
 import { createServiceClient } from "@/backend/supabase/server";
 
 // Stripe posts here unauthenticated; this route is exempt from auth in middleware.ts.
@@ -64,9 +65,12 @@ async function recordIgnoredEvent(event: Stripe.Event): Promise<void> {
   if (error) throw error;
 }
 
-/** Reconcile the customer's current Pro entitlement, independent of event order. */
+/** Reconcile the customer's current Smartlearn entitlement, independent of event order. */
 async function reconcileCustomer(customerId: string, event: Stripe.Event) {
-  if (!PRO_PRICE_ID) throw new Error("[billing] STRIPE_PRO_PRICE_ID is not set");
+  const configuredPrices = getConfiguredPlanPrices();
+  if (Object.keys(configuredPrices).length === 0) {
+    throw new Error("[billing] No paid Stripe prices are configured");
+  }
 
   const supabase = createServiceClient();
   const { data: profile, error: profileError } = await supabase
@@ -83,18 +87,17 @@ async function reconcileCustomer(customerId: string, event: Stripe.Event) {
 
   const subscriptions = await stripe.subscriptions.list({
     customer: customerId,
-    price: PRO_PRICE_ID,
     status: "all",
     limit: 100,
   });
   if (subscriptions.has_more) {
     console.warn(
-      `[billing/webhook] More than 100 Pro subscriptions found for customer ${customerId}; using the newest page.`
+      `[billing/webhook] More than 100 subscriptions found for customer ${customerId}; using the newest page.`
     );
   }
   const entitlement = resolveSubscriptionEntitlement(
     subscriptions.data,
-    PRO_PRICE_ID
+    configuredPrices
   );
 
   const { data: result, error } = await supabase.rpc(
@@ -139,7 +142,8 @@ export async function POST(req: Request) {
     if (!handled) return NextResponse.json({ received: true });
 
     if (await eventWasProcessed(event.id)) {
-      return NextResponse.json({ received: true, duplicate: true });
+      const email = await sendPlanChangeNotification(event.id);
+      return NextResponse.json({ received: true, duplicate: true, email });
     }
 
     const customerId = eventCustomerId(event);
@@ -149,7 +153,8 @@ export async function POST(req: Request) {
     }
 
     const result = await reconcileCustomer(customerId, event);
-    return NextResponse.json({ received: true, result });
+    const email = await sendPlanChangeNotification(event.id);
+    return NextResponse.json({ received: true, result, email });
   } catch (err) {
     console.error(`[billing/webhook] handler error for ${event.type}:`, err);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });

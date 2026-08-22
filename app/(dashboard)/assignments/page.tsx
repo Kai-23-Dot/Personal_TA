@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "ai/react";
 import { format, parseISO } from "date-fns";
-import { CalendarClock, ChevronDown, Zap, X } from "lucide-react";
+import { Bot, CalendarClock, ChevronDown, FileText, Zap, X } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
+import { AssignmentDocument } from "@/frontend/components/assignments/AssignmentDocument";
 
 type Assignment = {
   id: string;
@@ -15,7 +16,7 @@ type Assignment = {
   assignment_type: string;
   due_date: string | null;
   is_completed: boolean;
-  course?: { name: string } | null;
+  course?: { name: string; color: string | null } | null;
   course_id: string | null;
 };
 
@@ -52,6 +53,45 @@ function UrgencyLabel({ due }: { due: Date }) {
   return null;
 }
 
+function assignmentDescriptionToText(description: string | null): string {
+  if (!description) return "No instructions available.";
+  if (typeof document === "undefined") return description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const parsed = new DOMParser().parseFromString(description, "text/html");
+  return (parsed.body.textContent ?? description).replace(/\s+/g, " ").trim();
+}
+
+function normalizeCourseColor(color: string | null | undefined): string {
+  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : "#22d3ee";
+}
+
+function courseColorStyle(color: string | null | undefined): CSSProperties {
+  const safeColor = normalizeCourseColor(color);
+  return {
+    borderColor: `${safeColor}80`,
+    background: `linear-gradient(90deg, ${safeColor}12, rgba(9, 12, 24, 0.72) 22%)`,
+    boxShadow: `inset 3px 0 0 ${safeColor}`,
+  };
+}
+
+function courseDateStyle(color: string | null | undefined): CSSProperties {
+  const safeColor = normalizeCourseColor(color);
+  return {
+    borderColor: `${safeColor}66`,
+    backgroundColor: `${safeColor}1f`,
+    color: safeColor,
+  };
+}
+
+function coursePillStyle(color: string | null | undefined): CSSProperties {
+  const safeColor = normalizeCourseColor(color);
+  return {
+    borderColor: `${safeColor}99`,
+    backgroundColor: `${safeColor}1f`,
+    color: "#f8fafc",
+    boxShadow: `0 0 18px ${safeColor}1f`,
+  };
+}
+
 export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -69,6 +109,7 @@ export default function AssignmentsPage() {
   const [helperOpen, setHelperOpen] = useState(false);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [helperPrompt, setHelperPrompt] = useState("");
+  const [syncRevision, setSyncRevision] = useState(0);
 
   const sessionId = useMemo(() => {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -85,15 +126,21 @@ export default function AssignmentsPage() {
       `Assignment: ${activeAssignment.title}`,
       `Course: ${activeAssignment.course?.name ?? "Unknown"}`,
       `Type: ${activeAssignment.assignment_type} (${mode})`,
-      `Description: ${activeAssignment.description ?? "No description available."}`,
-      "Safety rule: Do not provide direct graded answers. Provide step-by-step guidance, hints, concept explanations, and review strategy.",
+      `Instructions: ${assignmentDescriptionToText(activeAssignment.description)}`,
+      "ASSIGNMENT COACH MODE (mandatory): Help the student learn without completing graded work. Do not provide a final answer, finished response, completed worksheet, or submission-ready text. Ask what they have tried, give one useful hint or concept explanation at a time, use questions to guide their reasoning, and offer feedback on the student's own attempt. If asked to do the assignment, politely redirect to the next step they can take themselves.",
     ].join("\n");
   }, [activeAssignment]);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: "/api/chat/context",
     body: { sessionId, context: helperContext },
   });
+
+  useEffect(() => {
+    const refreshAfterSync = () => setSyncRevision((revision) => revision + 1);
+    window.addEventListener("smartlearn:sync-complete", refreshAfterSync);
+    return () => window.removeEventListener("smartlearn:sync-complete", refreshAfterSync);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -128,7 +175,7 @@ export default function AssignmentsPage() {
       .finally(() => { if (mounted) setLoadingAssignments(false); });
 
     return () => { mounted = false; };
-  }, [selectedCourseId]);
+  }, [selectedCourseId, syncRevision]);
 
   useEffect(() => {
     if (!selectedCourseId) return;
@@ -209,11 +256,12 @@ export default function AssignmentsPage() {
 
   function openHelper(assignment: Assignment) {
     setActiveAssignment(assignment);
+    setMessages([]);
     const isQuizLike = ["quiz", "test", "exam"].includes(assignment.assignment_type);
     setHelperPrompt(
       isQuizLike
-        ? "Help me review this quiz topic with hints and elimination strategy."
-        : "Help me outline and improve my response for this writing assignment."
+        ? "Show me the question and what you have tried so far."
+        : "Tell me which part you are working on and share your attempt."
     );
     setHelperOpen(true);
   }
@@ -282,6 +330,7 @@ export default function AssignmentsPage() {
               key={course.id}
               href={`/assignments?course_id=${course.id}`}
               className={`${pillBase} ${selectedCourseId === course.id ? pillActive : pillInactive}`}
+              style={selectedCourseId === course.id ? coursePillStyle(course.color) : undefined}
             >
               <span className="inline-flex items-center gap-1.5">
                 <span
@@ -304,22 +353,22 @@ export default function AssignmentsPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {dueThisWeek.map((a) => {
-              const urgent = a.due.getTime() - Date.now() < 48 * 3600 * 1000;
+              const courseColor = normalizeCourseColor(a.course?.color);
               return (
                 <div
                   key={a.id}
-                  className={`group flex flex-col gap-1.5 rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg cursor-default ${
-                    urgent
-                      ? "border-orange-400/35 bg-orange-500/8 hover:border-orange-400/55"
-                      : "border-white/10 bg-white/5 hover:border-sky-400/30 hover:bg-sky-400/5"
-                  }`}
+                  className="group flex cursor-default flex-col gap-1.5 rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01] hover:brightness-110 hover:shadow-lg"
+                  style={courseColorStyle(courseColor)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-white leading-snug">{a.title}</p>
                     <TypeBadge type={a.assignment_type} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-400">{a.course?.name ?? "Course"}</p>
+                    <p className="inline-flex min-w-0 items-center gap-1.5 text-xs text-slate-400">
+                      <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: courseColor }} />
+                      <span className="truncate">{a.course?.name ?? "Course"}</span>
+                    </p>
                     <div className="flex items-center gap-2">
                       <UrgencyLabel due={a.due} />
                       <p className="text-xs text-slate-300">{format(a.due, "MMM d")}</p>
@@ -357,39 +406,33 @@ export default function AssignmentsPage() {
             const isExpanded = expandedId === assignment.id;
             const hasDue = Boolean(assignment.due_date);
             const due = hasDue ? parseISO(assignment.due_date as string) : null;
-            const urgent = due && due.getTime() - Date.now() < 48 * 3600 * 1000;
+            const courseColor = normalizeCourseColor(assignment.course?.color);
 
             return (
               <article
                 key={assignment.id}
-                className={`rounded-2xl border bg-[rgba(9,12,24,0.72)] backdrop-blur shadow-sm transition-all duration-200 ${
-                  isExpanded
-                    ? "border-sky-400/30 shadow-[0_4px_32px_rgba(56,189,248,0.08)]"
-                    : urgent
-                    ? "border-orange-400/25 hover:border-orange-400/45"
-                    : "border-white/10 hover:border-white/20 hover:shadow-md"
-                }`}
+                className="rounded-2xl border bg-[rgba(9,12,24,0.72)] shadow-sm backdrop-blur transition-all duration-200 hover:brightness-110 hover:shadow-md"
+                style={courseColorStyle(courseColor)}
               >
                 {/* Card header — always visible */}
                 <button
                   type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={`assignment-${assignment.id}`}
                   className="flex w-full items-start gap-4 p-5 text-left transition-colors duration-150 active:bg-white/[0.03]"
                   onClick={() => setExpandedId(isExpanded ? null : assignment.id)}
                 >
                   {/* Date chip */}
                   <div
-                    className={`flex flex-col items-center justify-center rounded-xl px-3 py-2 text-center flex-shrink-0 min-w-[52px] transition-colors duration-200 ${
-                      urgent
-                        ? "bg-orange-500/15 border border-orange-400/25"
-                        : "bg-sky-500/10 border border-sky-400/15"
-                    }`}
+                    className="flex min-w-[52px] flex-shrink-0 flex-col items-center justify-center rounded-xl border px-3 py-2 text-center transition-colors duration-200"
+                    style={courseDateStyle(courseColor)}
                   >
                     {due ? (
                       <>
-                        <span className={`text-[10px] font-semibold uppercase tracking-wide ${urgent ? "text-orange-300" : "text-sky-300"}`}>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: courseColor }}>
                           {format(due, "MMM")}
                         </span>
-                        <span className={`text-lg font-bold leading-none mt-0.5 ${urgent ? "text-orange-100" : "text-white"}`}>
+                        <span className="mt-0.5 text-lg font-bold leading-none text-white">
                           {format(due, "d")}
                         </span>
                       </>
@@ -410,7 +453,10 @@ export default function AssignmentsPage() {
                       </div>
                     </div>
                     <div className="mt-1 flex items-center gap-3">
-                      <span className="text-sm text-slate-400">{assignment.course?.name ?? "Course"}</span>
+                      <span className="inline-flex min-w-0 items-center gap-2 text-sm text-slate-400">
+                        <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: courseColor }} />
+                        <span className="truncate">{assignment.course?.name ?? "Course"}</span>
+                      </span>
                       {due ? <UrgencyLabel due={due} /> : null}
                       {due ? (
                         <span className="text-xs text-slate-500">{format(due, "p")}</span>
@@ -421,14 +467,21 @@ export default function AssignmentsPage() {
 
                 {/* Expandable content */}
                 <div
+                  id={`assignment-${assignment.id}`}
                   className={`grid transition-all duration-300 ease-in-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                 >
                   <div className="overflow-hidden">
                     <div className="border-t border-white/10 px-5 pb-5 pt-4">
                       {assignment.description ? (
-                        <p className="text-sm text-slate-300 leading-relaxed mb-4">
-                          {assignment.description}
-                        </p>
+                        <section className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-[rgba(5,9,20,0.72)]">
+                          <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+                            <FileText className="h-4 w-4 text-sky-300" aria-hidden="true" />
+                            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Assignment instructions</h3>
+                          </div>
+                          <div className="max-h-[65vh] overflow-auto p-4 sm:p-5 [scrollbar-width:thin]">
+                            <AssignmentDocument html={assignment.description} />
+                          </div>
+                        </section>
                       ) : (
                         <p className="text-sm text-slate-500 italic mb-4">No description provided.</p>
                       )}
@@ -457,10 +510,11 @@ export default function AssignmentsPage() {
                           Generate quiz
                         </button>
                         <button
-                          className="btn btn-secondary active:scale-95 transition-transform duration-100"
+                          className="btn btn-secondary !inline-flex items-center gap-2 active:scale-95 transition-transform duration-100"
                           onClick={() => openHelper(assignment)}
                         >
-                          {["quiz", "test", "exam"].includes(assignment.assignment_type) ? "Quiz helper" : "Writing helper"}
+                          <Bot className="h-4 w-4" aria-hidden="true" />
+                          Ask assignment coach
                         </button>
                       </div>
                     </div>
@@ -484,9 +538,7 @@ export default function AssignmentsPage() {
                 {activeAssignment ? activeAssignment.title : "Assignment helper"}
               </p>
               <p className="text-xs text-slate-400">
-                {activeAssignment && ["quiz", "test", "exam"].includes(activeAssignment.assignment_type)
-                  ? "Quiz review mode"
-                  : "Writing support mode"}
+                Guidance, explanations, and feedback—not completed work
               </p>
             </div>
             <button
@@ -500,7 +552,11 @@ export default function AssignmentsPage() {
 
           <div className="flex max-h-[260px] flex-col gap-2 overflow-y-auto p-4 [scrollbar-width:thin]">
             {messages.length === 0 ? (
-              <p className="text-sm text-slate-500">Ask for help — no direct answers will be given.</p>
+              <div className="rounded-xl border border-sky-400/15 bg-sky-500/5 p-3">
+                <p className="text-sm leading-relaxed text-slate-300">
+                  Tell me where you are stuck and show what you have tried. I can explain the concept, offer a hint, or review your approach without completing the assignment for you.
+                </p>
+              </div>
             ) : (
               messages.map((msg) => (
                 <div

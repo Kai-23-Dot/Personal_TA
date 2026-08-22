@@ -29,14 +29,14 @@ const cardVariants = cva("text-card-foreground", {
   variants: {
     variant: {
       // Standard content card used everywhere by default.
-      default: "card-raised rounded-2xl border border-border bg-card",
+      default: "card-raised rounded-2xl border border-border bg-card/90 backdrop-blur-xl",
       // Translucent section panel — for grouped content within a page
       // (replaces one-off `rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)]` divs).
       panel:
-        "rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl",
+        "rounded-2xl border border-white/8 bg-[rgba(10,15,30,0.78)] shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl",
       // Large translucent hero header — for page-top intro panels
       // (replaces one-off `rounded-3xl border ... bg-[rgba(12,15,27,0.82)]` divs).
-      hero: "rounded-3xl border border-sky-400/15 bg-[rgba(12,15,27,0.82)] shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+      hero: "future-page-hero rounded-3xl border border-sky-400/15 bg-[rgba(10,15,30,0.84)] shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl",
     },
   },
   defaultVariants: {

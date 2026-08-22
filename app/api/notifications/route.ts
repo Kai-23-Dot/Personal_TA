@@ -35,8 +35,9 @@ export async function GET() {
       .gte("created_at", recentCutoff),
     supabase
       .from("assignments")
-      .select("id,title,due_date,course:courses(name)")
+      .select("id,title,due_date,course:courses!inner(name,is_active)")
       .eq("user_id", user.id)
+      .eq("course.is_active", true)
       .eq("is_completed", false)
       .gte("due_date", now.toISOString())
       .lte("due_date", upcomingAssignmentsCutoff)
@@ -143,6 +144,7 @@ export async function GET() {
     .from("notifications")
     .select("*")
     .eq("user_id", user.id)
+    .or(`scheduled_at.is.null,scheduled_at.gte.${now.toISOString()}`)
     .order("created_at", { ascending: false })
     .limit(20);
 

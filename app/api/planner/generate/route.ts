@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    const tokenCheck = await assertWithinLimit(user.id, "ai_credits");
     if (!tokenCheck.ok) {
       return NextResponse.json(
         { success: false, error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
@@ -37,8 +37,9 @@ export async function POST(req: Request) {
     const endDate = format(addDays(new Date(date), 14), "yyyy-MM-dd");
     const { data: assignments } = await supabase
       .from("assignments")
-      .select("*, course:courses(name, color)")
+      .select("*, course:courses!inner(name, color, is_active)")
       .eq("user_id", user.id)
+      .eq("course.is_active", true)
       .eq("is_completed", false)
       .lte("due_date", endDate)
       .order("due_date", { ascending: true })

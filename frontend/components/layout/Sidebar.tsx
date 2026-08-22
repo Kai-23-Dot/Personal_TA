@@ -4,23 +4,26 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/backend/utils";
-import { GraduationCap, LogOut, Sparkles, Settings } from "lucide-react";
+import { CreditCard, GraduationCap, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { createClient } from "@/backend/supabase/client";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
 import type { Profile } from "@/types";
 import { toast } from "sonner";
 import { workspaceNavItems as navItems } from "@/frontend/lib/nav-items";
+import { PLAN_CATALOG, type Plan } from "@/backend/billing/plans";
 
 interface SidebarProps {
   profile: Profile | null;
-  plan?: "free" | "pro";
+  plan?: Plan;
+  isAdmin?: boolean;
 }
 
-export function Sidebar({ profile, plan = "free" }: SidebarProps) {
+export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const isPaid = plan !== "free";
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -33,21 +36,25 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
     : profile?.email?.[0]?.toUpperCase() ?? "U";
 
   return (
-    <aside className="fixed left-0 top-0 z-20 hidden h-screen w-60 flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-xl md:flex">
+    <aside className="workspace-sidebar fixed bottom-3 left-3 top-3 z-20 hidden w-60 flex-col rounded-3xl border border-sidebar-border bg-sidebar/90 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-2xl md:flex">
       <div className="px-5 py-[18px] border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+        <Link
+          href="/"
+          aria-label="Return to the Smartlearn home page"
+          className="flex items-center gap-2.5 group"
+        >
           <div className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">
             <Image
-              src="/conlearn-logo.png"
-              alt="Conlearn"
+              src="/smartlearn-logo.png"
+              alt="Smartlearn"
               width={32}
               height={32}
               className="w-full h-full object-contain"
             />
           </div>
           <div>
-            <div className="text-sidebar-foreground font-semibold text-sm leading-none">Conlearn</div>
-            <div className="text-sidebar-foreground/50 text-[11px] mt-0.5 tracking-wide">Study workspace</div>
+            <div className="font-mono text-sidebar-foreground font-semibold text-sm leading-none tracking-tight">SMARTLEARN</div>
+            <div className="text-primary/55 text-[9px] mt-1 tracking-[0.18em] uppercase">Intelligence OS</div>
           </div>
         </Link>
       </div>
@@ -63,9 +70,9 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", isActive && "active")}
+              className={cn("nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium", isActive && "active")}
             >
-              <Icon className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
+              <span className="nav-icon-shell"><Icon className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} /></span>
               <span className="flex-1">{item.label}</span>
               {isActive && (
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-300 flex-shrink-0" />
@@ -78,15 +85,27 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
           <p className="text-sky-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
             Account
           </p>
-          {plan !== "pro" && (
-            <Link
-              href="/pricing"
-              className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/pricing" && "active")}
-            >
-              <Sparkles className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
-              Upgrade
-            </Link>
-          )}
+          <Link
+            href="/pricing"
+            className={cn(
+              "mb-1 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all",
+              isPaid
+                ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100 hover:bg-emerald-400/10"
+                : "border-violet-400/25 bg-gradient-to-r from-violet-500/15 to-sky-500/10 text-white hover:border-violet-300/40 hover:from-violet-500/20 hover:to-sky-500/15",
+              pathname === "/pricing" && "ring-1 ring-sky-300/50"
+            )}
+          >
+            <span className="nav-icon-shell"><CreditCard className="nav-icon h-[15px] w-[15px] flex-shrink-0" /></span>
+            <span className="flex-1">{isPaid ? "Manage plan" : "Plans & upgrade"}</span>
+            <span className={cn(
+              "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+              isPaid
+                ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-200"
+                : "border-violet-300/25 bg-violet-400/10 text-violet-200"
+            )}>
+              {PLAN_CATALOG[plan].name}
+            </span>
+          </Link>
           <Link
             href="/settings"
             className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/settings" && "active")}
@@ -94,6 +113,15 @@ export function Sidebar({ profile, plan = "free" }: SidebarProps) {
             <Settings className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
             Settings
           </Link>
+          {isAdmin ? (
+            <Link
+              href="/admin"
+              className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/admin" && "active")}
+            >
+              <ShieldCheck className="nav-icon h-[15px] w-[15px] flex-shrink-0" />
+              Owner analytics
+            </Link>
+          ) : null}
         </div>
       </div>
 

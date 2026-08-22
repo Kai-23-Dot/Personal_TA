@@ -45,21 +45,28 @@ const modeOptions = [
   { value: "mixed", label: "Mixed" },
 ];
 
+const MAX_SELECTED_UNITS = 12;
+
 type Course = {
   id: string;
   name: string;
+};
+
+type CourseModule = {
+  id: string;
+  moduleId: number | null;
+  moduleName: string;
+  source: "canvas" | "generated";
+  itemCount: number;
+  powerpointCount: number;
+  assignmentIds: string[];
+  noteIds: string[];
 };
 
 type NoteListItem = {
   id: string;
   title: string;
   updated_at: string;
-};
-
-type Assignment = {
-  id: string;
-  title: string;
-  course_id: string;
 };
 
 type ResumeEntry = {
@@ -74,10 +81,13 @@ export default function PracticePage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState<string>("");
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
+  const [loadingModules, setLoadingModules] = useState(false);
+  const [moduleError, setModuleError] = useState<string | null>(null);
+  const [moduleReload, setModuleReload] = useState(0);
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [selectedNotes, setSelectedNotes] = useState<Record<string, boolean>>({});
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentId, setAssignmentId] = useState("");
   const [topic, setTopic] = useState("");
   const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState("adaptive");
@@ -159,21 +169,45 @@ export default function PracticePage() {
 
   useEffect(() => {
     let mounted = true;
-    async function loadAssignments() {
+    const controller = new AbortController();
+    async function loadModules() {
+      setModules([]);
+      setSelectedModuleIds([]);
+      setTopic("");
+      setModuleError(null);
       if (!courseId) {
-        setAssignments([]);
-        setAssignmentId("");
+        setLoadingModules(false);
         return;
       }
-      const res = await fetch(`/api/assignments?course_id=${courseId}`);
-      const data = await res.json();
-      if (mounted) setAssignments(data ?? []);
+      setLoadingModules(true);
+      try {
+        const res = await fetch(`/api/courses/units?courseId=${courseId}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Failed to load course units.");
+        const loadedUnits = Array.isArray(data?.units) ? data.units : [];
+        if (mounted) {
+          setModules(loadedUnits);
+          setModuleError(null);
+        }
+      } catch (caught) {
+        if (controller.signal.aborted) return;
+        if (mounted) {
+          setModules([]);
+          setModuleError(caught instanceof Error ? caught.message : "Failed to load course units.");
+        }
+      } finally {
+        if (mounted) setLoadingModules(false);
+      }
     }
-    loadAssignments();
+    void loadModules();
     return () => {
       mounted = false;
+      controller.abort();
     };
-  }, [courseId]);
+  }, [courseId, moduleReload]);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -181,21 +215,43 @@ export default function PracticePage() {
     setLoading(true);
 
     try {
-      const assignmentTitle = assignments.find((a) => a.id === assignmentId)?.title ?? "";
-      const effectiveTopic = topic || assignmentTitle || "Course practice";
+      const selectedModules = modules.filter((item) =>
+        selectedModuleIds.includes(item.id)
+      );
+      if (selectedModules.length === 0) {
+        setError("Select at least one course unit before generating practice.");
+        return;
+      }
+      const effectiveTopic =
+        topic.trim() ||
+        selectedModules
+          .map((selectedModule) => selectedModule.moduleName)
+          .join(", ")
+          .slice(0, 200);
       const noteIds = Object.entries(selectedNotes)
         .filter(([, selected]) => selected)
         .map(([id]) => id);
+      const selectedUnits = selectedModules.map((selectedModule) => ({
+        moduleId:
+          selectedModule.source === "canvas"
+            ? selectedModule.moduleId
+            : null,
+        moduleName: selectedModule.moduleName,
+        source: selectedModule.source,
+        assignmentIds: selectedModule.assignmentIds,
+        noteIds: selectedModule.noteIds,
+      }));
 
       if (mode === "flashcards") {
         const res = await fetch("/api/flashcards/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            noteId: noteIds[0] ?? null,
             courseId: courseId || null,
             topic: effectiveTopic,
             count: Math.min(Math.max(questionCount, 5), 40),
+            noteIds: noteIds.length > 0 ? noteIds : undefined,
+            units: selectedUnits,
           }),
         });
         const data = await res.json();
@@ -212,10 +268,10 @@ export default function PracticePage() {
           body: JSON.stringify({
             topic: effectiveTopic,
             courseId: courseId || null,
+            units: selectedUnits,
             difficulty,
             questionCount,
             noteIds: noteIds.length > 0 ? noteIds : undefined,
-            assignmentId: assignmentId || null,
             mode,
           }),
         });
@@ -308,30 +364,139 @@ export default function PracticePage() {
               ) : null}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="topic">Topic</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label id="module-selection-label">Course units / modules</Label>
+                {selectedModuleIds.length > 0 ? (
+                  <span className="text-xs font-medium text-sky-300">
+                    {selectedModuleIds.length} selected
+                  </span>
+                ) : null}
+              </div>
+              {loadingModules ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                  <div className="skeleton-shimmer h-3.5 w-3.5 flex-shrink-0 rounded-full" aria-hidden="true" />
+                  Loading units directly from your course…
+                </div>
+              ) : moduleError ? (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-rose-400" role="alert">
+                  <span>{moduleError}</span>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setModuleReload((value) => value + 1)}>
+                    Try again
+                  </Button>
+                </div>
+              ) : courseId && modules.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No usable course material was found yet. Sync the course or add notes, then try again.</p>
+              ) : (
+                <>
+                  {modules.length > 0 ? (
+                    <div
+                      className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2"
+                      role="group"
+                      aria-labelledby="module-selection-label"
+                    >
+                      {modules.map((item) => {
+                        const selected = selectedModuleIds.includes(item.id);
+                        return (
+                          <label
+                            key={item.id}
+                            className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                              selected
+                                ? "border-sky-400/35 bg-sky-400/10"
+                                : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  if (selectedModuleIds.length >= MAX_SELECTED_UNITS) {
+                                    toast.error(
+                                      `Choose up to ${MAX_SELECTED_UNITS} units per practice set.`
+                                    );
+                                    return;
+                                  }
+                                  setSelectedModuleIds((current) => [
+                                    ...current,
+                                    item.id,
+                                  ]);
+                                  return;
+                                }
+                                setSelectedModuleIds((current) =>
+                                  current.filter((id) => id !== item.id)
+                                );
+                              }}
+                              className="mt-0.5 rounded accent-sky-400"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium text-foreground">
+                                {item.moduleName}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {item.itemCount} item{item.itemCount === 1 ? "" : "s"}
+                                {item.powerpointCount > 0
+                                  ? ` · ${item.powerpointCount} PowerPoint${item.powerpointCount === 1 ? "" : "s"}`
+                                  : ""}
+                                {item.source === "generated"
+                                  ? " · organized by Smartlearn"
+                                  : ""}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  {modules.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedModuleIds(
+                            modules
+                              .slice(0, MAX_SELECTED_UNITS)
+                              .map((item) => item.id)
+                          );
+                          if (modules.length > MAX_SELECTED_UNITS) {
+                            toast.info(
+                              `Selected the first ${MAX_SELECTED_UNITS} units. Tests support up to ${MAX_SELECTED_UNITS} units at once.`
+                            );
+                          }
+                        }}
+                      >
+                        Select all
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedModuleIds([])}
+                      >
+                        Clear
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Choose one or more units, up to {MAX_SELECTED_UNITS}.
+                      </span>
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {modules.some((item) => item.source === "generated")
+                      ? "This course does not publish modules, so Smartlearn organized its assignments and notes into selectable units."
+                      : "Practice combines pages, assignments, and linked PowerPoints from every selected unit."}
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="topic">Focus within selected units (optional)</Label>
               <Input
                 id="topic"
                 type="text"
-                placeholder="e.g. Quadratic equations"
+                placeholder="e.g. key terms or a specific concept"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="assignment">Assignment (optional)</Label>
-              <select
-                id="assignment"
-                value={assignmentId}
-                onChange={(e) => setAssignmentId(e.target.value)}
-                className={NATIVE_SELECT_CLASS}
-              >
-                <option value="">No assignment selected</option>
-                {assignments.map((assignment) => (
-                  <option key={assignment.id} value={assignment.id}>
-                    {assignment.title}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="space-y-1.5">
               <Label>Practice from selected notes (optional)</Label>
@@ -387,7 +552,7 @@ export default function PracticePage() {
                 id="questions"
                 type="number"
                 min={5}
-                max={50}
+                max={20}
                 value={questionCount}
                 onChange={(e) => setQuestionCount(Number(e.target.value))}
               />
@@ -418,7 +583,12 @@ export default function PracticePage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={
+                loading || loadingModules || selectedModuleIds.length === 0
+              }
+            >
               {loading ? "Generating..." : "Generate test"}
             </Button>
             {error ? <p className="text-sm text-rose-400">{error}</p> : null}

@@ -6,6 +6,7 @@ node_modules
 .next
 .next-build
 .next-dev
+.next-browser
 out
 
 # Environment
@@ -25,6 +26,7 @@ test-results
 
 # Supabase
 .supabase
+supabase/.temp
 
 # Misc
 .DS_Store

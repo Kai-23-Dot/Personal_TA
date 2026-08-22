@@ -12,10 +12,12 @@ import {
   Grid2x2,
   X,
   MessageCircle,
-  Sparkles,
+  CreditCard,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { workspaceNavItems } from "@/frontend/lib/nav-items";
+import { PLAN_CATALOG, type Plan } from "@/backend/billing/plans";
 
 const quickAccess = [
   { href: "/dashboard",   label: "Home",        icon: LayoutDashboard },
@@ -25,12 +27,14 @@ const quickAccess = [
 ];
 
 interface MobileNavProps {
-  plan?: "free" | "pro";
+  plan?: Plan;
+  isAdmin?: boolean;
 }
 
-export function MobileNav({ plan = "free" }: MobileNavProps) {
+export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const isPaid = plan !== "free";
 
   // Close the drawer automatically whenever navigation happens.
   useEffect(() => {
@@ -97,6 +101,23 @@ export function MobileNav({ plan = "free" }: MobileNavProps) {
               </button>
             </div>
 
+            <Link
+              href="/pricing"
+              className={cn(
+                "mb-3 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors",
+                isPaid
+                  ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100"
+                  : "border-violet-400/25 bg-gradient-to-r from-violet-500/15 to-sky-500/10 text-white",
+                isActive("/pricing") && "ring-1 ring-sky-300/50"
+              )}
+            >
+              <CreditCard className="h-[18px] w-[18px]" />
+              <span className="flex-1">{isPaid ? "Manage your plan" : "View plans & upgrade"}</span>
+              <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                {PLAN_CATALOG[plan].name}
+              </span>
+            </Link>
+
             <div className="grid grid-cols-3 gap-2">
               {workspaceNavItems.map((item) => {
                 const Icon = item.icon;
@@ -130,18 +151,6 @@ export function MobileNav({ plan = "free" }: MobileNavProps) {
             <div className="mt-3 border-t border-white/8 pt-3">
               <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-sky-300/60">Account</p>
               <div className="space-y-1">
-                {plan !== "pro" && (
-                  <Link
-                    href="/pricing"
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
-                      isActive("/pricing") && "bg-sky-500/12 text-sky-200"
-                    )}
-                  >
-                    <Sparkles className="h-[15px] w-[15px]" />
-                    Upgrade
-                  </Link>
-                )}
                 <Link
                   href="/settings"
                   className={cn(
@@ -152,6 +161,18 @@ export function MobileNav({ plan = "free" }: MobileNavProps) {
                   <Settings className="h-[15px] w-[15px]" />
                   Settings
                 </Link>
+                {isAdmin ? (
+                  <Link
+                    href="/admin"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
+                      isActive("/admin") && "bg-sky-500/12 text-sky-200"
+                    )}
+                  >
+                    <ShieldCheck className="h-[15px] w-[15px]" />
+                    Owner analytics
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

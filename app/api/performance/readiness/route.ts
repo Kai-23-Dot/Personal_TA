@@ -23,9 +23,10 @@ export async function GET(req: Request) {
   // Load the assignment
   const { data: assignment } = await supabase
     .from("assignments")
-    .select("id, title, assignment_type, due_date, course_id, weight, points_possible, estimated_minutes")
+    .select("id, title, assignment_type, due_date, course_id, weight, points_possible, estimated_minutes, course:courses!inner(is_active)")
     .eq("id", assignmentId)
     .eq("user_id", user.id)
+    .eq("course.is_active", true)
     .single();
 
   if (!assignment) return NextResponse.json({ error: "Assignment not found" }, { status: 404 });

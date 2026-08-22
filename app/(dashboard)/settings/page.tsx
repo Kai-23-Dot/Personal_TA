@@ -17,6 +17,12 @@ import {
 } from "@/frontend/components/ui/select";
 import { Badge } from "@/frontend/components/ui/badge";
 import Link from "next/link";
+import {
+  formatMonthlyPrice,
+  PLAN_CATALOG,
+  type Plan,
+  type PlanLimits,
+} from "@/backend/billing/plans";
 
 type Profile = {
   full_name: string | null;
@@ -37,9 +43,15 @@ type Connection = {
 };
 
 type BillingStatus = {
-  plan: "free" | "pro";
-  limits: { practiceTestsPerWeek: number; notesPerWeek: number; tokensPerDay: number } | null;
-  usage: { practiceTests: number; notes: number; tokens: number };
+  plan: Plan;
+  limits: PlanLimits;
+  usage: {
+    practiceTests: number;
+    notes: number;
+    aiCredits: number;
+    audioSeconds: number;
+    storageBytes: number;
+  };
 };
 
 const TIMEZONES = [
@@ -85,8 +97,8 @@ export default function SettingsPage() {
         const nextBilling = (await response.json()) as BillingStatus;
         if (!mounted) return;
         setBilling(nextBilling);
-        if (nextBilling.plan === "pro") {
-          setMessage("Subscription active — welcome to Pro!");
+        if (nextBilling.plan !== "free") {
+          setMessage(`Subscription active — welcome to ${PLAN_CATALOG[nextBilling.plan].name}!`);
           setMessageType("success");
           return;
         }
@@ -107,7 +119,7 @@ export default function SettingsPage() {
         setConnections(connectionsData ?? []);
         setBilling(billingData ?? null);
       }
-      if (checkout === "success" && billingData?.plan !== "pro") {
+      if (checkout === "success" && billingData?.plan === "free") {
         void refreshBillingAfterCheckout();
       }
     }
@@ -115,7 +127,7 @@ export default function SettingsPage() {
 
     // Surface the outcome of a returning Checkout redirect.
     if (checkout === "success") {
-      setMessage("Payment received — activating Pro access…");
+      setMessage("Payment received — activating your paid plan…");
       setMessageType("success");
     }
     return () => {
@@ -123,7 +135,7 @@ export default function SettingsPage() {
     };
   }, []);
 
-  async function handleBillingAction(endpoint: "checkout" | "portal") {
+  async function handleBillingAction(endpoint: "portal") {
     setBillingBusy(true);
     try {
       const res = await fetch(`/api/billing/${endpoint}`, { method: "POST" });
@@ -310,40 +322,42 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm font-semibold text-foreground">
-                    {billing.plan === "pro" ? "Pro plan" : "Free plan"}
+                    {PLAN_CATALOG[billing.plan].name} plan
                   </span>
-                  <Badge variant={billing.plan === "pro" ? "info" : "outline"}>
-                    {billing.plan === "pro" ? "Unlimited access" : "$20/mo for unlimited"}
+                  <Badge variant={billing.plan !== "free" ? "info" : "outline"}>
+                    {billing.plan === "free"
+                      ? "Free forever"
+                      : `${formatMonthlyPrice(PLAN_CATALOG[billing.plan].monthlyPriceCents)}/mo`}
                   </Badge>
                 </div>
-                {billing.plan === "pro" ? (
+                {billing.plan !== "free" ? (
                   <Button variant="secondary" size="sm" disabled={billingBusy} onClick={() => handleBillingAction("portal")}>
                     Manage subscription
                   </Button>
                 ) : (
-                  <Button size="sm" disabled={billingBusy} onClick={() => handleBillingAction("checkout")}>
-                    Upgrade to Pro
+                  <Button size="sm" asChild>
+                    <Link href="/pricing">View paid plans</Link>
                   </Button>
                 )}
               </div>
 
-              {billing.limits ? (
-                <ul className="grid gap-1.5">
-                  <li className="text-sm text-muted-foreground">
-                    Practice tests this week: {billing.usage.practiceTests} / {billing.limits.practiceTestsPerWeek}
-                  </li>
-                  <li className="text-sm text-muted-foreground">
-                    Notes this week: {billing.usage.notes} / {billing.limits.notesPerWeek}
-                  </li>
-                  <li className="text-sm text-muted-foreground">
-                    AI tokens today: {billing.usage.tokens.toLocaleString()} / {billing.limits.tokensPerDay.toLocaleString()}
-                  </li>
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  You have unlimited practice tests, notes, and AI usage.
-                </p>
-              )}
+              <ul className="grid gap-1.5 sm:grid-cols-2">
+                <li className="text-sm text-muted-foreground">
+                  Practice tests: {billing.usage.practiceTests.toLocaleString()} / {billing.limits.practiceTestsPerMonth.toLocaleString()}
+                </li>
+                <li className="text-sm text-muted-foreground">
+                  AI-processed notes: {billing.usage.notes.toLocaleString()} / {billing.limits.notesPerMonth.toLocaleString()}
+                </li>
+                <li className="text-sm text-muted-foreground">
+                  AI credits: {billing.usage.aiCredits.toLocaleString()} / {billing.limits.aiCreditsPerMonth.toLocaleString()}
+                </li>
+                <li className="text-sm text-muted-foreground">
+                  Audio: {Math.ceil(billing.usage.audioSeconds / 60).toLocaleString()} / {billing.limits.audioMinutesPerMonth.toLocaleString()} minutes
+                </li>
+                <li className="text-sm text-muted-foreground">
+                  Storage: {(billing.usage.storageBytes / 1024 / 1024).toFixed(1)} / {billing.limits.storageMegabytes.toLocaleString()} MB
+                </li>
+              </ul>
               <Button variant="secondary" size="sm" asChild>
                 <a href="/pricing">View plans</a>
               </Button>

@@ -1,9 +1,8 @@
 /**
  * PersonalTA.ai — TA Chat Agent
  *
- * Uses Vercel AI SDK streamText with Sarvam AI (sarvam-30b).
- * Note: Sarvam does not support function/tool calling, so student data is
- * pre-fetched in the API route and injected into the system prompt as context.
+ * Uses Vercel AI SDK streamText with OpenAI GPT. Student data is pre-fetched
+ * in the API route and injected into the system prompt as context.
  *
  * The agent is invoked from /api/chat/route.ts via streamText.
  */
@@ -177,7 +176,7 @@ COMMON ERRORS & FIXES:
 - "File very slow": Use Simplify → Remove Details, or externally reference large sub-assemblies.
 --- END CAD KNOWLEDGE ---`;
 
-const BASE_SYSTEM_PROMPT = `You are Conlearn — an expert, supportive AI Teaching Assistant for a high school student.
+const BASE_SYSTEM_PROMPT = `You are Smartlearn — an expert, supportive AI Teaching Assistant for a high school student.
 
 PERSONALITY: Encouraging, clear, and student-friendly. Like the best TA you've ever had.
 

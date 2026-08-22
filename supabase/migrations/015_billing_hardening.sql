@@ -1,5 +1,5 @@
 -- ============================================================
--- Conlearn — Migration 015: Stripe reliability + usage aggregation
+-- Smartlearn — Migration 015: Stripe reliability + usage aggregation
 -- ============================================================
 
 -- Stripe can retry or deliver webhook events out of order. Keep an event ledger

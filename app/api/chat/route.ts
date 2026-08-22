@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     // Plan limit: block Free users who've exhausted their daily token allowance.
-    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    const tokenCheck = await assertWithinLimit(user.id, "ai_credits");
     if (!tokenCheck.ok) {
       return NextResponse.json(
         { error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // Pre-fetch student context (Sarvam doesn't support tool calling)
+    // Pre-fetch student context for a single, grounded GPT request.
     const today = format(new Date(), "yyyy-MM-dd");
     const twoWeeksOut = format(addDays(new Date(), 14), "yyyy-MM-dd");
 
@@ -63,8 +63,9 @@ export async function POST(req: Request) {
     ] = await Promise.all([
       supabase
         .from("assignments")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .gte("due_date", today)
         .lte("due_date", twoWeeksOut)
         .eq("is_completed", false)
@@ -73,8 +74,9 @@ export async function POST(req: Request) {
 
       supabase
         .from("assignments")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .in("assignment_type", ["test", "exam", "quiz"])
         .gte("due_date", today)
         .lte("due_date", twoWeeksOut)
@@ -84,8 +86,9 @@ export async function POST(req: Request) {
 
       supabase
         .from("performance_metrics")
-        .select("*, course:courses(name)")
+        .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .lt("accuracy_pct", 70)
         .order("accuracy_pct", { ascending: true })
         .limit(5),
@@ -154,9 +157,10 @@ export async function POST(req: Request) {
     if (noteId) {
       const { data: note } = await supabase
         .from("notes")
-        .select("title, content, course_id")
+        .select("title, content, course_id, course:courses!inner(is_active)")
         .eq("id", noteId)
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .single();
       if (note?.content) {
         ragResults = [
@@ -169,9 +173,10 @@ export async function POST(req: Request) {
     if (assignmentId) {
       const { data: assignment } = await supabase
         .from("assignments")
-        .select("title, description")
+        .select("title, description, course:courses!inner(is_active)")
         .eq("id", assignmentId)
         .eq("user_id", user.id)
+        .eq("course.is_active", true)
         .single();
       if (assignment?.description) {
         ragResults = [

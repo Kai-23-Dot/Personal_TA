@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { getActiveCourseIds, retainActiveCourseRows } from "@/backend/lms/activeCourses";
 
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data, error } = await supabase
+  const [{ data, error }, activeCourseIds] = await Promise.all([supabase
     .from("rubrics")
     .select("*")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }), getActiveCourseIds(supabase, user.id)]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(retainActiveCourseRows(data ?? [], activeCourseIds));
 }
 
 export async function POST(req: Request) {

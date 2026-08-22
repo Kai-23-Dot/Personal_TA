@@ -25,13 +25,13 @@ export function PageHero({
   className?: string;
 }) {
   return (
-    <Card variant="hero" className={cn("p-6", className)}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <Card variant="hero" className={cn("overflow-hidden p-6 sm:p-8", className)}>
+      <div className="relative z-[1] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-100">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/[0.07] px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-sky-200">
             <Icon className="h-3.5 w-3.5" /> {badgeLabel}
           </p>
-          <h1 className="font-sora text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="font-sora text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
             {title}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p>

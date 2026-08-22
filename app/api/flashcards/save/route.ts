@@ -20,6 +20,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "front and back are required" }, { status: 400 });
   }
 
+  if (courseId) {
+    const { data: course } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", courseId)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!course) return NextResponse.json({ error: "Course is no longer active." }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("flashcards")
     .insert({

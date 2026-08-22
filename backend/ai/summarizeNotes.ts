@@ -1,6 +1,5 @@
 /**
- * Note summarization using Vercel AI SDK + Anthropic Claude.
- * Uses generateText (not the raw Anthropic SDK) for consistency.
+ * Note summarization using Vercel AI SDK and OpenAI GPT.
  */
 import { generateText } from "ai";
 import { chatModel, fastModel } from "./provider";

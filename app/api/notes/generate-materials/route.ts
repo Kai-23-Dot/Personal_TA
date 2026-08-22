@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const tokenCheck = await assertWithinLimit(user.id, "tokens");
+    const tokenCheck = await assertWithinLimit(user.id, "ai_credits");
     if (!tokenCheck.ok) {
       return NextResponse.json(
         { error: tokenCheck.reason, code: "LIMIT_REACHED", feature: tokenCheck.feature, limit: tokenCheck.limit, used: tokenCheck.used },
@@ -42,12 +42,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "A valid note and material type are required." }, { status: 400 });
     }
     const { noteId, type } = parsed.data;
+    if (type === "practice" || type === "both") {
+      const practiceCheck = await assertWithinLimit(user.id, "practice_test");
+      if (!practiceCheck.ok) {
+        return NextResponse.json(
+          {
+            error: practiceCheck.reason,
+            code: "LIMIT_REACHED",
+            feature: practiceCheck.feature,
+            limit: practiceCheck.limit,
+            used: practiceCheck.used,
+          },
+          { status: 402 }
+        );
+      }
+    }
 
     const { data: note } = await supabase
       .from("notes")
-      .select("id, title, content, course_id, course:courses(name)")
+      .select("id, title, content, course_id, course:courses!inner(name,is_active)")
       .eq("id", noteId)
       .eq("user_id", user.id)
+      .eq("course.is_active", true)
       .single();
 
     if (!note?.content) {

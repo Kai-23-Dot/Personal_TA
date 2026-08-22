@@ -48,10 +48,13 @@ import { extractFileText, mimeToFileType } from "@/backend/utils/extractFileText
 import { crawlCanvasCourseContent } from "@/backend/canvas-intelligence/canvasCrawler";
 import { extractFromGoogleLink, extractFromHtml } from "@/backend/canvas-intelligence/contentExtractor";
 import { classifyContent } from "@/backend/canvas-intelligence/contentClassifier";
+import { deactivateMissingCanvasCourses } from "@/backend/lms/deactivateMissingCanvasCourses";
+import { getCanvasCourseLifecycle } from "@/backend/lms/courseLifecycle";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const syncRequestSchema = z.object({
   connectionId: z.string().uuid(),
+  mode: z.enum(["full", "quick"]).optional(),
 }).strict();
 
 function validCronAuthorization(req: Request): boolean {
@@ -71,6 +74,7 @@ async function runCronSync(req: Request) {
 
   // The service client is created only after the cron secret is verified.
   const supabase = createServiceClient();
+  const mode = new URL(req.url).searchParams.get("mode") === "quick" ? "quick" : "full";
   const { data: connections, error: connectionError } = await supabase
     .from("lms_connections")
     .select("*")
@@ -90,12 +94,12 @@ async function runCronSync(req: Request) {
 
   for (const conn of connections ?? []) {
     try {
-      const result = await syncConnection(supabase, conn);
+      const result = await syncConnection(supabase, conn, mode);
       totalCourses += result.courses;
       totalAssignments += result.assignments;
       totalNotes += result.notes;
       errors.push(...result.errors.map((message) => `${conn.id}: ${message}`));
-      if (result.courses > 0 || result.assignments > 0 || result.notes > 0) {
+      if (result.errors.length === 0 || result.courses > 0 || result.assignments > 0 || result.notes > 0) {
         await supabase
           .from("lms_connections")
           .update({ last_synced_at: new Date().toISOString() })
@@ -133,27 +137,28 @@ export async function POST(req: Request) {
   if (!parsedBody.success) {
     return NextResponse.json({ error: "A valid connectionId is required." }, { status: 400 });
   }
-  const { connectionId } = parsedBody.data;
+  const { connectionId, mode = "full" } = parsedBody.data;
 
   const { data: connection, error: connectionError } = await supabase
     .from("lms_connections")
     .select("*")
     .eq("id", connectionId)
     .eq("user_id", user.id)
+    .eq("is_active", true)
     .single();
 
   if (connectionError || !connection) {
     return NextResponse.json({ success: false, error: "Connection not found" }, { status: 404 });
   }
 
-  const result = await syncConnection(supabase, connection);
+  const result = await syncConnection(supabase, connection, mode);
 
-  if (result.courses > 0 || result.assignments > 0) {
-    // Update last_synced_at on partial or full success
+  if (result.errors.length === 0 || result.courses > 0 || result.assignments > 0 || result.notes > 0) {
     await supabase
       .from("lms_connections")
       .update({ last_synced_at: new Date().toISOString() })
-      .eq("id", connectionId);
+      .eq("id", connectionId)
+      .eq("user_id", user.id);
   }
 
   return NextResponse.json({
@@ -184,7 +189,8 @@ async function syncConnection(
     refresh_token: string | null;
     token_expires_at: string | null;
     canvas_domain: string | null;
-  }
+  },
+  mode: "full" | "quick" = "full"
 ): Promise<SyncResult> {
   let { access_token } = connection;
   const { user_id, platform, canvas_domain, refresh_token, token_expires_at } = connection;
@@ -306,11 +312,18 @@ async function syncConnection(
       return { courses: 0, assignments: 0, notes: 0, errors };
     }
 
-    // Collect active platform IDs so we can deactivate stale courses after the loop
-    const activePlatformIds = canvasCourses.map((cc) => String(cc.id));
+    // Canvas sometimes keeps concluded enrollments in its active collection.
+    // Only lifecycle-current IDs remain visible in Smartlearn.
+    const courseLifecycles = new Map(
+      canvasCourses.map((course) => [course.id, getCanvasCourseLifecycle(course)])
+    );
+    const activePlatformIds = canvasCourses
+      .filter((course) => courseLifecycles.get(course.id)?.isActive)
+      .map((course) => String(course.id));
 
     for (const cc of canvasCourses) {
       const teacher = cc.teachers?.[0];
+      const lifecycle = courseLifecycles.get(cc.id) ?? getCanvasCourseLifecycle(cc);
       const { data: course, error: courseErr } = await supabase
         .from("courses")
         .upsert(
@@ -322,7 +335,9 @@ async function syncConnection(
             name: cc.name,
             teacher_name: teacher?.display_name ?? null,
             teacher_email: teacher?.login_id ?? null,
-            is_active: true,
+            is_active: lifecycle.isActive,
+            academic_year: lifecycle.academicYear,
+            semester: lifecycle.semester,
           },
           { onConflict: "user_id,connection_id,platform_id" }
         )
@@ -331,6 +346,7 @@ async function syncConnection(
 
       if (courseErr) { errors.push(`Canvas course upsert failed (${cc.name}): ${courseErr.message}`); continue; }
       if (!course) continue;
+      if (!lifecycle.isActive) continue;
       coursesSynced++;
 
       // Assignment sync
@@ -461,6 +477,7 @@ async function syncConnection(
         }
       }
 
+      if (mode === "full") {
       // Canvas Pages → Notes
       try {
         const pages = await fetchCanvasPages(canvas_domain, access_token, cc.id);
@@ -741,20 +758,17 @@ async function syncConnection(
       } catch (err) {
         errors.push(`Canvas intelligence crawl failed (${cc.name}): ${(err as Error).message}`);
       }
+      }
     }
 
     // Deactivate courses that were removed from Canvas since the last sync
-    if (activePlatformIds.length > 0) {
-      const { error: deactivateErr } = await supabase
-        .from("courses")
-        .update({ is_active: false })
-        .eq("user_id", user_id)
-        .eq("platform", "canvas")
-        .eq("connection_id", connection.id)
-        .not("platform_id", "in", `(${activePlatformIds.join(",")})`);
-      if (deactivateErr) {
-        errors.push(`Failed to deactivate removed Canvas courses: ${deactivateErr.message}`);
-      }
+    const deactivateErr = await deactivateMissingCanvasCourses(supabase, {
+      userId: user_id,
+      connectionId: connection.id,
+      activePlatformIds,
+    });
+    if (deactivateErr) {
+      errors.push(`Failed to deactivate removed Canvas courses: ${deactivateErr.message}`);
     }
 
   // ── Infinite Campus ───────────────────────────────────────────────────────

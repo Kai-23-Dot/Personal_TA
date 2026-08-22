@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Conlearn — Landing Hero Styles ()
+   Smartlearn — Landing Hero Styles ()
    ═══════════════════════════════════════════════════════════════ */
 
 /* ─── Cursor blink ────────────────────────────────────────────── */
@@ -407,11 +407,111 @@
 /* ─── Footer ────────────────────────────────────────────────────── */
 .footer-brand {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
   color: #ededed;
-  margin: 0 0 0.5rem;
+  margin: 0;
+}
+
+.smartlearn-footer {
+  padding: 2.25rem max(1.25rem, 4vw) 1.5rem;
+  text-align: left;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(66, 112, 220, 0.08), transparent 24rem),
+    #070a12;
+}
+
+.smartlearn-footer .footer-content {
+  max-width: 1120px;
+}
+
+.footer-primary,
+.footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.footer-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+}
+
+.footer-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.footer-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.footer-nav a:hover {
+  border-color: rgba(125, 180, 255, 0.28);
+  background: rgba(125, 180, 255, 0.07);
+  color: #f8fbff;
+}
+
+.footer-meta {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.smartlearn-footer .footer-meta p,
+.smartlearn-footer .footer-legal p {
+  margin: 0;
+}
+
+.smartlearn-footer .footer-meta p {
+  color: rgba(148, 163, 184, 0.68);
+  font-size: 0.72rem;
+}
+
+.footer-legal {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.smartlearn-footer .footer-legal p {
+  color: rgba(138, 148, 168, 0.55);
+  font-size: 0.65rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .footer-primary,
+  .footer-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .footer-nav {
+    justify-content: flex-start;
+  }
+
+  .footer-legal {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
 }
 
 /* Section dividers */

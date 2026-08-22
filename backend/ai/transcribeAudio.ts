@@ -1,15 +1,35 @@
 /**
- * Audio lecture transcription using Sarvam Saaras v3 ASR.
+ * Audio lecture transcription using OpenAI GPT Transcribe.
  *
- * Step 1: raw transcription via Sarvam's dedicated speech-to-text endpoint
- *         (POST https://api.sarvam.ai/speech-to-text, multipart/form-data)
- * Step 2: structuring pass via sarvam-30b chat model (generateText)
+ * Step 1: raw transcription via OpenAI's audio transcription endpoint.
+ * Step 2: a GPT-4.1 mini pass structures the transcript as study notes.
  *
  * Supported formats: mp3, mp4, m4a, wav, webm, ogg
  * Max file size: 25 MB per request.
  */
 import { generateText } from "ai";
+import OpenAI, { toFile } from "openai";
 import { chatModel } from "./provider";
+import { getUsageUserId } from "@/backend/billing/usageContext";
+import {
+  assertWithinLimit,
+  recordUsage,
+  reserveAiCredits,
+  settleAiCreditReservation,
+  UsageLimitError,
+} from "@/backend/billing/limits";
+
+const TRANSCRIPTION_MODEL = "gpt-transcribe";
+
+/** GPT Transcribe is $0.0045/minute; one credit covers $0.001. */
+const AUDIO_CREDITS_PER_MINUTE = 5;
+
+export function audioCreditsForDuration(durationSeconds: number): number {
+  return Math.max(
+    1,
+    Math.ceil((Math.max(0, durationSeconds) / 60) * AUDIO_CREDITS_PER_MINUTE)
+  );
+}
 
 export interface TranscriptionResult {
   rawTranscript: string;
@@ -19,42 +39,61 @@ export interface TranscriptionResult {
 }
 
 /**
- * Transcribe audio and structure into notes using Sarvam.
+ * Transcribe audio and structure it into notes using OpenAI GPT models.
  */
 export async function transcribeAudio(
   audioBuffer: Buffer,
   fileName: string,
   courseName?: string
 ): Promise<TranscriptionResult> {
-  const sarvamApiKey = process.env.SARVAM_API_KEY;
-  if (!sarvamApiKey) {
-    throw new Error("Audio transcription provider is not configured.");
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    throw new Error("OpenAI audio transcription is not configured.");
   }
   const mimeType = getAudioMimeType(fileName);
-
-  // Step 1: Raw transcription via Sarvam Saaras v3 ASR
-  const formData = new FormData();
-  const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-  formData.append("file", blob, fileName);
-  formData.append("model", "saaras:v3");
-
-  const asr = await fetch("https://api.sarvam.ai/speech-to-text", {
-    method: "POST",
-    headers: {
-      "api-subscription-key": sarvamApiKey,
-    },
-    body: formData,
-    signal: AbortSignal.timeout(60_000),
-  });
-
-  if (!asr.ok) {
-    throw new Error(`Audio transcription failed with status ${asr.status}.`);
+  const duration = await getAudioDurationSeconds(audioBuffer, mimeType);
+  const userId = getUsageUserId();
+  const audioCredits = audioCreditsForDuration(duration);
+  if (userId) {
+    const durationCheck = await assertWithinLimit(
+      userId,
+      "audio_seconds",
+      duration
+    );
+    if (!durationCheck.ok) throw new UsageLimitError(durationCheck.reason);
+    await reserveAiCredits(userId, audioCredits);
   }
 
-  const asrData = await asr.json() as { transcript?: string; language_code?: string };
-  const rawTranscript = asrData.transcript ?? "";
+  // Step 1: Raw transcription with OpenAI GPT Transcribe.
+  let transcription: {
+    text: string;
+    language?: string;
+    languages?: Array<{ code?: string }>;
+  };
+  try {
+    const openai = new OpenAI({
+      apiKey: openaiApiKey,
+      maxRetries: 1,
+      timeout: 90_000,
+    });
+    const file = await toFile(audioBuffer, fileName, { type: mimeType });
+    transcription = (await openai.audio.transcriptions.create({
+      file,
+      model: TRANSCRIPTION_MODEL,
+      prompt: courseName
+        ? `A class lecture for ${courseName}. Preserve technical terms, names, formulas, and assignment details.`
+        : "A class lecture. Preserve technical terms, names, formulas, and assignment details.",
+    })) as typeof transcription;
+  } catch (error) {
+    if (userId) await settleAiCreditReservation(userId, audioCredits, 0);
+    throw error;
+  }
+
+  if (userId) await recordUsage(userId, "audio_seconds", duration);
+
+  const rawTranscript = transcription.text ?? "";
   if (!rawTranscript.trim()) {
-    throw new Error("The transcription provider returned an empty transcript.");
+    throw new Error("OpenAI returned an empty transcript.");
   }
 
   // Step 2: Structure the transcript into organized lecture notes
@@ -92,8 +131,28 @@ Be concise and student-friendly. Fix transcript errors where obvious.`,
   return {
     rawTranscript,
     structuredNotes,
-    language: asrData.language_code,
+    duration,
+    language: transcription.languages?.[0]?.code ?? transcription.language,
   };
+}
+
+async function getAudioDurationSeconds(
+  audioBuffer: Buffer,
+  mimeType: string
+): Promise<number> {
+  try {
+    const { parseBuffer } = await import("music-metadata");
+    const metadata = await parseBuffer(
+      audioBuffer,
+      { mimeType, size: audioBuffer.length },
+      { duration: true, skipCovers: true }
+    );
+    const duration = Math.ceil(metadata.format.duration ?? 0);
+    if (!Number.isFinite(duration) || duration <= 0) throw new Error();
+    return duration;
+  } catch {
+    throw new Error("The audio duration could not be determined.");
+  }
 }
 
 function getAudioMimeType(fileName: string): string {

@@ -22,6 +22,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
       .select("id, name, platform, teacher_name, section, color, updated_at, platform_id")
       .eq("id", id)
       .eq("user_id", user.id)
+      .eq("is_active", true)
       .maybeSingle(),
     supabase
       .from("assignments")
