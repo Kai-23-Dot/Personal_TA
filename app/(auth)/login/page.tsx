@@ -28,11 +28,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [accountCreated, setAccountCreated] = useState(false);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    setAccountCreated(
-      new URLSearchParams(window.location.search).get("created") === "1"
-    );
+    const params = new URLSearchParams(window.location.search);
+    const created = params.get("created") === "1";
+    setAccountCreated(created);
+    setEmailNotVerified(params.get("error") === "email_not_verified");
+    if (created) {
+      try {
+        const pendingEmail = sessionStorage.getItem("pending_verification_email");
+        if (pendingEmail) setEmail(pendingEmail);
+      } catch {
+        // Private browsing can disable web storage; manual entry still works.
+      }
+    }
   }, []);
 
   function showAuthFailure(error: unknown) {
@@ -46,6 +57,9 @@ export default function LoginPage() {
   async function readAuthResponse(response: Response) {
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
+      if (payload?.code === "EMAIL_NOT_VERIFIED") {
+        setEmailNotVerified(true);
+      }
       throw new Error(payload?.error ?? "Sign in failed. Please try again.");
     }
     return payload;
@@ -70,6 +84,11 @@ export default function LoginPage() {
         }),
       });
       await readAuthResponse(response);
+      try {
+        sessionStorage.removeItem("pending_verification_email");
+      } catch {
+        // A completed sign-in does not depend on web storage cleanup.
+      }
 
       const requestedNext = new URLSearchParams(window.location.search).get("next");
       const safeNext =
@@ -84,6 +103,38 @@ export default function LoginPage() {
       showAuthFailure(error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      toast.error("Enter the email address for the account first.");
+      return;
+    }
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error("Please complete the human verification first.");
+      return;
+    }
+
+    setResending(true);
+    try {
+      const response = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          ...(captchaToken ? { captchaToken } : {}),
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Could not resend the verification email.");
+      }
+      toast.success(payload?.message ?? "A new verification link is on its way.");
+    } catch (error) {
+      showAuthFailure(error);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -121,13 +172,22 @@ export default function LoginPage() {
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
             <h2 className="contact-form-title">Sign in to Smartlearn</h2>
 
-            {accountCreated ? (
+            {accountCreated || emailNotVerified ? (
               <div
                 role="status"
                 className="mb-5 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-100"
               >
-                <strong className="block text-emerald-200">Check your email to activate your account.</strong>
-                Open the Smartlearn verification link, then return here to sign in.
+                <strong className="block text-emerald-200">Verify your email to activate your account.</strong>
+                Open the Smartlearn verification link, then return here to sign in. If the email is missing or expired, enter your address below and{" "}
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                  className="font-semibold text-sky-300 underline decoration-sky-300/40 underline-offset-2 hover:text-sky-200 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {resending ? "sending a new link…" : "send a new link"}
+                </button>
+                .
               </div>
             ) : null}
 

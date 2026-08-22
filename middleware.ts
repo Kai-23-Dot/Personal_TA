@@ -87,6 +87,9 @@ function sensitiveAnonymousRule(pathname: string, method: string): RateLimitRule
   if (method === "POST" && pathname === "/api/auth/password-reset") {
     return { limit: 4, windowMs: ONE_HOUR };
   }
+  if (method === "POST" && pathname === "/api/auth/resend-confirmation") {
+    return { limit: 4, windowMs: ONE_HOUR };
+  }
   if (method === "POST" && pathname === "/api/auth/oauth") {
     return { limit: 10, windowMs: 10 * ONE_MINUTE };
   }

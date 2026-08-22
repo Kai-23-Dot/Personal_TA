@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
   signUp: vi.fn(),
+  resend: vi.fn(),
   rpc: vi.fn(),
 }));
 
@@ -15,6 +16,7 @@ vi.mock("@/app/api/auth/_supabase-route", () => ({
         signInWithPassword: mocks.signInWithPassword,
         signOut: mocks.signOut,
         signUp: mocks.signUp,
+        resend: mocks.resend,
       },
       rpc: mocks.rpc,
     },
@@ -27,6 +29,7 @@ vi.mock("@/app/api/auth/_supabase-route", () => ({
 
 import { POST as login } from "@/app/api/auth/login/route";
 import { POST as signup } from "@/app/api/auth/signup/route";
+import { POST as resendConfirmation } from "@/app/api/auth/resend-confirmation/route";
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
   return new NextRequest(`http://localhost${path}`, {
@@ -47,6 +50,7 @@ describe("auth routes", () => {
       data: { session: null, user: { email_confirmed_at: null } },
       error: null,
     });
+    mocks.resend.mockResolvedValue({ error: null });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
   });
 
@@ -154,6 +158,25 @@ describe("auth routes", () => {
 
     expect(response.status).toBe(503);
     expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("resends a signup confirmation with the safe onboarding callback", async () => {
+    const response = await resendConfirmation(
+      jsonRequest("/api/auth/resend-confirmation", {
+        email: "student@example.com",
+        captchaToken: null,
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.resend).toHaveBeenCalledWith({
+      type: "signup",
+      email: "student@example.com",
+      options: {
+        captchaToken: undefined,
+        emailRedirectTo: "http://localhost/callback?next=%2Fonboarding%3Fwelcome%3D1",
+      },
+    });
   });
 
   it("rejects signup before creating an auth user when the username exists", async () => {

@@ -77,6 +77,11 @@ export default function SignupPage() {
         }),
       });
       await readAuthResponse(response);
+      try {
+        sessionStorage.setItem("pending_verification_email", email.trim());
+      } catch {
+        // The login screen still lets the user type the address manually.
+      }
       toast.success("Verification email sent. Open the link to activate your account.");
       router.push("/login?created=1&next=%2Fonboarding%3Fwelcome%3D1");
     } catch (error) {

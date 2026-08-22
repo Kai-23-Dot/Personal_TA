@@ -29,3 +29,10 @@ export const loginInputSchema = z
     password: z.string().min(1).max(1024),
   })
   .strict();
+
+export const resendConfirmationInputSchema = z
+  .object({
+    captchaToken: captchaTokenSchema,
+    email: z.string().trim().email().max(254),
+  })
+  .strict();
