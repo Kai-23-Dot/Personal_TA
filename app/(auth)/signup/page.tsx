@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
 import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
+import { AuthFieldLabel } from "@/frontend/components/auth/field-help";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -75,17 +76,9 @@ export default function SignupPage() {
           ...(captchaToken ? { captchaToken } : {}),
         }),
       });
-      const payload = await readAuthResponse(response);
-
-      if (payload?.hasSession) {
-        // Email confirmation is off for this project, so signup already returned
-        // an active session — go straight in instead of making them log in again.
-        router.push("/onboarding?welcome=1");
-        router.refresh();
-      } else {
-        toast.success("Account created! Confirm your email, then sign in to connect Canvas.");
-        router.push("/login?created=1&next=%2Fonboarding%3Fwelcome%3D1");
-      }
+      await readAuthResponse(response);
+      toast.success("Verification email sent. Open the link to activate your account.");
+      router.push("/login?created=1&next=%2Fonboarding%3Fwelcome%3D1");
     } catch (error) {
       showAuthFailure(error);
     } finally {
@@ -163,7 +156,11 @@ export default function SignupPage() {
 
             <form className="contact-form" onSubmit={handleSignup}>
               <div className="form-field">
-                <label htmlFor="username">Username</label>
+                <AuthFieldLabel
+                  htmlFor="username"
+                  label="Username"
+                  help="Use 3–50 characters. Letters, numbers, spaces, periods, apostrophes, underscores, and hyphens are allowed."
+                />
                 <input
                   id="username"
                   type="text"
@@ -173,22 +170,35 @@ export default function SignupPage() {
                   minLength={3}
                   maxLength={50}
                   autoComplete="username"
+                  spellCheck={false}
                   required
                 />
               </div>
               <div className="form-field">
-                <label htmlFor="email">Email</label>
+                <AuthFieldLabel
+                  htmlFor="email"
+                  label="Email"
+                  help="Use an inbox you can open now. Smartlearn sends a verification link, and the account cannot sign in until that link is opened."
+                />
                 <input
                   id="email"
                   type="email"
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  inputMode="email"
+                  maxLength={254}
+                  spellCheck={false}
                   required
                 />
               </div>
               <div className="form-field">
-                <label htmlFor="password">Password</label>
+                <AuthFieldLabel
+                  htmlFor="password"
+                  label="Password"
+                  help="Use 8–128 characters. A unique passphrase is recommended; passwords are case-sensitive."
+                />
                 <input
                   id="password"
                   type="password"
@@ -196,6 +206,8 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
                   required
                 />
               </div>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackdrop";
 import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
+import { AuthFieldLabel } from "@/frontend/components/auth/field-help";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +27,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
+
+  useEffect(() => {
+    setAccountCreated(
+      new URLSearchParams(window.location.search).get("created") === "1"
+    );
+  }, []);
 
   function showAuthFailure(error: unknown) {
     const message =
@@ -113,6 +121,16 @@ export default function LoginPage() {
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
             <h2 className="contact-form-title">Sign in to Smartlearn</h2>
 
+            {accountCreated ? (
+              <div
+                role="status"
+                className="mb-5 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-100"
+              >
+                <strong className="block text-emerald-200">Check your email to activate your account.</strong>
+                Open the Smartlearn verification link, then return here to sign in.
+              </div>
+            ) : null}
+
             {otherProviders.length > 0 ? (
               <>
                 <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
@@ -148,19 +166,31 @@ export default function LoginPage() {
 
             <form className="contact-form" onSubmit={handleEmailLogin}>
               <div className="form-field">
-                <label htmlFor="email">Email</label>
+                <AuthFieldLabel
+                  htmlFor="email"
+                  label="Email"
+                  help="Enter the verified email address connected to your Smartlearn account. New accounts must open the emailed confirmation link before signing in."
+                />
                 <input
                   id="email"
                   type="email"
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  inputMode="email"
+                  maxLength={254}
+                  spellCheck={false}
                   required
                 />
               </div>
               <div className="form-field">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem" }}>
-                  <label htmlFor="password">Password</label>
+                  <AuthFieldLabel
+                    htmlFor="password"
+                    label="Password"
+                    help="Enter the password for this account exactly as created. Passwords are case-sensitive."
+                  />
                   <Link href="/forgot-password" style={{ fontSize: "0.85rem" }}>
                     Forgot password?
                   </Link>
@@ -171,6 +201,8 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  maxLength={1024}
                   required
                 />
               </div>
