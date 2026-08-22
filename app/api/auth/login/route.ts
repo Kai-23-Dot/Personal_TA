@@ -2,6 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authUnavailableResponse, createAuthRouteClient } from "../_supabase-route";
 import { loginInputSchema } from "@/backend/security/authInput";
 
+const EMAIL_NOT_VERIFIED_MESSAGE =
+  "Verify your email before signing in. Open the confirmation link we sent to your inbox, then try again.";
+
+function isEmailNotVerified(error: { code?: string; message?: string }): boolean {
+  return error.code === "email_not_confirmed" ||
+    /email(?: address)? (?:is )?not confirmed|confirm your email/i.test(error.message ?? "");
+}
+
 export async function POST(request: NextRequest) {
   const parsed = loginInputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -21,13 +29,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { error } = await authClient.supabase.auth.signInWithPassword({
+    const { data, error } = await authClient.supabase.auth.signInWithPassword({
       email,
       password,
       options: { captchaToken },
     });
 
     if (error) {
+      if (isEmailNotVerified(error)) {
+        return NextResponse.json(
+          {
+            error: EMAIL_NOT_VERIFIED_MESSAGE,
+            code: "EMAIL_NOT_VERIFIED",
+          },
+          { status: 403 }
+        );
+      }
       const isRateLimited = error.status === 429;
       return NextResponse.json(
         {
@@ -36,6 +53,21 @@ export async function POST(request: NextRequest) {
             : error.message,
         },
         { status: isRateLimited ? 429 : 401 }
+      );
+    }
+
+    // Keep this defense-in-depth check even though Supabase also blocks
+    // unverified email/password users at the provider level.
+    if (!data.user?.email_confirmed_at) {
+      await authClient.supabase.auth.signOut({ scope: "local" });
+      return authClient.applyCookies(
+        NextResponse.json(
+          {
+            error: EMAIL_NOT_VERIFIED_MESSAGE,
+            code: "EMAIL_NOT_VERIFIED",
+          },
+          { status: 403 }
+        )
       );
     }
 

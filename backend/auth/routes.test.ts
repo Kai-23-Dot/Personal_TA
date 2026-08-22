@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
+  signOut: vi.fn(),
   signUp: vi.fn(),
   rpc: vi.fn(),
 }));
@@ -12,6 +13,7 @@ vi.mock("@/app/api/auth/_supabase-route", () => ({
     supabase: {
       auth: {
         signInWithPassword: mocks.signInWithPassword,
+        signOut: mocks.signOut,
         signUp: mocks.signUp,
       },
       rpc: mocks.rpc,
@@ -37,8 +39,14 @@ function jsonRequest(path: string, body: Record<string, unknown>) {
 describe("auth routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.signInWithPassword.mockResolvedValue({ error: null });
-    mocks.signUp.mockResolvedValue({ data: { session: null }, error: null });
+    mocks.signInWithPassword.mockResolvedValue({
+      data: { user: { email_confirmed_at: "2026-08-22T12:00:00.000Z" } },
+      error: null,
+    });
+    mocks.signUp.mockResolvedValue({
+      data: { session: null, user: { email_confirmed_at: null } },
+      error: null,
+    });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
   });
 
@@ -82,6 +90,47 @@ describe("auth routes", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("is_username_available", {
       candidate_username: "Student",
     });
+  });
+
+  it("rejects a login when the provider returns an unverified user", async () => {
+    mocks.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { email_confirmed_at: null } },
+      error: null,
+    });
+
+    const response = await login(
+      jsonRequest("/api/auth/login", {
+        email: "student@example.com",
+        password: "correct-password",
+      })
+    );
+
+    expect(response.status).toBe(403);
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+    await expect(response.json()).resolves.toMatchObject({
+      code: "EMAIL_NOT_VERIFIED",
+    });
+  });
+
+  it("fails closed if signup unexpectedly returns an active session", async () => {
+    mocks.signUp.mockResolvedValueOnce({
+      data: {
+        session: { access_token: "unexpected" },
+        user: { email_confirmed_at: "2026-08-22T12:00:00.000Z" },
+      },
+      error: null,
+    });
+
+    const response = await signup(
+      jsonRequest("/api/auth/signup", {
+        username: "Student",
+        email: "student@example.com",
+        password: "correct-password",
+      })
+    );
+
+    expect(response.status).toBe(503);
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("rejects signup before creating an auth user when the username exists", async () => {

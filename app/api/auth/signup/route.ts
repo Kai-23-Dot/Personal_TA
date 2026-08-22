@@ -84,12 +84,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Supabase only returns an active session immediately when email confirmation
-    // is disabled for the project; otherwise `data.session` is null until the user
-    // clicks the confirmation link. Tell the frontend which case this is so it can
-    // skip the redundant login step when a session already exists.
+    // Verification-required signups never return a session. Fail closed if the
+    // provider configuration drifts instead of admitting an auto-confirmed user.
+    if (data.session || data.user?.email_confirmed_at) {
+      await authClient.supabase.auth.signOut({ scope: "local" });
+      console.error("[Auth] Signup returned an auto-confirmed session.");
+      return authClient.applyCookies(
+        NextResponse.json(
+          { error: "Email verification could not be started. Please try again shortly." },
+          { status: 503 }
+        )
+      );
+    }
+
     return authClient.applyCookies(
-      NextResponse.json({ ok: true, hasSession: Boolean(data.session) })
+      NextResponse.json({ ok: true, verificationRequired: true })
     );
   } catch (error) {
     return authUnavailableResponse(error);
