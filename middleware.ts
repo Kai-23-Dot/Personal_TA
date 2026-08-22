@@ -291,6 +291,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Email/password accounts must activate through the confirmation link before
+  // reaching any protected page or API. This backs up the Auth provider setting
+  // and prevents an accidentally issued unverified session from being useful.
+  if (user && !user.email_confirmed_at && !isPublicRoute) {
+    if (isApiRoute) {
+      return NextResponse.json(
+        {
+          error: "Verify your email before continuing.",
+          code: "EMAIL_NOT_VERIFIED",
+        },
+        { status: 403 }
+      );
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "email_not_verified");
+    return NextResponse.redirect(url);
+  }
+
   if (user && isApiRoute && !isPublicRoute) {
     const userRule = isExpensiveRoute(pathname)
       ? { limit: 20, windowMs: ONE_MINUTE }

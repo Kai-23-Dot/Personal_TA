@@ -90,6 +90,29 @@ describe("auth routes", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("is_username_available", {
       candidate_username: "Student",
     });
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      verificationRequired: true,
+    });
+  });
+
+  it("maps the provider's unconfirmed-email error to an actionable response", async () => {
+    mocks.signInWithPassword.mockResolvedValueOnce({
+      data: { user: null },
+      error: { code: "email_not_confirmed", message: "Email not confirmed" },
+    });
+
+    const response = await login(
+      jsonRequest("/api/auth/login", {
+        email: "student@example.com",
+        password: "correct-password",
+      })
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "EMAIL_NOT_VERIFIED",
+    });
   });
 
   it("rejects a login when the provider returns an unverified user", async () => {
