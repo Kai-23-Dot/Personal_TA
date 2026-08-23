@@ -19,7 +19,6 @@ const workspacePages = [
   "/notes",
   "/practice",
   "/flashcards",
-  "/study",
   "/focus",
   "/review",
   "/chat",
@@ -46,17 +45,10 @@ const readOnlyApis = [
   "/api/onboarding",
   "/api/performance/trends",
   "/api/performance/weak",
-  `/api/planner/plan?date=${new Date().toISOString().slice(0, 10)}`,
   "/api/practice/history",
   "/api/profile",
   "/api/rubrics",
-  "/api/study/availability",
-  "/api/study/blocks",
-  "/api/study/grade-impact",
-  "/api/study/heatmap",
-  "/api/study/priorities",
   "/api/study/recommendations",
-  "/api/study/schedule",
   "/api/admin/overview?days=30",
 ];
 
@@ -125,7 +117,7 @@ test.describe("beta smoke coverage", () => {
     const page = await context.newPage();
     await page.goto(`${baseURL}/`);
     await page.getByRole("button", { name: "Toggle navigation" }).click();
-    await expect(page.getByRole("link", { name: "Website" }).last()).toBeVisible();
+    await expect(page.getByRole("link", { name: "About" }).last()).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       content: document.documentElement.scrollWidth,
@@ -136,7 +128,7 @@ test.describe("beta smoke coverage", () => {
 
   test("core workspace pages remain within the mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const path of ["/dashboard", "/assignments", "/study", "/groups", "/settings"]) {
+    for (const path of ["/dashboard", "/assignments", "/groups", "/settings"]) {
       await page.goto(path);
       await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
       const dimensions = await page.evaluate(() => ({

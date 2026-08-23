@@ -110,7 +110,7 @@ export default function PrivacyPage() {
                     With your authorization, account identifiers, institution domain, access or refresh tokens, courses, teachers, assignments, deadlines, submissions, grades, feedback, modules, pages, files, and related synchronization metadata.
                   </DataCard>
                   <DataCard title="Content you provide">
-                    Notes, documents, images, presentations, audio, extracted text, prompts, chats, flashcards, study plans, rubric material, answers, feedback requests, and support communications.
+                    Notes, documents, images, presentations, audio, extracted text, prompts, chats, flashcards, rubric material, answers, feedback requests, and support communications.
                   </DataCard>
                   <DataCard title="Learning and product activity">
                     Practice results, study and focus sessions, mastery indicators, schedules, feature usage, AI-token and storage usage, connection status, and onboarding progress.
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
                   {[
                     "Create, authenticate, maintain, and secure your account.",
                     "Sync and organize authorized courses, assignments, grades, and learning materials.",
-                    "Generate explanations, summaries, practice material, study plans, and other requested AI features.",
+                    "Generate explanations, summaries, practice material, recommendations, and other requested AI features.",
                     "Personalize recommendations using deadlines, course context, practice history, and learning preferences.",
                     "Store notes, study progress, group activity, and settings across sessions and devices.",
                     "Process subscriptions, enforce plan limits, send service messages, and provide support.",

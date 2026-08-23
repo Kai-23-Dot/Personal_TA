@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
   description:
     "An AI-powered personal teaching assistant that syncs with your school platforms, tracks your assignments, and helps you study smarter.",
-  keywords: ["AI tutor", "study planner", "homework help", "Google Classroom", "Canvas LMS"],
+  keywords: ["AI tutor", "course assistant", "homework help", "Google Classroom", "Canvas LMS"],
   authors: [{ name: "Smartlearn" }],
   openGraph: {
     title: "Smartlearn — Operational intelligence for your semester",

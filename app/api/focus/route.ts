@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
 
-export async function POST(req: Request) {
+export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const body = await req.json();
-  const { studyBlockId } = body as { studyBlockId?: string | null };
 
   const { data, error } = await supabase
     .from("focus_sessions")
     .insert({
       user_id: user.id,
-      study_block_id: studyBlockId ?? null,
+      study_block_id: null,
       status: "active",
     })
     .select()

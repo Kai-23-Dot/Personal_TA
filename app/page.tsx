@@ -199,6 +199,7 @@ export default async function HomePage() {
         actionLabel={user ? "Open workspace" : undefined}
         actionHref={user ? "/dashboard" : undefined}
       />
+      <main>
       {/* ══════════════════════════════════════════════════════════
           HERO — editorial copy + live learning intelligence console
           ══════════════════════════════════════════════════════════ */}
@@ -218,7 +219,7 @@ export default async function HomePage() {
               className="hero-subtitle hero-animate"
               style={{ animationDelay: "0.28s" }}
             >
-              Smartlearn connects Canvas, coursework, deadlines, and performance into one clear plan—so
+              Smartlearn connects Canvas, coursework, deadlines, and performance into one clear workspace—so
               every study session starts with purpose.
             </p>
 
@@ -242,7 +243,7 @@ export default async function HomePage() {
             <div className="hero-console">
               <div className="hero-console-head">
                 <div>
-                  <span className="console-overline">LIVE STUDY PLAN</span>
+                  <span className="console-overline">LIVE PRIORITY SIGNAL</span>
                   <strong>Your next study move</strong>
                 </div>
                 <span className="console-live"><i /> CANVAS SYNCED</span>
@@ -263,8 +264,8 @@ export default async function HomePage() {
                 <ArrowRight className="hero-signal-arrow" aria-hidden="true" />
                 <div className="hero-signal-card is-plan">
                   <Sparkles aria-hidden="true" />
-                  <span>Study plan</span>
-                  <strong>42 minutes</strong>
+                  <span>Next action</span>
+                  <strong>42 min review</strong>
                 </div>
               </div>
 
@@ -369,6 +370,7 @@ export default async function HomePage() {
 
       </div>
 
+      </main>
       <SmartlearnFooter />
     </div>
   );

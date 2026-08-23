@@ -117,7 +117,6 @@ export default function FocusPage() {
           const res = await fetch("/api/focus", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studyBlockId: null }),
           });
           const data = await res.json();
           if (data?.session?.id) setSessionId(data.session.id);

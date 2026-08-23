@@ -108,7 +108,6 @@ function isExpensiveRoute(pathname: string): boolean {
     "/api/notes/study-guide",
     "/api/notes/summarize",
     "/api/notes/transcribe",
-    "/api/planner/generate",
     "/api/practice/extract",
     "/api/practice/generate",
     "/api/retrieval/evaluate",

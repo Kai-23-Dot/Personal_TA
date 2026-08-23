@@ -96,7 +96,7 @@ export function GlobalAssistant() {
         <div className="flex min-h-[180px] max-h-[340px] flex-col gap-3 overflow-y-auto p-4 scroll-smooth">
           {messages.length === 0 ? (
             <p className="mt-6 text-center text-xs text-slate-500 leading-relaxed px-4">
-              Ask anything about your courses, assignments, or study plan. I know what page you&apos;re on.
+              Ask anything about your courses, assignments, or learning progress. I know what page you&apos;re on.
             </p>
           ) : (
             messages.map((m) => (

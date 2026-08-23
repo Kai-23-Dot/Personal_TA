@@ -55,12 +55,7 @@ export async function POST(req: Request) {
     const today = format(new Date(), "yyyy-MM-dd");
     const twoWeeksOut = format(addDays(new Date(), 14), "yyyy-MM-dd");
 
-    const [
-      { data: assignments },
-      { data: exams },
-      { data: metrics },
-      { data: todayPlan },
-    ] = await Promise.all([
+    const [{ data: assignments }, { data: exams }, { data: metrics }] = await Promise.all([
       supabase
         .from("assignments")
         .select("*, course:courses!inner(name,is_active)")
@@ -93,17 +88,10 @@ export async function POST(req: Request) {
         .order("accuracy_pct", { ascending: true })
         .limit(5),
 
-      supabase
-        .from("study_plans")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("plan_date", today)
-        .maybeSingle(),
     ]);
 
     type AssignmentRow = { title: string; course?: { name: string } | null; due_date: string | null; assignment_type: string; is_completed: boolean; points_possible: number | null };
     type MetricRow = { topic: string; course?: { name: string } | null; accuracy_pct: number; mastery_level: string };
-    type PlanTask = { title: string; is_completed: boolean; estimated_minutes: number; task_type: string };
 
     const context: AgentContext = {
       upcomingAssignments: (assignments as AssignmentRow[] ?? []).map((a) => ({
@@ -126,22 +114,6 @@ export async function POST(req: Request) {
         accuracy: m.accuracy_pct,
         mastery: m.mastery_level,
       })),
-      todayPlan: todayPlan
-        ? (() => {
-            const tasks = (todayPlan.tasks as PlanTask[]) ?? [];
-            return {
-              has_plan: true,
-              total_tasks: tasks.length,
-              completed_tasks: tasks.filter((t) => t.is_completed).length,
-              tasks: tasks.map((t) => ({
-                title: t.title,
-                is_completed: t.is_completed,
-                minutes: t.estimated_minutes,
-                type: t.task_type,
-              })),
-            };
-          })()
-        : { has_plan: false },
     };
 
     const lastUserText = lastUserMessage

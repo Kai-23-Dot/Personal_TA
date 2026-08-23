@@ -22,7 +22,7 @@ const sections = [
   },
   {
     title: "2. The service and beta features",
-    body: <p>Smartlearn provides study planning, learning assistance, practice tools, document processing, and connections to learning-management systems. Features identified as beta, preview, or experimental may be incomplete, change without notice, or be withdrawn. We do not promise that every feature will always be available or error-free.</p>,
+    body: <p>Smartlearn provides learning assistance, practice tools, document processing, course prioritization, and connections to learning-management systems. Features identified as beta, preview, or experimental may be incomplete, change without notice, or be withdrawn. We do not promise that every feature will always be available or error-free.</p>,
   },
   {
     title: "3. Accounts and security",
@@ -32,7 +32,7 @@ const sections = [
     title: "4. AI output and academic integrity",
     body: (
       <>
-        <p>AI-generated explanations, summaries, study plans, answers, citations, and other output may be incomplete, inaccurate, or inappropriate. You must review output and verify important facts against course materials and qualified instructors. Smartlearn is a learning aid—not a teacher, grading authority, or substitute for legal, medical, financial, mental-health, or other professional advice.</p>
+        <p>AI-generated explanations, summaries, recommendations, answers, citations, and other output may be incomplete, inaccurate, or inappropriate. You must review output and verify important facts against course materials and qualified instructors. Smartlearn is a learning aid—not a teacher, grading authority, or substitute for legal, medical, financial, mental-health, or other professional advice.</p>
         <p>You remain responsible for your submitted schoolwork and for following your school&apos;s academic-integrity policies. You may not use Smartlearn to cheat, impersonate another student, evade proctoring, submit generated work as your own when prohibited, or make a consequential educational decision about another person.</p>
       </>
     ),

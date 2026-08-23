@@ -16,18 +16,11 @@ export async function GET() {
     course: { name: string } | { name: string }[] | null;
   };
 
-  type BlockRow = {
-    id: string;
-    title: string;
-    start_time: string;
-  };
-
   const now = new Date();
   const upcomingAssignmentsCutoff = new Date(now.getTime() + 3 * 86400000).toISOString();
-  const upcomingBlocksCutoff = new Date(now.getTime() + 24 * 60 * 60000).toISOString();
   const recentCutoff = new Date(now.getTime() - 7 * 86400000).toISOString();
 
-  const [{ data: existing }, { data: assignments }, { data: blocks }] = await Promise.all([
+  const [{ data: existing }, { data: assignments }] = await Promise.all([
     supabase
       .from("notifications")
       .select("title")
@@ -42,15 +35,6 @@ export async function GET() {
       .gte("due_date", now.toISOString())
       .lte("due_date", upcomingAssignmentsCutoff)
       .order("due_date", { ascending: true })
-      .limit(10),
-    supabase
-      .from("study_blocks")
-      .select("id,title,start_time")
-      .eq("user_id", user.id)
-      .eq("status", "scheduled")
-      .gte("start_time", now.toISOString())
-      .lte("start_time", upcomingBlocksCutoff)
-      .order("start_time", { ascending: true })
       .limit(10),
   ]);
 
@@ -70,20 +54,6 @@ export async function GET() {
         body: `${courseName ?? "Course"} • Due ${due}`,
         type: "reminder",
         scheduled_at: assignment.due_date ?? undefined,
-      });
-    }
-  });
-
-  ((blocks as BlockRow[] | null) ?? []).forEach((block) => {
-    const start = new Date(block.start_time).toLocaleString();
-    const title = `Upcoming study block: ${block.title}`;
-    if (!existingTitles.has(title)) {
-      inserts.push({
-        user_id: user.id,
-        title,
-        body: `Starts ${start}`,
-        type: "reminder",
-        scheduled_at: block.start_time ?? undefined,
       });
     }
   });

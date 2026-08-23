@@ -250,8 +250,8 @@ export default function DashboardPage() {
     if (!canvasConnection) {
       return {
         badge: "Start here",
-        title: "Connect Canvas to build your study plan.",
-        description: "Import current courses, deadlines, and class materials so Smartlearn can rank what matters next.",
+        title: "Connect Canvas to rank what matters next.",
+        description: "Import current courses, deadlines, and class materials so Smartlearn can surface the work that needs your attention.",
         href: "/settings/setup/canvas",
         cta: "Connect Canvas",
         tone: "focus",
@@ -281,8 +281,8 @@ export default function DashboardPage() {
         description: topRecommendation.reason,
         href: `/practice${topRecommendation.course_id ? `?courseId=${topRecommendation.course_id}` : ""}`,
         cta: "Start targeted practice",
-        secondaryHref: "/study",
-        secondaryLabel: "View study plan",
+        secondaryHref: "/assignments",
+        secondaryLabel: "Review deadlines",
         tone: "focus",
         meta: [
           topRecommendation.course_name ?? "Across your courses",
@@ -563,7 +563,7 @@ export default function DashboardPage() {
             <Panel
               title="Study priorities"
               subtitle="Ranked by deadline, grade impact, and your mastery gaps"
-              action={<Link href="/study" className="text-xs font-semibold text-sky-300 hover:text-sky-200">Full plan</Link>}
+              action={<Link href="/practice" className="text-xs font-semibold text-sky-300 hover:text-sky-200">Practice weak spots</Link>}
             >
               {recommendations.length === 0 ? (
                 <div className="flex min-h-52 flex-col items-center justify-center text-center">

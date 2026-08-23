@@ -121,7 +121,7 @@ export default function SignupPage() {
         showSignIn
       />
 
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
+      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
             <h2 className="contact-form-title">Sign Up</h2>
@@ -230,7 +230,7 @@ export default function SignupPage() {
             </form>
           </div>
         </div>
-      </div>
+      </main>
     </SmartlearnBackdrop>
   );
 }

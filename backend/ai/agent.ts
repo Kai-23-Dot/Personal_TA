@@ -34,12 +34,6 @@ export interface AgentContext {
     accuracy: number;
     mastery: string;
   }>;
-  todayPlan?: {
-    has_plan: boolean;
-    total_tasks?: number;
-    completed_tasks?: number;
-    tasks?: Array<{ title: string; is_completed: boolean; minutes: number; type: string }>;
-  };
 }
 
 // ---- Build context block from pre-fetched data ----
@@ -73,17 +67,6 @@ function buildContextBlock(ctx?: AgentContext): string {
     lines.push("\nWEAK AREAS (lowest accuracy in practice):");
     for (const w of ctx.weakAreas) {
       lines.push(`  • ${w.topic}${w.course ? ` (${w.course})` : ""} — ${w.accuracy}% accuracy — ${w.mastery}`);
-    }
-  }
-
-  if (ctx.todayPlan) {
-    if (ctx.todayPlan.has_plan && ctx.todayPlan.tasks) {
-      lines.push(`\nTODAY'S STUDY PLAN (${ctx.todayPlan.completed_tasks}/${ctx.todayPlan.total_tasks} tasks done):`);
-      for (const t of ctx.todayPlan.tasks) {
-        lines.push(`  ${t.is_completed ? "✓" : "○"} ${t.title} (~${t.minutes}min, ${t.type})`);
-      }
-    } else {
-      lines.push("\nTODAY'S STUDY PLAN: No plan generated yet.");
     }
   }
 

@@ -12,7 +12,7 @@ export default function ContactPage() {
   return (
     <SmartlearnBackdrop>
       <SmartlearnHeader showSignIn />
-      <section className="section" style={{ paddingTop: "120px" }}>
+      <main className="section" style={{ paddingTop: "120px" }}>
         <h1 className="animate-on-scroll">Contact us</h1>
         <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
           <div className="contact-form-column">
@@ -22,7 +22,7 @@ export default function ContactPage() {
             </p>
           </div>
         </div>
-      </section>
+      </main>
       <SmartlearnFooter />
     </SmartlearnBackdrop>
   );
