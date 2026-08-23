@@ -764,7 +764,7 @@ nav {
 	}
 }
 
-.block {
+.blockchain-visual .block {
 	width: 70px;
 	height: 70px;
 	background: linear-gradient(135deg, var(--cs-primary), var(--cs-accent));
@@ -781,7 +781,7 @@ nav {
 	z-index: 2;
 }
 
-.block::before {
+.blockchain-visual .block::before {
 	content: '';
 	position: absolute;
 	top: 0;
@@ -792,11 +792,11 @@ nav {
 	animation: hexShine 6s infinite;
 }
 
-.block:nth-child(odd) {
+.blockchain-visual .block:nth-child(odd) {
 	animation-delay: -4s;
 }
 
-.block:nth-child(even) {
+.blockchain-visual .block:nth-child(even) {
 	animation-delay: -2s;
 }
 

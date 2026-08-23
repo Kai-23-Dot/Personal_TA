@@ -575,35 +575,78 @@ export default function DashboardPage() {
                   </button>
                 </div>
               ) : (
-                <ol className="divide-y divide-white/[0.07]">
-                  {recommendations.slice(0, 4).map((recommendation, index) => (
-                    <li key={`${recommendation.topic}-${index}`}>
-                      <Link
-                        href={`/practice${recommendation.course_id ? `?courseId=${recommendation.course_id}` : ""}`}
-                        className="group grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
-                      >
-                        <span className={`grid h-8 w-8 place-items-center rounded-lg text-xs font-semibold ${index === 0 ? "bg-sky-300/15 text-sky-200" : "bg-white/[0.045] text-slate-500"}`}>
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <strong className="truncate text-sm font-medium text-white">{recommendation.topic}</strong>
-                            {recommendation.course_name ? <span className="truncate text-[11px] text-slate-600">{recommendation.course_name}</span> : null}
+                <ol className="space-y-2.5">
+                  {recommendations.slice(0, 4).map((recommendation, index) => {
+                    const priorityTone = [
+                      {
+                        border: "border-sky-300/20 hover:border-sky-300/35",
+                        surface: "bg-sky-400/[0.065] hover:bg-sky-400/[0.095]",
+                        rank: "border-sky-300/20 bg-sky-300/10 text-sky-200",
+                        action: "text-sky-200",
+                      },
+                      {
+                        border: "border-violet-300/15 hover:border-violet-300/30",
+                        surface: "bg-violet-400/[0.04] hover:bg-violet-400/[0.07]",
+                        rank: "border-violet-300/15 bg-violet-300/[0.08] text-violet-200",
+                        action: "text-violet-200",
+                      },
+                      {
+                        border: "border-cyan-300/15 hover:border-cyan-300/30",
+                        surface: "bg-cyan-400/[0.035] hover:bg-cyan-400/[0.065]",
+                        rank: "border-cyan-300/15 bg-cyan-300/[0.08] text-cyan-200",
+                        action: "text-cyan-200",
+                      },
+                      {
+                        border: "border-white/[0.08] hover:border-emerald-300/25",
+                        surface: "bg-white/[0.025] hover:bg-emerald-400/[0.045]",
+                        rank: "border-white/[0.08] bg-white/[0.04] text-slate-400",
+                        action: "text-emerald-200",
+                      },
+                    ][index];
+                    const accuracyLabel = recommendation.accuracy_pct === null
+                      ? "Baseline needed"
+                      : `${recommendation.accuracy_pct}% mastery`;
+                    const accuracyTone = recommendation.accuracy_pct === null
+                      ? "border-white/[0.08] bg-white/[0.035] text-slate-400"
+                      : recommendation.accuracy_pct < 60
+                        ? "border-amber-300/20 bg-amber-300/[0.08] text-amber-200"
+                        : "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-200";
+
+                    return (
+                      <li key={`${recommendation.topic}-${index}`}>
+                        <Link
+                          href={`/practice${recommendation.course_id ? `?courseId=${recommendation.course_id}` : ""}`}
+                          className={`group grid gap-3 rounded-2xl border p-4 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${priorityTone.border} ${priorityTone.surface}`}
+                        >
+                          <span className={`grid h-9 w-9 place-items-center rounded-xl border text-[11px] font-bold tracking-[0.08em] ${priorityTone.rank}`}>
+                            {String(index + 1).padStart(2, "0")}
                           </span>
-                          <span className="mt-1 block text-xs leading-5 text-slate-500">{recommendation.reason}</span>
-                        </span>
-                        <span className="flex items-center gap-3 pl-11 sm:pl-0">
-                          <span className="text-right">
-                            <span className="block text-[10px] uppercase tracking-[0.12em] text-slate-600">Accuracy</span>
-                            <strong className={`text-sm ${recommendation.accuracy_pct === null ? "text-slate-500" : recommendation.accuracy_pct < 50 ? "text-orange-200" : "text-sky-200"}`}>
-                              {recommendation.accuracy_pct === null ? "Untested" : `${recommendation.accuracy_pct}%`}
+                          <span className="min-w-0">
+                            {recommendation.course_name ? (
+                              <span className="line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                {recommendation.course_name}
+                              </span>
+                            ) : null}
+                            <strong className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-white sm:text-[15px]">
+                              {recommendation.topic}
                             </strong>
+                            <span className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-400">
+                              {recommendation.reason}
+                            </span>
                           </span>
-                          <ArrowRight className="h-4 w-4 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300" aria-hidden="true" />
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                          <span className="flex items-center gap-3 pl-12 sm:flex-col sm:items-end sm:gap-2 sm:pl-0">
+                            <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${accuracyTone}`}>
+                              {accuracyLabel}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${priorityTone.action}`}>
+                              Practice
+                              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
             </Panel>
