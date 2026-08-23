@@ -96,6 +96,7 @@ export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId");
+  const targetedAssignmentId = searchParams.get("assignmentId");
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -207,6 +208,20 @@ export default function AssignmentsPage() {
     }
     return result;
   }, [assignments, selectedCourseId, statusFilter, sortOrder]);
+
+  useEffect(() => {
+    if (!targetedAssignmentId || loadingAssignments) return;
+    if (!visibleAssignments.some((assignment) => assignment.id === targetedAssignmentId)) return;
+
+    setExpandedId(targetedAssignmentId);
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`assignment-${targetedAssignmentId}`)
+        ?.closest("article")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [loadingAssignments, targetedAssignmentId, visibleAssignments]);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === selectedCourseId) ?? null,
