@@ -107,4 +107,13 @@ describe("website product-surface contract", () => {
     expect(flashcards).toContain("Tap to flip back");
     expect(flashcards).not.toContain("if (!isFlipped) setIsFlipped(true)");
   });
+
+  test("long flashcards have top-anchored independent scroll regions", () => {
+    const flashcards = source("app/(dashboard)/flashcards/page.tsx");
+    expect(flashcards).toContain('data-card-scroll="question"');
+    expect(flashcards).toContain('data-card-scroll="answer"');
+    expect(flashcards).toContain('questionUsesReadingLayout ? "items-start" : "items-center"');
+    expect(flashcards).toContain('answerUsesReadingLayout ? "items-start" : "items-center"');
+    expect(flashcards).toContain("touch-pan-y overflow-y-auto");
+  });
 });

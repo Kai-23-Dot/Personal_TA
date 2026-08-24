@@ -15,8 +15,8 @@ export async function GET(req: Request) {
     .from("flashcards")
     .select("*")
     .eq("user_id", user.id)
-    .order("next_review", { ascending: true })
-    .limit(50);
+    .order(dueOnly ? "next_review" : "created_at", { ascending: dueOnly })
+    .limit(dueOnly ? 50 : 300);
 
   if (courseId) query = query.eq("course_id", courseId);
   if (dueOnly) query = query.lte("next_review", new Date().toISOString());

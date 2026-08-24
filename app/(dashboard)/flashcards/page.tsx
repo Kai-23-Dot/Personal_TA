@@ -5,6 +5,10 @@ import { ArrowLeft, ArrowRight, Layers3, RotateCcw } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
+import {
+  groupFlashcardsIntoDecks,
+  type FlashcardDeck,
+} from "@/frontend/lib/flashcardDecks";
 
 type Course = { id: string; name: string };
 type Flashcard = {
@@ -15,8 +19,12 @@ type Flashcard = {
   topic: string;
   difficulty: string;
   next_review: string;
+  course_id: string | null;
+  created_at: string;
+  deck_id: string | null;
+  deck_name: string | null;
 };
-type SavedSet = { topic: string; count: number; cards: Flashcard[] };
+type SavedSet = FlashcardDeck<Flashcard>;
 
 export default function FlashcardsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -50,12 +58,9 @@ export default function FlashcardsPage() {
       .then((r) => r.json())
       .then((data: Flashcard[]) => {
         if (!mounted) return;
-        const byTopic = new Map<string, Flashcard[]>();
-        for (const card of (Array.isArray(data) ? data : [])) {
-          if (!byTopic.has(card.topic)) byTopic.set(card.topic, []);
-          byTopic.get(card.topic)!.push(card);
-        }
-        setSavedSets(Array.from(byTopic.entries()).map(([topic, cards]) => ({ topic, count: cards.length, cards })));
+        setSavedSets(
+          groupFlashcardsIntoDecks(Array.isArray(data) ? data : [])
+        );
       })
       .catch(() => { if (mounted) setSavedSets([]); })
       .finally(() => { if (mounted) setLoadingSets(false); });
@@ -209,11 +214,18 @@ export default function FlashcardsPage() {
           style={{ perspective: "1600px" }}
           className="animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none"
         >
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => setIsFlipped((flipped) => !flipped)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setIsFlipped((flipped) => !flipped);
+              }
+            }}
             aria-pressed={isFlipped}
-            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
+            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full cursor-pointer rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
           >
             <span className="sr-only">
               {isFlipped
@@ -250,16 +262,27 @@ export default function FlashcardsPage() {
                   </span>
                 </div>
 
-                <div className="relative my-4 flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-1 py-3 sm:my-6 sm:px-4">
-                  <p
-                    className={`max-w-2xl whitespace-pre-wrap break-words font-semibold tracking-[-0.02em] text-slate-50 ${
-                      questionUsesReadingLayout
-                        ? "text-left text-[clamp(1.05rem,2.5vw,1.45rem)] leading-[1.7]"
-                        : "text-balance text-center text-[clamp(1.2rem,3vw,1.8rem)] leading-[1.55]"
+                <div
+                  data-card-scroll="question"
+                  onClick={(event) => event.stopPropagation()}
+                  className="relative my-4 min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-1 sm:my-6 sm:px-4"
+                  style={{ scrollbarGutter: "stable" }}
+                >
+                  <div
+                    className={`flex min-h-full w-full justify-center py-3 ${
+                      questionUsesReadingLayout ? "items-start" : "items-center"
                     }`}
                   >
-                    {current.front}
-                  </p>
+                    <p
+                      className={`max-w-2xl whitespace-pre-wrap break-words font-semibold tracking-[-0.02em] text-slate-50 ${
+                        questionUsesReadingLayout
+                          ? "text-left text-[clamp(1.05rem,2.5vw,1.45rem)] leading-[1.7]"
+                          : "text-balance text-center text-[clamp(1.2rem,3vw,1.8rem)] leading-[1.55]"
+                      }`}
+                    >
+                      {current.front}
+                    </p>
+                  </div>
                 </div>
 
                 <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
@@ -288,16 +311,27 @@ export default function FlashcardsPage() {
                   </span>
                 </div>
 
-                <div className="relative my-4 flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-1 py-3 sm:my-6 sm:px-4">
-                  <p
-                    className={`max-w-2xl whitespace-pre-wrap break-words font-medium tracking-[-0.01em] text-slate-100 ${
-                      answerUsesReadingLayout
-                        ? "text-left text-[clamp(1rem,2.2vw,1.3rem)] leading-[1.75]"
-                        : "text-balance text-center text-[clamp(1.05rem,2.5vw,1.5rem)] leading-[1.7]"
+                <div
+                  data-card-scroll="answer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="relative my-4 min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-1 sm:my-6 sm:px-4"
+                  style={{ scrollbarGutter: "stable" }}
+                >
+                  <div
+                    className={`flex min-h-full w-full justify-center py-3 ${
+                      answerUsesReadingLayout ? "items-start" : "items-center"
                     }`}
                   >
-                    {current.back}
-                  </p>
+                    <p
+                      className={`max-w-2xl whitespace-pre-wrap break-words font-medium tracking-[-0.01em] text-slate-100 ${
+                        answerUsesReadingLayout
+                          ? "text-left text-[clamp(1rem,2.2vw,1.3rem)] leading-[1.75]"
+                          : "text-balance text-center text-[clamp(1.05rem,2.5vw,1.5rem)] leading-[1.7]"
+                      }`}
+                    >
+                      {current.back}
+                    </p>
+                  </div>
                 </div>
 
                 <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
@@ -305,14 +339,18 @@ export default function FlashcardsPage() {
                 </p>
               </div>
             </div>
-          </button>
+          </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+        <div className={`mt-5 grid gap-3 ${isFlipped ? "sm:grid-cols-2" : ""}`}>
           <button
             type="button"
             onClick={() => setIsFlipped((flipped) => !flipped)}
-            className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.055] px-5 text-sm font-semibold text-slate-200 transition-all duration-200 hover:border-sky-300/30 hover:bg-sky-300/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 active:scale-[0.98] motion-reduce:transition-none sm:text-base"
+            className={`inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base ${
+              isFlipped
+                ? "border-white/[0.12] bg-white/[0.055] text-slate-200 hover:border-sky-300/30 hover:bg-sky-300/[0.08] hover:text-white"
+                : "border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] hover:from-white hover:to-cyan-100"
+            }`}
           >
             <RotateCcw
               aria-hidden="true"
@@ -323,23 +361,22 @@ export default function FlashcardsPage() {
             {isFlipped ? "View question" : "Reveal answer"}
           </button>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!isFlipped}
-            className="btn btn-primary min-h-14 w-full gap-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-          >
-            {isFlipped
-              ? currentIndex + 1 >= cards.length
+          {isFlipped && (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 px-5 text-sm font-bold text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] transition-all duration-200 hover:from-white hover:to-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base"
+            >
+              {currentIndex + 1 >= cards.length
                 ? "Review deck again"
-                : "Next flashcard"
-              : "Reveal answer to continue"}
-            {isFlipped && currentIndex + 1 >= cards.length ? (
-              <RotateCcw aria-hidden="true" className="size-4" />
-            ) : (
-              <ArrowRight aria-hidden="true" className="size-4" />
-            )}
-          </button>
+                : "Next flashcard"}
+              {currentIndex + 1 >= cards.length ? (
+                <RotateCcw aria-hidden="true" className="size-4" />
+              ) : (
+                <ArrowRight aria-hidden="true" className="size-4" />
+              )}
+            </button>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs leading-5 text-slate-600">
@@ -376,7 +413,7 @@ export default function FlashcardsPage() {
             <div className="grid gap-2">
               {savedSets.map((set) => (
                 <button
-                  key={set.topic}
+                  key={set.id}
                   type="button"
                   onClick={() => startSet(set)}
                   className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-left transition-all hover:border-violet-400/30 hover:bg-violet-400/5 active:scale-[0.99]"
@@ -385,7 +422,7 @@ export default function FlashcardsPage() {
                     <Layers3 className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{set.topic}</p>
+                    <p className="text-sm font-medium text-white truncate">{set.name}</p>
                     <p className="text-xs text-slate-500">{set.count} card{set.count !== 1 ? "s" : ""}</p>
                   </div>
                   <span className="text-xs text-slate-600 group-hover:text-slate-400 transition-colors">Study →</span>

@@ -88,6 +88,7 @@ export async function POST(req: Request) {
             "mixed"
           )
         );
+        const deckId = crypto.randomUUID();
         const { data: inserted, error: flashcardError } = await supabase
           .from("flashcards")
           .insert(
@@ -100,6 +101,8 @@ export async function POST(req: Request) {
               hint: card.hint,
               topic: card.topic || note.title,
               difficulty: card.difficulty,
+              deck_id: deckId,
+              deck_name: note.title,
             }))
           )
           .select("id");

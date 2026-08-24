@@ -244,6 +244,7 @@ export async function POST(req: Request) {
     }
 
     // Insert all cards into the database
+    const deckId = crypto.randomUUID();
     const { data: savedCards, error } = await supabase
       .from("flashcards")
       .insert(
@@ -257,6 +258,8 @@ export async function POST(req: Request) {
           hint: card.hint,
           topic: card.topic || safeTopic,
           difficulty: card.difficulty,
+          deck_id: deckId,
+          deck_name: safeTopic,
         }))
       )
       .select();

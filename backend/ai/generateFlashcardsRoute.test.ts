@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   generateFlashcardsFromContent: vi.fn(),
   getUser: vi.fn(),
+  insertFlashcards: vi.fn(),
   runWithUsageContext: vi.fn(),
 }));
 
@@ -58,15 +59,25 @@ describe("flashcard generation route", () => {
       moduleNames: [],
       warnings: [],
     });
-    const generatedCard = {
-      id: "card-1",
-      front: "What is a core loop?",
-      back: "The repeated sequence of actions that drives gameplay.",
-      hint: null,
-      topic: "Introduction to SGD",
-      difficulty: "hard",
-    };
-    mocks.generateFlashcardsFromContent.mockResolvedValue([generatedCard]);
+    const generatedCards = [
+      {
+        id: "card-1",
+        front: "What is a core loop?",
+        back: "The repeated sequence of actions that drives gameplay.",
+        hint: null,
+        topic: "Core loops",
+        difficulty: "hard",
+      },
+      {
+        id: "card-2",
+        front: "What is player feedback?",
+        back: "A response that communicates the result of a player action.",
+        hint: null,
+        topic: "Player feedback",
+        difficulty: "hard",
+      },
+    ];
+    mocks.generateFlashcardsFromContent.mockResolvedValue(generatedCards);
 
     const courseQuery: Record<string, ReturnType<typeof vi.fn>> = {};
     courseQuery.select = vi.fn(() => courseQuery);
@@ -75,12 +86,11 @@ describe("flashcard generation route", () => {
       data: { name: courseName },
       error: null,
     }));
-    const flashcardSelect = vi.fn(async () => ({
-      data: [generatedCard],
-      error: null,
+    mocks.insertFlashcards.mockImplementation((rows: unknown[]) => ({
+      select: vi.fn(async () => ({ data: rows, error: null })),
     }));
     const flashcardQuery = {
-      insert: vi.fn(() => ({ select: flashcardSelect })),
+      insert: mocks.insertFlashcards,
     };
 
     mocks.from.mockImplementation((table: string) => {
@@ -120,5 +130,17 @@ describe("flashcard generation route", () => {
       courseName,
       "hard"
     );
+    const inserted = mocks.insertFlashcards.mock.calls[0]?.[0] as Array<{
+      deck_id: string;
+      deck_name: string;
+      topic: string;
+    }>;
+    expect(inserted).toHaveLength(2);
+    expect(new Set(inserted.map((card) => card.deck_id)).size).toBe(1);
+    expect(inserted.every((card) => card.deck_name === courseName)).toBe(true);
+    expect(inserted.map((card) => card.topic)).toEqual([
+      "Core loops",
+      "Player feedback",
+    ]);
   });
 });

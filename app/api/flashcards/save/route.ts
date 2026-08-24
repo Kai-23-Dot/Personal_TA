@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       hint: hint ?? null,
       topic: topic ?? "General",
       difficulty: "medium",
+      deck_id: crypto.randomUUID(),
+      deck_name: topic?.trim() || "General",
     })
     .select()
     .single();
