@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Layers3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Layers3, RotateCcw } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
@@ -156,134 +156,195 @@ export default function FlashcardsPage() {
 
   // ── Cards view (focused) ──
   if (view === "cards" && cards.length > 0 && current) {
+    const questionUsesReadingLayout =
+      current.front.length > 220 || current.front.includes("\n");
+    const answerUsesReadingLayout =
+      current.back.length > 280 || current.back.includes("\n");
+
     return (
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-6">
-        {/* Minimal header */}
-        <div className="mb-8 flex items-center justify-between">
+      <div className="mx-auto max-w-3xl px-4 pb-20 pt-4 sm:px-6 sm:pt-6">
+        <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={handleNewDeck}
-            className="text-sm text-slate-400 transition hover:text-slate-200"
+            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
           >
-            ← New Deck
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            New deck
           </button>
-          <p className="text-xs text-slate-500">{current.topic}</p>
-        </div>
-
-        {/* Progress */}
-        <div className="mb-4">
-          <p className="text-sm text-slate-400">
-            Card <span className="font-medium text-white">{currentIndex + 1}</span> of{" "}
-            <span className="font-medium text-white">{cards.length}</span>
+          <p
+            className="max-w-full truncate text-sm font-medium text-slate-500 sm:max-w-[65%] sm:text-right"
+            title={current.topic}
+          >
+            {current.topic}
           </p>
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-6 h-1 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="mb-3 flex items-end justify-between gap-4">
+          <p aria-live="polite" className="text-sm text-slate-400 sm:text-base">
+            Card <span className="font-semibold text-slate-100">{currentIndex + 1}</span> of{" "}
+            <span className="font-semibold text-slate-100">{cards.length}</span>
+          </p>
+          <p className="text-xs font-medium text-slate-600">
+            {Math.round(((currentIndex + 1) / cards.length) * 100)}% complete
+          </p>
+        </div>
+
+        <div
+          role="progressbar"
+          aria-label="Deck progress"
+          aria-valuemin={1}
+          aria-valuemax={cards.length}
+          aria-valuenow={currentIndex + 1}
+          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
+        >
           <div
-            className="h-full rounded-full bg-sky-400 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 shadow-[0_0_14px_rgba(56,189,248,0.35)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
 
-        {/* Card with 3D flip */}
         <div
           key={currentIndex}
-          style={{ perspective: "1200px" }}
-          className="mb-6"
-        >
-          <div
-            onClick={() => { if (!isFlipped) setIsFlipped(true); }}
-            style={{
-              position: "relative",
-              width: "100%",
-              minHeight: "260px",
-              transformStyle: "preserve-3d",
-              transition: "transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1)",
-              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-              cursor: isFlipped ? "default" : "pointer",
-            }}
-          >
-            {/* Front face */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                borderRadius: "20px",
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(9,12,26,0.82)",
-                boxShadow: "0 12px 48px rgba(0,0,0,0.4)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "2.5rem 2rem",
-                gap: "1.25rem",
-                backdropFilter: "blur(12px)",
-                userSelect: "none",
-              }}
-            >
-              <p style={{ color: "#7dd3fc", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                Question
-              </p>
-              <p style={{ color: "#f1f5f9", fontSize: "1.15rem", lineHeight: 1.75, textAlign: "center", fontWeight: 400 }}>
-                {current.front}
-              </p>
-              <p style={{ color: "#475569", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-                Tap to reveal answer
-              </p>
-            </div>
-
-            {/* Back face */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                transform: "rotateY(180deg)",
-                borderRadius: "20px",
-                border: "1px solid rgba(125,211,252,0.2)",
-                background: "rgba(10,20,40,0.9)",
-                boxShadow: "0 12px 48px rgba(0,0,0,0.45), 0 0 60px rgba(56,189,248,0.05)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "2.5rem 2rem",
-                gap: "1.25rem",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <p style={{ color: "#38bdf8", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                Answer
-              </p>
-              <p style={{ color: "#e2e8f0", fontSize: "1.1rem", lineHeight: 1.8, textAlign: "center", fontWeight: 400, whiteSpace: "pre-wrap" }}>
-                {current.back}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Next button — appears after flip */}
-        <div
-          style={{
-            transition: "opacity 0.3s ease, transform 0.3s ease",
-            opacity: isFlipped ? 1 : 0,
-            transform: isFlipped ? "translateY(0)" : "translateY(8px)",
-            pointerEvents: isFlipped ? "auto" : "none",
-          }}
+          style={{ perspective: "1600px" }}
+          className="animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none"
         >
           <button
             type="button"
-            onClick={handleNext}
-            className="btn btn-primary w-full active:scale-[0.98] transition-transform duration-100"
+            onClick={() => setIsFlipped((flipped) => !flipped)}
+            aria-pressed={isFlipped}
+            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
           >
-            {currentIndex + 1 >= cards.length ? "Finish →" : "Next Flashcard →"}
+            <span className="sr-only">
+              {isFlipped
+                ? "Showing the answer. Activate to return to the question."
+                : "Showing the question. Activate to reveal the answer."}
+            </span>
+            <div
+              className="relative h-full w-full transition-transform duration-700 motion-reduce:transition-none"
+              data-side={isFlipped ? "answer" : "question"}
+              style={{
+                transformStyle: "preserve-3d",
+                WebkitTransformStyle: "preserve-3d",
+                transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                transitionTimingFunction: "cubic-bezier(0.2, 0.72, 0.2, 1)",
+              }}
+            >
+              <div
+                aria-hidden={isFlipped}
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.98),rgba(7,12,26,0.97))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:p-8 md:p-10"
+                style={{
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(139,92,246,0.14),transparent_42%),radial-gradient(circle_at_90%_90%,rgba(56,189,248,0.08),transparent_38%)]" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-300 sm:text-sm">
+                    <span className="size-2 rounded-full bg-violet-300 shadow-[0_0_12px_rgba(196,181,253,0.7)]" />
+                    Question
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <RotateCcw aria-hidden="true" className="size-3.5" />
+                    Tap to flip
+                  </span>
+                </div>
+
+                <div className="relative my-4 flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-1 py-3 sm:my-6 sm:px-4">
+                  <p
+                    className={`max-w-2xl whitespace-pre-wrap break-words font-semibold tracking-[-0.02em] text-slate-50 ${
+                      questionUsesReadingLayout
+                        ? "text-left text-[clamp(1.05rem,2.5vw,1.45rem)] leading-[1.7]"
+                        : "text-balance text-center text-[clamp(1.2rem,3vw,1.8rem)] leading-[1.55]"
+                    }`}
+                  >
+                    {current.front}
+                  </p>
+                </div>
+
+                <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
+                  Tap the card or press Space to reveal the answer
+                </p>
+              </div>
+
+              <div
+                aria-hidden={!isFlipped}
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-sky-300/25 bg-[linear-gradient(145deg,rgba(8,22,42,0.99),rgba(6,13,29,0.98))] p-5 shadow-[0_24px_90px_rgba(14,116,144,0.16),0_24px_70px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-8 md:p-10"
+                style={{
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_8%,rgba(34,211,238,0.13),transparent_40%),radial-gradient(circle_at_10%_90%,rgba(59,130,246,0.08),transparent_38%)]" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-300 sm:text-sm">
+                    <span className="size-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.75)]" />
+                    Answer
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <RotateCcw aria-hidden="true" className="size-3.5" />
+                    Tap to flip back
+                  </span>
+                </div>
+
+                <div className="relative my-4 flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain px-1 py-3 sm:my-6 sm:px-4">
+                  <p
+                    className={`max-w-2xl whitespace-pre-wrap break-words font-medium tracking-[-0.01em] text-slate-100 ${
+                      answerUsesReadingLayout
+                        ? "text-left text-[clamp(1rem,2.2vw,1.3rem)] leading-[1.75]"
+                        : "text-balance text-center text-[clamp(1.05rem,2.5vw,1.5rem)] leading-[1.7]"
+                    }`}
+                  >
+                    {current.back}
+                  </p>
+                </div>
+
+                <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
+                  Flip back whenever you want to review the question
+                </p>
+              </div>
+            </div>
           </button>
         </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+          <button
+            type="button"
+            onClick={() => setIsFlipped((flipped) => !flipped)}
+            className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.055] px-5 text-sm font-semibold text-slate-200 transition-all duration-200 hover:border-sky-300/30 hover:bg-sky-300/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 active:scale-[0.98] motion-reduce:transition-none sm:text-base"
+          >
+            <RotateCcw
+              aria-hidden="true"
+              className={`size-4 transition-transform duration-500 motion-reduce:transition-none ${
+                isFlipped ? "-rotate-180" : ""
+              }`}
+            />
+            {isFlipped ? "View question" : "Reveal answer"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={!isFlipped}
+            className="btn btn-primary min-h-14 w-full gap-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          >
+            {isFlipped
+              ? currentIndex + 1 >= cards.length
+                ? "Review deck again"
+                : "Next flashcard"
+              : "Reveal answer to continue"}
+            {isFlipped && currentIndex + 1 >= cards.length ? (
+              <RotateCcw aria-hidden="true" className="size-4" />
+            ) : (
+              <ArrowRight aria-hidden="true" className="size-4" />
+            )}
+          </button>
+        </div>
+
+        <p className="mt-4 text-center text-xs leading-5 text-slate-600">
+          You can flip the current card as many times as you need before moving on.
+        </p>
       </div>
     );
   }

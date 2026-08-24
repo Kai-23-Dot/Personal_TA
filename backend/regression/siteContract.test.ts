@@ -99,4 +99,12 @@ describe("website product-surface contract", () => {
     expect(css).not.toMatch(/^\.block(?:\s|,|\{|:)/m);
     expect(css).toMatch(/\.blockchain-visual\s+\.block/);
   });
+
+  test("flashcards can toggle between question and answer without leaving the card", () => {
+    const flashcards = source("app/(dashboard)/flashcards/page.tsx");
+    expect(flashcards).toContain("setIsFlipped((flipped) => !flipped)");
+    expect(flashcards).toContain("View question");
+    expect(flashcards).toContain("Tap to flip back");
+    expect(flashcards).not.toContain("if (!isFlipped) setIsFlipped(true)");
+  });
 });
