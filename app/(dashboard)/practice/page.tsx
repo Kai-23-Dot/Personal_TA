@@ -247,9 +247,9 @@ export default function PracticePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            courseId: courseId || null,
+            ...(courseId ? { courseId } : {}),
             topic: effectiveTopic,
-            count: Math.min(Math.max(questionCount, 5), 40),
+            count: Math.min(Math.max(questionCount, 5), 30),
             noteIds: noteIds.length > 0 ? noteIds : undefined,
             units: selectedUnits,
           }),

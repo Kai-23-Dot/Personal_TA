@@ -22,7 +22,6 @@ export default function FlashcardsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   // Draft form state — persisted so a half-configured set survives exit.
   const [courseId, setCourseId] = usePersistentState("smartlearn:flashcards:courseId", "");
-  const [noteId] = useState("");
   const [topic, setTopic] = usePersistentState("smartlearn:flashcards:topic", "");
   const [count, setCount] = usePersistentState("smartlearn:flashcards:count", 10);
   const [difficulty, setDifficulty] = usePersistentState<"mixed" | "easy" | "medium" | "hard">("smartlearn:flashcards:difficulty", "mixed");
@@ -68,15 +67,24 @@ export default function FlashcardsPage() {
     setLoading(true);
     setMessage(null);
     try {
+      const normalizedCourseId = typeof courseId === "string" ? courseId.trim() : "";
+      const trimmedTopic = typeof topic === "string" ? topic.trim() : "";
+      const normalizedCount = Number.isFinite(count)
+        ? Math.min(30, Math.max(5, Math.trunc(count)))
+        : 10;
+      const normalizedDifficulty = ["mixed", "easy", "medium", "hard"].includes(
+        difficulty
+      )
+        ? difficulty
+        : "mixed";
       const res = await fetch("/api/flashcards/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          noteId: noteId || null,
-          courseId: courseId || null,
-          topic: topic || undefined,
-          count,
-          difficulty,
+          ...(normalizedCourseId ? { courseId: normalizedCourseId } : {}),
+          ...(trimmedTopic ? { topic: trimmedTopic } : {}),
+          count: normalizedCount,
+          difficulty: normalizedDifficulty,
         }),
       });
       const data = await res.json();
@@ -89,6 +97,8 @@ export default function FlashcardsPage() {
       setCurrentIndex(0);
       setIsFlipped(false);
       setView("cards");
+    } catch {
+      setMessage("Could not reach the flashcard generator. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -336,6 +346,7 @@ export default function FlashcardsPage() {
               id="fc-course"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
+              required
               className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
             >
               <option value="">Select a course</option>
@@ -353,6 +364,9 @@ export default function FlashcardsPage() {
               onChange={(e) => setTopic(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
             />
+            <p className="text-xs text-slate-500">
+              Leave blank to create a course-wide review deck.
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -388,7 +402,7 @@ export default function FlashcardsPage() {
               id="fc-count"
               type="number"
               min={5}
-              max={40}
+              max={30}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
               className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"

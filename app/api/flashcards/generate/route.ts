@@ -5,43 +5,9 @@ import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
-import { z } from "zod";
+import { flashcardGenerationSchema } from "@/backend/security/flashcardInput";
 
 export const maxDuration = 60;
-
-const flashcardUnitSchema = z.object({
-  moduleId: z.number().int().positive().nullable(),
-  moduleName: z.string().trim().min(1).max(300),
-  source: z.enum(["canvas", "generated"]),
-  assignmentIds: z.array(z.string().uuid()).max(100),
-  noteIds: z.array(z.string().uuid()).max(100),
-}).strict();
-
-const flashcardGenerationSchema = z.object({
-  noteId: z.string().uuid().optional(),
-  noteIds: z.array(z.string().uuid()).max(100).optional(),
-  courseId: z.string().uuid().optional(),
-  topic: z.string().trim().min(1).max(200).optional(),
-  units: z.array(flashcardUnitSchema).min(1).max(12).optional(),
-  count: z.number().int().min(1).max(30).default(10),
-  difficulty: z.enum(["easy", "medium", "hard", "mixed"]).default("mixed"),
-}).strict().superRefine((value, context) => {
-  const hasSelectedContent = Boolean(
-    value.noteId || value.noteIds?.length || value.units?.length
-  );
-  if (!hasSelectedContent && (!value.topic || !value.courseId)) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Provide a note, or both a course and topic.",
-    });
-  }
-  if ((value.noteIds?.length || value.units?.length) && !value.courseId) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "A course is required for selected notes or units.",
-    });
-  }
-});
 
 export async function POST(req: Request) {
   try {
@@ -120,7 +86,10 @@ export async function POST(req: Request) {
     }
 
     const selectedUnitNames = units.map((unit) => unit.moduleName);
-    derivedTopic = derivedTopic || selectedUnitNames.join(", ").slice(0, 200);
+    const retrievalTopic = (
+      topic || selectedUnitNames.join(", ") || courseName || "Course review"
+    ).slice(0, 200);
+    derivedTopic = derivedTopic || retrievalTopic;
     const selectedUnitChars = selectedUnitNames.length > 1
       ? Math.max(900, Math.floor(18_000 / selectedUnitNames.length))
       : 4_000;
@@ -186,13 +155,14 @@ export async function POST(req: Request) {
       }
     }
 
-    // Pull Canvas sources for every selected Canvas unit. For legacy requests
-    // without explicit content, retain topic-based whole-course retrieval.
-    if (topic && courseId && (selectedCanvasUnits.length > 0 || contentBlocks.length === 0)) {
+    // Pull Canvas sources for every selected Canvas unit. A course-only request
+    // uses the course name as a broad retrieval query because Topic is optional
+    // in the standalone flashcard form.
+    if (courseId && (selectedCanvasUnits.length > 0 || contentBlocks.length === 0)) {
       const retrieval = await canvasDeepFetch({
         userId: user.id,
         courseId,
-        topic,
+        topic: retrievalTopic,
         moduleIds: selectedCanvasUnits
           .map((unit) => unit.moduleId)
           .filter((id): id is number => id !== null),
@@ -235,13 +205,13 @@ export async function POST(req: Request) {
       .join("\n\n---\n\n")
       .slice(0, 80_000);
 
-    // Final fallback: recent summaries for the topic
-    if (!content && topic) {
+    // Final fallback: recent summaries from the selected course.
+    if (!content && courseId) {
       const { data: summaries } = await supabase
         .from("note_summaries")
         .select("content")
         .eq("user_id", user.id)
-        .eq("course_id", courseId!)
+        .eq("course_id", courseId)
         .order("created_at", { ascending: false })
         .limit(3);
 
