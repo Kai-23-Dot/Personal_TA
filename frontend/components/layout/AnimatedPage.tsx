@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 export function AnimatedPage({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   return (
-    <div key={pathname} className="animate-fade-in">
+    <div key={pathname} className="animate-fade-in" data-assistant-screen>
       {children}
     </div>
   );

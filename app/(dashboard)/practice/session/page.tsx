@@ -13,6 +13,7 @@ import { OptionsList } from "@/frontend/components/practice/OptionsList";
 import { FeedbackBox } from "@/frontend/components/practice/FeedbackBox";
 import { NavigationControls } from "@/frontend/components/practice/NavigationControls";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
+import { buildPracticeAssistantContext } from "@/frontend/lib/practiceAssistantContext";
 import { cn } from "@/backend/utils";
 import { Card, CardContent } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
@@ -40,6 +41,8 @@ type PracticeSession = {
   course_id: string | null;
   status: string;
 };
+
+const EMPTY_QUESTIONS: QuizQuestion[] = [];
 
 function extractCodeFromQuestion(question: string) {
   const match = question.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
@@ -134,7 +137,7 @@ export default function PracticeSessionPage() {
     if (!sessionStartRef.current) sessionStartRef.current = Date.now();
   }, []);
 
-  const questions = session?.questions ?? [];
+  const questions = session?.questions ?? EMPTY_QUESTIONS;
   const current = questions[index];
 
   const progressLabel = useMemo(() => {
@@ -154,25 +157,19 @@ export default function PracticeSessionPage() {
     return current.options.map((opt) => ({ value: opt, label: opt }));
   }, [current]);
 
-  // Push visible screen content so the AI Assistant can see the current question
+  // Supply exact assessment state. Submitted results include the verified score
+  // and each result; active assessments intentionally omit correct answers.
   const screenContent = useMemo(() => {
-    if (!session || !current || submitted) return "";
-    const lines = [
-      `Practice Test — Topic: ${session.topic} | Difficulty: ${session.difficulty}`,
-      `Question ${index + 1} of ${questions.length}:`,
-      current.question,
-    ];
-    if (current.options && current.options.length > 0) {
-      lines.push("Answer choices:");
-      current.options.forEach((opt, i) => lines.push(`  ${String.fromCharCode(65 + i)}. ${opt}`));
-    } else {
-      lines.push("(Short answer question)");
-    }
-    if (answers[index]) lines.push(`Student's current answer: ${answers[index]}`);
-    return lines.join("\n");
-  }, [session, current, index, questions.length, answers, submitted]);
+    return buildPracticeAssistantContext({
+      session,
+      questions,
+      answers,
+      currentIndex: index,
+      submitted,
+    });
+  }, [session, questions, answers, index, submitted]);
 
-  useSetPageContent(screenContent);
+  useSetPageContent(screenContent, "practice-session");
 
   function setAnswer(value: string) {
     setAnswers((prev) => ({ ...prev, [index]: value }));

@@ -6,6 +6,7 @@ import { format, addDays } from "date-fns";
 import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { parseChatBody } from "@/backend/security/chatInput";
+import { buildCurrentScreenContextBlock } from "@/backend/ai/currentScreenContext";
 
 export const maxDuration = 60;
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     const { sessionId, context } = parsed.data;
     const messages: CoreMessage[] = parsed.messages;
 
-    const pageContextExtra = context ? `\n\nCURRENT PAGE CONTEXT:\n${context}` : "";
+    const pageContextExtra = buildCurrentScreenContextBlock(context);
 
     const lastUserMessage = messages[messages.length - 1];
     if (lastUserMessage?.role === "user") {

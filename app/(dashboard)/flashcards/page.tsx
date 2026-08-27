@@ -157,7 +157,7 @@ export default function FlashcardsPage() {
     return lines.join("\n");
   }, [view, current, currentIndex, cards.length, isFlipped]);
 
-  useSetPageContent(screenContent);
+  useSetPageContent(screenContent, "flashcard-session");
 
   // ── Cards view (focused) ──
   if (view === "cards" && cards.length > 0 && current) {

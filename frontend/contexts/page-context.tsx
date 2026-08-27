@@ -1,20 +1,33 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { mergeAssistantContextSources } from "@/frontend/lib/assistantScreenContext";
 
 interface PageContextValue {
   pageContent: string;
-  setPageContent: (content: string) => void;
+  setPageContent: (sourceId: string, content: string) => void;
 }
 
 const PageContext = createContext<PageContextValue>({
   pageContent: "",
-  setPageContent: () => {},
+  setPageContent: () => undefined,
 });
 
 export function PageContextProvider({ children }: { children: ReactNode }) {
-  const [pageContent, setPageContent] = useState("");
-  const update = useCallback((content: string) => setPageContent(content), []);
+  const [sources, setSources] = useState<Record<string, string>>({});
+  const update = useCallback((sourceId: string, content: string) => {
+    setSources((current) => {
+      if (!content) {
+        if (!(sourceId in current)) return current;
+        const next = { ...current };
+        delete next[sourceId];
+        return next;
+      }
+      if (current[sourceId] === content) return current;
+      return { ...current, [sourceId]: content };
+    });
+  }, []);
+  const pageContent = useMemo(() => mergeAssistantContextSources(sources), [sources]);
   return (
     <PageContext.Provider value={{ pageContent, setPageContent: update }}>
       {children}
@@ -32,10 +45,12 @@ export function usePageContent() {
  * into the shared context so the AI Assistant can see it.
  * Clears automatically when the component unmounts (page navigation).
  */
-export function useSetPageContent(content: string) {
+export function useSetPageContent(content: string, sourceId?: string) {
   const { setPageContent } = useContext(PageContext);
+  const generatedSourceId = useId();
+  const resolvedSourceId = sourceId ?? generatedSourceId;
   useEffect(() => {
-    setPageContent(content);
-    return () => setPageContent("");
-  }, [content, setPageContent]);
+    setPageContent(resolvedSourceId, content);
+    return () => setPageContent(resolvedSourceId, "");
+  }, [content, resolvedSourceId, setPageContent]);
 }

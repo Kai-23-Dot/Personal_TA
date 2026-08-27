@@ -121,6 +121,90 @@ test.describe("hardening: authenticated workspace", () => {
     }
   });
 
+  test("AI Assistant sends the current rendered workspace with each question", async ({ page }) => {
+    await page.route("**/api/chat/context", async (route) => {
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "" });
+    });
+
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: "Open AI Assistant" }).click();
+    await expect(page.getByText("Current screen context connected")).toBeVisible();
+    await page.getByPlaceholder("Ask anything...").fill("What am I looking at right now?");
+    const requestPromise = page.waitForRequest("**/api/chat/context");
+    await page.getByRole("button", { name: "Send message" }).click();
+    const requestBody = (await requestPromise).postDataJSON() as { context?: string };
+
+    expect(requestBody.context).toContain("CURRENT SCREEN CONTENT");
+    expect(requestBody.context).toContain("Route: /dashboard");
+    expect(requestBody.context).toContain("Visible workspace content");
+  });
+
+  test("AI Assistant receives the verified submitted practice results", async ({ page }) => {
+    await page.route("**/api/practice/session?sessionId=e2e-screen-context", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "e2e-screen-context",
+          topic: "Critical Thinking",
+          difficulty: "medium",
+          question_count: 2,
+          course_id: null,
+          status: "active",
+          questions: [
+            {
+              question: "Why identify assumptions in an argument?",
+              type: "multiple_choice",
+              options: ["To find logical gaps", "To avoid reading evidence"],
+              correct_answer: "To find logical gaps",
+              explanation: "Assumptions can expose hidden weaknesses in reasoning.",
+              difficulty: "medium",
+            },
+            {
+              question: "What demonstrates critical thinking?",
+              type: "multiple_choice",
+              options: ["Compare evidence", "Ignore other views"],
+              correct_answer: "Compare evidence",
+              explanation: "Comparing evidence reveals the limits of each view.",
+              difficulty: "medium",
+            },
+          ],
+        }),
+      });
+    });
+    await page.route("**/api/practice/generate", async (route) => {
+      if (route.request().method() === "PATCH") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      } else {
+        await route.continue();
+      }
+    });
+    await page.route("**/api/chat/context", async (route) => {
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "" });
+    });
+
+    await page.goto("/practice/session?sessionId=e2e-screen-context");
+    await page.getByLabel("To find logical gaps").check();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("Ignore other views").check();
+    await page.getByRole("button", { name: "Submit Test" }).click();
+    await expect(page.getByRole("heading", { name: "Test Results" })).toBeVisible();
+    await expect(page.getByText("1 / 2", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Open AI Assistant" }).click();
+    await expect(page.getByText("Current screen context connected")).toBeVisible();
+    await page.getByPlaceholder("Ask anything...").fill("Did I get every question correct?");
+    const requestPromise = page.waitForRequest("**/api/chat/context");
+    await page.getByRole("button", { name: "Send message" }).click();
+    const requestBody = (await requestPromise).postDataJSON() as { context?: string };
+
+    expect(requestBody.context).toContain("Practice state: submitted results (review mode)");
+    expect(requestBody.context).toContain("Verified score: 1 of 2 (50% correct)");
+    expect(requestBody.context).toContain("Overall verification: Not every question is correct.");
+    expect(requestBody.context).toContain("Incorrect question numbers: 2");
+    expect(requestBody.context).toContain("Question 2 — INCORRECT");
+  });
+
   test("retired planner surfaces cannot be used", async ({ page, request }) => {
     await page.goto("/study");
     await expect(page).toHaveURL(/\/dashboard$/);

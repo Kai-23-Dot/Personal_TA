@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseChatBody } from "./chatInput";
+import { MAX_CHAT_CONTEXT_CHARS, parseChatBody } from "./chatInput";
 
 const validBody = {
   sessionId: "session_123",
@@ -53,6 +53,22 @@ describe("parseChatBody", () => {
     const result = parseChatBody({
       ...validBody,
       messages: [{ role: "assistant", content: "Hello" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts bounded live-screen context", () => {
+    const result = parseChatBody({
+      ...validBody,
+      context: "Submitted score: 3 of 3",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects oversized live-screen context", () => {
+    const result = parseChatBody({
+      ...validBody,
+      context: "x".repeat(MAX_CHAT_CONTEXT_CHARS + 1),
     });
     expect(result.success).toBe(false);
   });

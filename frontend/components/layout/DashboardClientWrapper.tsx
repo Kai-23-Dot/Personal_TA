@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageContextProvider } from "@/frontend/contexts/page-context";
 import { GlobalAssistant } from "./GlobalAssistant";
 import { AnimatedPage } from "./AnimatedPage";
+import { LiveScreenContext } from "./LiveScreenContext";
 import {
   Dialog,
   DialogContent,
@@ -99,6 +100,7 @@ export function DashboardClientWrapper({
   return (
     <PageContextProvider>
       <AnimatedPage>{children}</AnimatedPage>
+      <LiveScreenContext />
       <GlobalAssistant />
       <Dialog open={showAgreementGate} onOpenChange={() => undefined}>
         <DialogContent

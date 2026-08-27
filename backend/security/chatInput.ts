@@ -7,6 +7,7 @@ const MAX_TOTAL_TEXT_CHARS = 100_000;
 const MAX_ATTACHMENTS = 3;
 const MAX_ATTACHMENT_BYTES = 2_500_000;
 const MAX_TOTAL_ATTACHMENT_BYTES = 3_000_000;
+export const MAX_CHAT_CONTEXT_CHARS = 8_000;
 
 const allowedImages = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
@@ -51,7 +52,7 @@ const chatBodySchema = z.object({
   sessionId: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/),
   noteId: z.string().uuid().optional(),
   assignmentId: z.string().uuid().optional(),
-  context: z.string().max(8_000).optional(),
+  context: z.string().max(MAX_CHAT_CONTEXT_CHARS).optional(),
 });
 
 export type ValidChatBody = z.infer<typeof chatBodySchema>;

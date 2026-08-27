@@ -6,6 +6,7 @@ import { useRef, useEffect, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { usePageContent } from "@/frontend/contexts/page-context";
+import { buildAssistantRequestContext } from "@/frontend/lib/assistantScreenContext";
 
 const PAGE_CONTEXTS: Record<string, string> = {
   "/dashboard": "The student is on the main Dashboard page, which shows upcoming assignments due this week, course overview, and recommended practice topics.",
@@ -37,9 +38,7 @@ export function GlobalAssistant() {
   const screenContent = usePageContent();
 
   // Full context: page description + actual visible content (if any page provides it)
-  const fullContext = screenContent
-    ? `${pathnameContext}\n\nCURRENT SCREEN CONTENT:\n${screenContent}`
-    : pathnameContext;
+  const fullContext = buildAssistantRequestContext(pathnameContext, screenContent);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: "/api/chat/context",
@@ -57,7 +56,7 @@ export function GlobalAssistant() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label="Open AI Assistant"
+        aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
         className="fixed bottom-[88px] right-4 z-40 flex h-13 w-13 items-center justify-center rounded-full border border-sky-400/30 bg-[rgba(9,12,24,0.9)] shadow-[0_0_24px_rgba(56,189,248,0.15)] backdrop-blur transition-all hover:border-sky-400/50 hover:shadow-[0_0_32px_rgba(56,189,248,0.25)] active:scale-95 md:bottom-8"
         style={{ height: "52px", width: "52px" }}
       >
@@ -82,10 +81,13 @@ export function GlobalAssistant() {
         <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-white">AI Assistant</p>
-            <p className="text-[11px] text-slate-500">Aware of your current page</p>
+            <p className="text-[11px] text-slate-500">
+              {screenContent ? "Current screen context connected" : "Aware of your current page"}
+            </p>
           </div>
           <button
             onClick={() => setOpen(false)}
+            aria-label="Close AI Assistant panel"
             className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/5 hover:text-slate-300"
           >
             <X className="h-3.5 w-3.5" />
@@ -145,6 +147,7 @@ export function GlobalAssistant() {
           />
           <button
             type="submit"
+            aria-label="Send message"
             disabled={isLoading || !input.trim()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-300 transition hover:bg-sky-500/30 disabled:opacity-40"
           >
