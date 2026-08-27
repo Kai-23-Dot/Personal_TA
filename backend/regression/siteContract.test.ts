@@ -70,16 +70,32 @@ describe("website product-surface contract", () => {
     expect(source("app/(dashboard)/dashboard/page.tsx")).not.toMatch(/href=[{]?["']\/study["']/);
   });
 
-  test("dashboard command center stays responsive and uses live account signals", () => {
+  test("dashboard uses a responsive Notion-style workspace with live account signals", () => {
     const dashboard = source("app/(dashboard)/dashboard/page.tsx");
     expect(dashboard).toContain("data-dashboard-command-center");
+    expect(dashboard).toContain("data-dashboard-notion-workspace");
     expect(dashboard).toContain("data-dashboard-primary-action");
-    expect(dashboard).toContain("sm:grid-cols-2 2xl:grid-cols-4");
-    expect(dashboard).toContain("xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.7fr)]");
+    expect(dashboard).toContain("data-dashboard-deadline-database");
+    expect(dashboard).toContain("data-dashboard-course-database");
+    expect(dashboard).toContain("sm:grid-cols-2 xl:grid-cols-4");
+    expect(dashboard).toContain("xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]");
     expect(dashboard).toContain("upcomingAssignments.length");
     expect(dashboard).toContain("hoursThisWeek");
     expect(dashboard).toContain("notesCount");
     expect(dashboard).toContain("courseDeadlines.length");
+    expect(dashboard).not.toContain("blur-[90px]");
+  });
+
+  test("workspace shell uses flat document-style navigation", () => {
+    const layout = source("app/(dashboard)/layout.tsx");
+    const sidebar = source("frontend/components/layout/Sidebar.tsx");
+    const header = source("frontend/components/layout/Header.tsx");
+    expect(layout).toContain("data-notion-workspace-shell");
+    expect(layout).toContain("md:pl-60");
+    expect(sidebar).toContain("fixed inset-y-0 left-0");
+    expect(header).toContain("sticky top-0");
+    expect(sidebar).not.toContain("rounded-3xl");
+    expect(header).not.toContain("rounded-2xl border border-border/70");
   });
 
   test("dashboard redesign research covers at least fifty distinct references", () => {

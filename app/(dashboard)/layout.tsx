@@ -53,17 +53,17 @@ export default async function DashboardLayout({
   const showOnboardingBanner = !onboarding?.completed && !canvasConn;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-dashboard-shell>
+    <div className="min-h-screen bg-background text-foreground" data-dashboard-shell data-notion-workspace-shell>
       <Sidebar profile={profile ?? null} plan={plan} isAdmin={isAdmin} />
-      <div className="min-h-screen md:pl-[15.75rem]">
+      <div className="min-h-screen md:pl-60">
         <Header title="Smartlearn" description="Your courses, notes, practice tests, and study sets — all in one place." isAdmin={isAdmin} />
         {/* Legacy .app-container (chain-summit.css) is deliberately NOT used here:
             its `padding` shorthand zeroed the top padding and capped width at
             1200px, silently overriding these utilities. */}
-        <main className="w-full px-5 pb-28 pt-8 md:px-8 md:pb-10">
+        <main className="w-full px-4 pb-28 pt-7 sm:px-6 md:pb-10 lg:px-8">
         <DashboardClientWrapper pendingCanvasAgreement={pendingCanvasAgreement ?? null}>
           {showOnboardingBanner ? (
-            <div className="mb-5 rounded-2xl border border-sky-400/20 bg-sky-500/10 p-4">
+            <div className="mb-6 rounded-lg border border-sky-400/20 bg-sky-500/[0.08] p-4" data-notion-surface>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <strong className="text-sm text-sky-100">Finish onboarding</strong>

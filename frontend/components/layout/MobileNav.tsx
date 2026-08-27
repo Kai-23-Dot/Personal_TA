@@ -50,7 +50,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
       <div
         role="navigation"
         aria-label="Mobile navigation"
-        className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-1 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.92)] p-2 shadow-2xl backdrop-blur-xl md:hidden"
+        className="fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 gap-1 rounded-xl border border-white/10 bg-[rgba(9,12,20,0.96)] p-1.5 shadow-2xl backdrop-blur-xl md:hidden"
       >
         {quickAccess.map((link) => {
           const Icon = link.icon;
@@ -60,7 +60,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               key={link.href}
               href={link.href}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
+                "flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
                 active && "bg-sky-500/12 text-sky-200"
               )}
             >
@@ -74,7 +74,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
           onClick={() => setOpen(true)}
           aria-label="Open full navigation menu"
           aria-expanded={open}
-          className="flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground"
+          className="flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground"
         >
           <Grid2x2 className="h-4 w-4" />
           More

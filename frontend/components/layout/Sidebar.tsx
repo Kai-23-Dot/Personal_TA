@@ -36,12 +36,12 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
     : profile?.email?.[0]?.toUpperCase() ?? "U";
 
   return (
-    <aside className="workspace-sidebar fixed bottom-3 left-3 top-3 z-20 hidden w-60 flex-col rounded-3xl border border-sidebar-border bg-sidebar/90 shadow-[20px_0_80px_rgba(0,0,0,0.22)] backdrop-blur-2xl md:flex">
-      <div className="px-5 py-[18px] border-b border-sidebar-border">
+    <aside className="workspace-sidebar fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-xl md:flex">
+      <div className="border-b border-sidebar-border px-4 py-3.5">
         <Link
           href="/"
           aria-label="Return to the Smartlearn home page"
-          className="flex items-center gap-2.5 group"
+          className="group flex items-center gap-2.5 rounded-md px-1 py-1"
         >
           <div className="w-8 h-8 flex-shrink-0 overflow-hidden transition-all duration-300 group-hover:scale-105">
             <Image
@@ -52,15 +52,15 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
               className="w-full h-full object-contain"
             />
           </div>
-          <div>
-            <div className="font-mono text-sidebar-foreground font-semibold text-sm leading-none tracking-tight">SMARTLEARN</div>
-            <div className="text-primary/55 text-[9px] mt-1 tracking-[0.18em] uppercase">Intelligence OS</div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold leading-none tracking-[-0.02em] text-sidebar-foreground">Smartlearn</div>
+            <div className="mt-1 text-[9px] uppercase tracking-[0.15em] text-primary/50">Learning workspace</div>
           </div>
         </Link>
       </div>
 
-      <div role="navigation" aria-label="Workspace navigation" className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        <p className="text-sky-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
+      <div role="navigation" aria-label="Workspace navigation" className="flex-1 space-y-0.5 overflow-y-auto px-2.5 py-3">
+        <p className="px-2.5 pb-1.5 pt-2 text-[10px] font-medium text-sidebar-foreground/35">
           Workspace
         </p>
         {navItems.map((item) => {
@@ -70,35 +70,33 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
             <Link
               key={item.href}
               href={item.href}
-              className={cn("nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium", isActive && "active")}
+              className={cn("nav-item flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium", isActive && "active")}
             >
               <span className="nav-icon-shell"><Icon className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} /></span>
               <span className="flex-1">{item.label}</span>
-              {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-300 flex-shrink-0" />
-              )}
+              {isActive ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300" /> : null}
             </Link>
           );
         })}
 
         <div className="pt-3">
-          <p className="text-sky-300/60 text-[10px] font-semibold uppercase tracking-widest px-3 py-2">
+          <p className="px-2.5 pb-1.5 pt-2 text-[10px] font-medium text-sidebar-foreground/35">
             Account
           </p>
           <Link
             href="/pricing"
             className={cn(
-              "mb-1 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all",
+              "mb-1 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
               isPaid
-                ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100 hover:bg-emerald-400/10"
-                : "border-violet-400/25 bg-gradient-to-r from-violet-500/15 to-sky-500/10 text-white hover:border-violet-300/40 hover:from-violet-500/20 hover:to-sky-500/15",
-              pathname === "/pricing" && "ring-1 ring-sky-300/50"
+                ? "text-emerald-100 hover:bg-white/[0.045]"
+                : "text-sidebar-foreground/70 hover:bg-white/[0.045] hover:text-sidebar-foreground",
+              pathname === "/pricing" && "bg-sky-400/[0.10] text-sky-100"
             )}
           >
             <span className="nav-icon-shell"><CreditCard className="nav-icon h-[15px] w-[15px] flex-shrink-0" /></span>
             <span className="flex-1">{isPaid ? "Manage plan" : "Plans & upgrade"}</span>
             <span className={cn(
-              "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+              "rounded border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider",
               isPaid
                 ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-200"
                 : "border-violet-300/25 bg-violet-400/10 text-violet-200"
@@ -108,7 +106,7 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
           </Link>
           <Link
             href="/settings"
-            className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/settings" && "active")}
+            className={cn("nav-item flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium", pathname === "/settings" && "active")}
           >
             <Settings className={cn("nav-icon w-[15px] h-[15px] flex-shrink-0")} />
             Settings
@@ -116,7 +114,7 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
           {isAdmin ? (
             <Link
               href="/admin"
-              className={cn("nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium", pathname === "/admin" && "active")}
+              className={cn("nav-item flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium", pathname === "/admin" && "active")}
             >
               <ShieldCheck className="nav-icon h-[15px] w-[15px] flex-shrink-0" />
               Owner analytics
@@ -126,11 +124,11 @@ export function Sidebar({ profile, plan = "free", isAdmin = false }: SidebarProp
       </div>
 
       {/* User */}
-      <div className="px-3 py-3 border-t border-sidebar-border">
-        <div className="group flex items-center gap-3 rounded-xl transition-colors duration-150">
+      <div className="border-t border-sidebar-border px-2.5 py-2.5">
+        <div className="group flex items-center gap-3 rounded-md transition-colors duration-150">
           <Link
             href="/settings"
-            className="flex flex-1 min-w-0 items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/[0.06] transition-colors duration-150"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-2 transition-colors duration-150 hover:bg-white/[0.045]"
           >
             <Avatar className="w-7 h-7 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url ?? undefined} />
