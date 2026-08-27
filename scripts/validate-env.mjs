@@ -2,20 +2,20 @@ import nextEnv from "@next/env";
 
 nextEnv.loadEnvConfig(process.cwd());
 
-const strict = process.env.VERCEL === "1" || process.argv.includes("--strict");
+const deploymentStrict = process.env.VERCEL === "1" || process.argv.includes("--strict");
+const productionStrict = process.env.VERCEL_ENV === "production" || process.argv.includes("--strict");
 const required = [
   "CRON_SECRET",
   "NEXT_PUBLIC_APP_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_SUPABASE_URL",
   "OPENAI_API_KEY",
-  "STRIPE_MAX_PRICE_ID",
-  "STRIPE_PLUS_PRICE_ID",
   "STRIPE_PRO_PRICE_ID",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
+const productionRequired = ["STRIPE_MAX_PRICE_ID", "STRIPE_PLUS_PRICE_ID"];
 const paired = [
   ["CANVAS_CLIENT_ID", "CANVAS_CLIENT_SECRET"],
   ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
@@ -31,12 +31,19 @@ const warnings = [];
 for (const name of required) {
   const value = process.env[name]?.trim();
   if (!value || placeholderPattern.test(value)) {
-    (strict ? errors : warnings).push(`${name} is not configured`);
+    (deploymentStrict ? errors : warnings).push(`${name} is not configured`);
+  }
+}
+
+for (const name of productionRequired) {
+  const value = process.env[name]?.trim();
+  if (!value || placeholderPattern.test(value)) {
+    (productionStrict ? errors : warnings).push(`${name} is not configured`);
   }
 }
 
 if (!process.env.ADMIN_EMAILS?.trim() && !process.env.ADMIN_USER_IDS?.trim()) {
-  (strict ? errors : warnings).push("ADMIN_EMAILS or ADMIN_USER_IDS is not configured");
+  (productionStrict ? errors : warnings).push("ADMIN_EMAILS or ADMIN_USER_IDS is not configured");
 }
 
 for (const pair of paired) {
@@ -50,7 +57,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 if (appUrl) {
   try {
     const parsed = new URL(appUrl);
-    if (strict && parsed.protocol !== "https:") {
+    if (deploymentStrict && parsed.protocol !== "https:") {
       errors.push("NEXT_PUBLIC_APP_URL must use HTTPS in production");
     }
   } catch {
@@ -63,5 +70,5 @@ if (errors.length > 0) {
   for (const error of errors) console.error(`[env] Error: ${error}`);
   process.exitCode = 1;
 } else {
-  console.log(`[env] Configuration check passed${strict ? " (strict)" : ""}.`);
+  console.log(`[env] Configuration check passed${deploymentStrict ? " (strict)" : ""}.`);
 }
