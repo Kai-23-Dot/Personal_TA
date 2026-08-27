@@ -70,6 +70,24 @@ describe("website product-surface contract", () => {
     expect(source("app/(dashboard)/dashboard/page.tsx")).not.toMatch(/href=[{]?["']\/study["']/);
   });
 
+  test("dashboard command center stays responsive and uses live account signals", () => {
+    const dashboard = source("app/(dashboard)/dashboard/page.tsx");
+    expect(dashboard).toContain("data-dashboard-command-center");
+    expect(dashboard).toContain("data-dashboard-primary-action");
+    expect(dashboard).toContain("sm:grid-cols-2 2xl:grid-cols-4");
+    expect(dashboard).toContain("xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.7fr)]");
+    expect(dashboard).toContain("upcomingAssignments.length");
+    expect(dashboard).toContain("hoursThisWeek");
+    expect(dashboard).toContain("notesCount");
+    expect(dashboard).toContain("courseDeadlines.length");
+  });
+
+  test("dashboard redesign research covers at least fifty distinct references", () => {
+    const research = source("docs/dashboard-redesign-research.md");
+    const reviewedRows = research.match(/^\|\s*\d+\s*\|/gm) ?? [];
+    expect(reviewedRows.length).toBeGreaterThanOrEqual(50);
+  });
+
   test("onboarding does not require a removed planner step", () => {
     const onboarding = source("app/(dashboard)/onboarding/page.tsx");
     expect(onboarding).not.toMatch(/generatePlan|href:\s*["']\/study["']/);

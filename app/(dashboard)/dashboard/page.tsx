@@ -4,17 +4,21 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNowStrict, parseISO } from "date-fns";
 import {
+  Activity,
   AlertCircle,
   ArrowRight,
+  ArrowUpRight,
   BookOpen,
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Command,
   FileStack,
   Flame,
   GraduationCap,
   Link2,
   MessageCircleQuestion,
+  Radio,
   RefreshCw,
   Sparkles,
   Target,
@@ -82,12 +86,12 @@ function Panel({
 }) {
   return (
     <section
-      className={`rounded-[1.4rem] border border-white/[0.08] bg-[rgba(8,12,24,0.78)] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.22)] backdrop-blur sm:p-6 ${className}`}
+      className={`rounded-[1.65rem] border border-white/[0.075] bg-[linear-gradient(145deg,rgba(10,15,29,0.9),rgba(5,9,19,0.82))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-6 ${className}`}
     >
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-start justify-between gap-4 sm:mb-6">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-[-0.02em] text-white sm:text-lg">{title}</h2>
-          {subtitle ? <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
+          <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-white sm:text-base">{title}</h2>
+          {subtitle ? <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500">{subtitle}</p> : null}
         </div>
         {action}
       </div>
@@ -112,13 +116,14 @@ function QuickTool({
   return (
     <Link
       href={href}
-      className="group flex min-h-12 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-3 text-sm font-medium text-slate-200 transition-colors hover:border-sky-300/25 hover:bg-sky-400/[0.07] hover:text-white"
+      className="group relative flex min-h-14 items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-3 text-sm font-medium text-slate-200 transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300/25 hover:bg-sky-400/[0.07] hover:text-white"
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.07] bg-white/[0.04] text-sky-300">
+      <span className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/0 to-transparent transition-all duration-300 group-hover:via-sky-300/70" />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-sky-300/10 bg-sky-300/[0.06] text-sky-300 transition-colors group-hover:border-sky-300/25 group-hover:bg-sky-300/[0.1]">
         {icon}
       </span>
       <span>{label}</span>
-      <ArrowRight className="ml-auto h-3.5 w-3.5 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300" />
+      <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-slate-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sky-300" />
     </Link>
   );
 }
@@ -346,35 +351,84 @@ export default function DashboardPage() {
   const primaryTone = {
     urgent: {
       border: "border-orange-300/25",
-      glow: "bg-orange-400/10",
-      badge: "border-orange-300/25 bg-orange-400/10 text-orange-200",
-      icon: "text-orange-200",
+      glow: "bg-orange-400/15",
+      badge: "border-orange-300/25 bg-orange-400/10 text-orange-100",
+      dot: "bg-orange-300 shadow-[0_0_16px_rgba(253,186,116,0.75)]",
     },
     focus: {
       border: "border-sky-300/20",
-      glow: "bg-sky-400/10",
-      badge: "border-sky-300/25 bg-sky-400/10 text-sky-200",
-      icon: "text-sky-200",
+      glow: "bg-sky-400/15",
+      badge: "border-sky-300/25 bg-sky-400/10 text-sky-100",
+      dot: "bg-sky-300 shadow-[0_0_16px_rgba(125,211,252,0.75)]",
     },
     clear: {
       border: "border-emerald-300/20",
-      glow: "bg-emerald-400/10",
-      badge: "border-emerald-300/25 bg-emerald-400/10 text-emerald-200",
-      icon: "text-emerald-200",
+      glow: "bg-emerald-400/15",
+      badge: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100",
+      dot: "bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.75)]",
     },
   }[primaryAction.tone];
 
+  const canvasUpdatedLabel = canvasConnection?.last_synced_at
+    ? formatDistanceToNowStrict(parseISO(canvasConnection.last_synced_at), { addSuffix: true })
+    : "Not synced yet";
+  const courseSignalPositions = [
+    "left-[8%] top-[54%]",
+    "left-[28%] top-[12%]",
+    "right-[27%] top-[17%]",
+    "right-[8%] top-[56%]",
+    "left-[45%] bottom-[4%]",
+  ];
+  const weeklyMetrics = [
+    {
+      icon: <CalendarDays className="h-4 w-4" />,
+      label: "Due in 7 days",
+      value: String(upcomingAssignments.length),
+      note: urgentAssignments.length > 0 ? `${urgentAssignments.length} urgent` : "No urgent deadlines",
+      tone: "border-orange-300/15 bg-orange-300/[0.06] text-orange-200",
+      line: "via-orange-300/70",
+    },
+    {
+      icon: <Flame className="h-4 w-4" />,
+      label: "Study streak",
+      value: `${studyStreak} ${studyStreak === 1 ? "day" : "days"}`,
+      note: studyStreak > 0 ? "Momentum active" : "Start with one session",
+      tone: "border-violet-300/15 bg-violet-300/[0.06] text-violet-200",
+      line: "via-violet-300/70",
+    },
+    {
+      icon: <Clock3 className="h-4 w-4" />,
+      label: "Focus this week",
+      value: `${hoursThisWeek} hrs`,
+      note: "Completed sessions only",
+      tone: "border-sky-300/15 bg-sky-300/[0.06] text-sky-200",
+      line: "via-sky-300/70",
+    },
+    {
+      icon: <FileStack className="h-4 w-4" />,
+      label: "Indexed material",
+      value: String(notesCount),
+      note: `${courses.length} active course${courses.length === 1 ? "" : "s"}`,
+      tone: "border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-200",
+      line: "via-emerald-300/70",
+    },
+  ];
+
   return (
-    <div className="mx-auto max-w-[1320px] px-4 pb-20 pt-5 sm:px-6 sm:pt-7">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            {format(new Date(), "EEEE · MMMM d")}
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-white sm:text-[2rem]">
+    <div className="mx-auto max-w-[1440px] pb-20 pt-1" data-dashboard-command-center>
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-30 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300/80" />
+            </span>
+            {format(new Date(), "EEEE · MMMM d")} · Live semester
+          </div>
+          <h1 className="mt-2.5 text-[clamp(1.8rem,4vw,2.65rem)] font-semibold leading-none tracking-[-0.045em] text-white">
             {greeting}{firstName ? `, ${firstName}` : ""}.
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400">
+          <p className="mt-2 text-sm leading-6 text-slate-400">
             {urgentAssignments.length > 0
               ? `${urgentAssignments.length} deadline${urgentAssignments.length === 1 ? " needs" : "s need"} attention within 48 hours.`
               : upcomingAssignments.length > 0
@@ -382,20 +436,22 @@ export default function DashboardPage() {
                 : "Your next seven days are clear."}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {canvasConnection ? (
-            <p className="hidden text-right text-[11px] leading-4 text-slate-600 md:block">
-              Canvas updated<br />
-              {canvasConnection.last_synced_at
-                ? formatDistanceToNowStrict(parseISO(canvasConnection.last_synced_at), { addSuffix: true })
-                : "not yet synced"}
+
+        <div className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-2 pl-3.5 sm:w-auto sm:justify-end">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-600">
+              <Radio className="h-3 w-3 text-emerald-300/70" aria-hidden="true" />
+              Canvas signal
             </p>
-          ) : null}
+            <p className="mt-0.5 max-w-36 truncate text-xs text-slate-300">
+              {canvasConnection ? canvasUpdatedLabel : "Not connected"}
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleSync}
             disabled={syncing || !canvasConnection}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 text-xs font-semibold text-slate-200 transition-colors hover:border-white/20 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 text-xs font-semibold text-slate-100 transition-all hover:border-sky-300/25 hover:bg-sky-300/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} aria-hidden="true" />
             {syncing ? "Syncing" : "Sync now"}
@@ -404,20 +460,22 @@ export default function DashboardPage() {
       </header>
 
       {syncMessage ? (
-        <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-xs text-slate-300" role="status">
+        <div className="mb-5 flex items-start gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-xs text-slate-300" role="status">
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-300" aria-hidden="true" />
           {syncMessage}
         </div>
       ) : null}
 
       {loadState === "loading" ? (
-        <div className="space-y-5" role="status" aria-label="Loading dashboard">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-            <SkeletonBlock className="h-[330px]" />
-            <SkeletonBlock className="h-[330px]" />
+        <div className="space-y-4" role="status" aria-label="Loading dashboard">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.7fr)]">
+            <SkeletonBlock className="h-[350px]" />
+            <SkeletonBlock className="h-[350px]" />
           </div>
-          <SkeletonBlock className="h-24" />
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            {[0, 1, 2, 3].map((item) => <SkeletonBlock key={item} className="h-28" />)}
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
             <SkeletonBlock className="h-80" />
             <SkeletonBlock className="h-80" />
           </div>
@@ -425,9 +483,9 @@ export default function DashboardPage() {
       ) : null}
 
       {loadState === "error" ? (
-        <div className="rounded-[1.4rem] border border-red-300/20 bg-red-400/[0.06] p-8 text-center">
+        <div className="rounded-[1.65rem] border border-red-300/20 bg-red-400/[0.06] p-8 text-center">
           <p className="mb-4 text-sm text-slate-300">{syncMessage ?? "Failed to load your dashboard."}</p>
-          <div className="flex justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <button type="button" className="btn btn-primary" onClick={() => loadDashboardData()}>Retry</button>
             <Link href="/settings" className="btn btn-secondary">Settings</Link>
           </div>
@@ -435,57 +493,118 @@ export default function DashboardPage() {
       ) : null}
 
       {loadState === "ready" ? (
-        <div className="space-y-5">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-            <section className={`relative min-h-[330px] overflow-hidden rounded-[1.6rem] border ${primaryTone.border} bg-[rgba(8,13,27,0.9)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-8`}>
-              <div className={`pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full ${primaryTone.glow} blur-3xl`} />
-              <div className="relative flex h-full flex-col">
-                <div className="flex items-center justify-between gap-4">
-                  <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${primaryTone.badge}`}>
-                    <Zap className="h-3 w-3" aria-hidden="true" />
-                    {primaryAction.badge}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Priority 01</span>
-                </div>
+        <div className="space-y-4 sm:space-y-5">
+          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.7fr)]">
+            <section
+              className={`relative overflow-hidden rounded-[1.8rem] border ${primaryTone.border} bg-[linear-gradient(145deg,rgba(10,18,36,0.97),rgba(5,10,23,0.94))] p-5 shadow-[0_28px_100px_rgba(0,0,0,0.32)] sm:p-7`}
+              data-dashboard-primary-action
+            >
+              <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(125,211,252,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.045)_1px,transparent_1px)] [background-size:32px_32px]" />
+              <div className={`pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full ${primaryTone.glow} blur-[90px]`} />
 
-                <div className="my-auto py-8">
-                  <h2 className="max-w-2xl text-2xl font-semibold leading-[1.15] tracking-[-0.04em] text-white sm:text-3xl lg:text-[2.25rem]">
-                    {primaryAction.title}
-                  </h2>
-                  <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-[15px]">
-                    {primaryAction.description}
-                  </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {primaryAction.meta.map((item) => (
-                      <span key={item} className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[11px] font-medium text-slate-300">
-                        {item}
-                      </span>
-                    ))}
+              <div className="relative grid h-full gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-stretch">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${primaryTone.badge}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${primaryTone.dot}`} />
+                      {primaryAction.badge}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                      <Command className="h-3 w-3" aria-hidden="true" />
+                      Priority 01
+                    </span>
+                  </div>
+
+                  <div className="py-7 sm:py-9">
+                    <h2 className="max-w-2xl text-[clamp(1.7rem,4.2vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.05em] text-white">
+                      {primaryAction.title}
+                    </h2>
+                    <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-[15px]">
+                      {primaryAction.description}
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {primaryAction.meta.map((item) => (
+                        <span key={item} className="rounded-full border border-white/[0.08] bg-black/15 px-3 py-1.5 text-[11px] font-medium text-slate-300">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+                    <Link
+                      href={primaryAction.href}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-sky-100/40 bg-gradient-to-r from-white to-sky-100 px-5 text-sm font-bold text-slate-950 shadow-[0_14px_40px_rgba(56,189,248,0.14)] transition-all hover:-translate-y-0.5 hover:to-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+                    >
+                      {primaryAction.cta}
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                    {primaryAction.secondaryHref ? (
+                      <Link
+                        href={primaryAction.secondaryHref}
+                        className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] px-5 text-sm font-semibold text-slate-200 transition-colors hover:border-white/20 hover:bg-white/[0.075] hover:text-white"
+                      >
+                        {primaryAction.secondaryLabel}
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link href={primaryAction.href} className="btn btn-primary !inline-flex !items-center !gap-2">
-                    {primaryAction.cta}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                  {primaryAction.secondaryHref ? (
-                    <Link href={primaryAction.secondaryHref} className="btn btn-secondary !inline-flex !items-center !gap-2">
-                      {primaryAction.secondaryLabel}
-                    </Link>
-                  ) : null}
-                </div>
+                <aside className="relative overflow-hidden rounded-[1.3rem] border border-white/[0.08] bg-black/20 p-4 backdrop-blur-xl" aria-label="Live semester pulse">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">Live semester</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">Current workload</p>
+                    </div>
+                    <Activity className="h-4 w-4 text-sky-300/80" aria-hidden="true" />
+                  </div>
+
+                  <dl className="mt-5 grid grid-cols-3 gap-2 border-y border-white/[0.07] py-4 lg:grid-cols-1 lg:gap-3 lg:border-b-0">
+                    {[
+                      ["7-day load", upcomingAssignments.length],
+                      ["Urgent", urgentAssignments.length],
+                      ["Focus hrs", hoursThisWeek],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
+                        <dt className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">{label}</dt>
+                        <dd className="mt-1 text-lg font-semibold tabular-nums text-white lg:mt-0 lg:text-base">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  <div className="relative mt-2 hidden h-24 lg:block" aria-hidden="true">
+                    <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/10" />
+                    <div className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/15" />
+                    <div className="absolute left-1/2 top-1/2 grid h-7 w-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-sky-300/20 bg-sky-300/[0.08]">
+                      <Zap className="h-3 w-3 text-sky-200" />
+                    </div>
+                    {courses.slice(0, 5).map((course, index) => (
+                      <span
+                        key={course.id}
+                        className={`absolute h-2 w-2 rounded-full ring-4 ring-white/[0.025] ${courseSignalPositions[index]}`}
+                        style={{ backgroundColor: course.color ?? "#7dd3fc" }}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-3 text-center text-[10px] text-slate-600 lg:mt-0">
+                    {courses.length} active course{courses.length === 1 ? "" : "s"} in signal
+                  </p>
+                </aside>
               </div>
             </section>
 
             <Panel
               title="Deadline queue"
-              subtitle="The next commitments that can change your week"
-              action={<Link href="/assignments" className="text-xs font-semibold text-sky-300 hover:text-sky-200">View all</Link>}
-              className="min-h-[330px]"
+              subtitle="Your next four commitments, ordered by due time"
+              action={(
+                <Link href="/assignments" className="inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-sky-200">
+                  View all <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
+              )}
+              className="h-full"
             >
               {upcomingAssignments.length === 0 ? (
-                <div className="grid min-h-[210px] place-items-center text-center">
+                <div className="grid min-h-[230px] place-items-center text-center">
                   <div>
                     <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-300/70" aria-hidden="true" />
                     <p className="mt-3 text-sm font-medium text-slate-200">No deadlines this week</p>
@@ -493,28 +612,33 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <ol className="space-y-2">
-                  {upcomingAssignments.slice(0, 4).map((assignment, index) => {
+                <ol className="divide-y divide-white/[0.065]">
+                  {upcomingAssignments.slice(0, 4).map((assignment) => {
                     const urgent = assignment.due.getTime() - nowMs < 48 * HOUR_MS;
                     return (
                       <li key={assignment.id}>
                         <Link
                           href={assignmentHref(assignment.id)}
-                          className={`group flex items-center gap-3 rounded-xl border px-3 py-3 transition-colors ${
-                            urgent
-                              ? "border-orange-300/20 bg-orange-400/[0.07] hover:bg-orange-400/[0.1]"
-                              : "border-white/[0.07] bg-white/[0.025] hover:border-white/[0.13] hover:bg-white/[0.045]"
-                          }`}
+                          className="group grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 py-3.5 first:pt-0 last:pb-0"
                         >
-                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-semibold ${urgent ? "bg-orange-300/10 text-orange-200" : "bg-white/[0.05] text-slate-400"}`}>
-                            {index + 1}
+                          <span className={`grid h-11 w-11 place-items-center rounded-xl border text-center ${urgent ? "border-orange-300/20 bg-orange-300/[0.08]" : "border-white/[0.07] bg-white/[0.035]"}`}>
+                            <span>
+                              <span className={`block text-[8px] font-bold uppercase tracking-[0.14em] ${urgent ? "text-orange-300" : "text-slate-600"}`}>{format(assignment.due, "MMM")}</span>
+                              <span className="mt-0.5 block text-sm font-semibold leading-none text-slate-100">{format(assignment.due, "d")}</span>
+                            </span>
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-slate-100">{assignment.title}</span>
-                            <span className="mt-0.5 block truncate text-[11px] text-slate-500">{assignment.course?.name ?? "Course"}</span>
+                          <span className="min-w-0">
+                            <span className="line-clamp-2 text-sm font-medium leading-5 text-slate-100 transition-colors group-hover:text-white">{assignment.title}</span>
+                            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-500">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: assignment.course?.color ?? "#7dd3fc" }} />
+                              <span className="truncate">{assignment.course?.name ?? "Course"}</span>
+                            </span>
                           </span>
-                          <span className={`shrink-0 text-right text-[11px] font-semibold ${urgent ? "text-orange-200" : "text-slate-400"}`}>
-                            {deadlineLabel(assignment.due, nowMs)}
+                          <span className="flex items-center gap-2 pl-1">
+                            <span className={`hidden whitespace-nowrap text-[10px] font-semibold 2xl:block ${urgent ? "text-orange-200" : "text-slate-500"}`}>
+                              {deadlineLabel(assignment.due, nowMs)}
+                            </span>
+                            <ArrowRight className="h-3.5 w-3.5 text-slate-700 transition-all group-hover:translate-x-0.5 group-hover:text-sky-300" aria-hidden="true" />
                           </span>
                         </Link>
                       </li>
@@ -525,82 +649,60 @@ export default function DashboardPage() {
             </Panel>
           </div>
 
-          <section aria-label="Weekly progress" className="grid overflow-hidden rounded-[1.2rem] border border-white/[0.08] bg-[rgba(8,12,24,0.65)] sm:grid-cols-3">
-            {[
-              {
-                icon: <CalendarDays className="h-4 w-4 text-orange-200" />,
-                label: "Due in 7 days",
-                value: String(upcomingAssignments.length),
-                note: urgentAssignments.length > 0 ? `${urgentAssignments.length} urgent` : "No urgent deadlines",
-              },
-              {
-                icon: <Flame className="h-4 w-4 text-violet-200" />,
-                label: "Study streak",
-                value: `${studyStreak} ${studyStreak === 1 ? "day" : "days"}`,
-                note: studyStreak > 0 ? "Momentum active" : "Start with one session",
-              },
-              {
-                icon: <Clock3 className="h-4 w-4 text-sky-200" />,
-                label: "Focus this week",
-                value: `${hoursThisWeek} hrs`,
-                note: "Based on completed sessions",
-              },
-            ].map((metric, index) => (
-              <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""}`}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.035]">{metric.icon}</span>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">{metric.label}</p>
-                  <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                    <strong className="text-base font-semibold text-white">{metric.value}</strong>
-                    <span className="text-[11px] text-slate-500">{metric.note}</span>
+          <section aria-label="Weekly pulse" className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            {weeklyMetrics.map((metric) => (
+              <div key={metric.label} className="group relative overflow-hidden rounded-[1.3rem] border border-white/[0.07] bg-[rgba(7,11,22,0.76)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-[rgba(10,16,30,0.88)]">
+                <span className={`pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent ${metric.line} to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100`} />
+                <div className="flex items-center gap-3.5">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${metric.tone}`}>{metric.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-600">{metric.label}</p>
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <strong className="text-lg font-semibold tabular-nums tracking-[-0.02em] text-white">{metric.value}</strong>
+                      <span className="text-[10px] text-slate-500">{metric.note}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </section>
 
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
             <Panel
               title="Study priorities"
-              subtitle="Ranked by deadline, grade impact, and your mastery gaps"
+              subtitle="Smartlearn ranks these from real deadlines and demonstrated mastery"
               action={<Link href="/practice" className="text-xs font-semibold text-sky-300 hover:text-sky-200">Practice weak spots</Link>}
             >
               {recommendations.length === 0 ? (
-                <div className="flex min-h-52 flex-col items-center justify-center text-center">
+                <div className="flex min-h-48 flex-col items-center justify-center text-center">
                   <Target className="h-8 w-8 text-slate-600" aria-hidden="true" />
                   <p className="mt-3 text-sm font-medium text-slate-300">No study priorities yet</p>
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">Sync Canvas, then complete practice so Smartlearn can rank your strongest next move.</p>
+                  <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">Complete a practice session so Smartlearn can rank your strongest next move.</p>
                   <button type="button" className="btn btn-secondary mt-4" onClick={handleSync} disabled={syncing || !canvasConnection}>
-                    {canvasConnection ? "Sync Canvas" : "Connect Canvas first"}
+                    {canvasConnection ? "Refresh course data" : "Connect Canvas first"}
                   </button>
                 </div>
               ) : (
                 <ol className="space-y-2.5">
-                  {recommendations.slice(0, 4).map((recommendation, index) => {
+                  {recommendations.slice(0, 3).map((recommendation, index) => {
                     const priorityTone = [
                       {
                         border: "border-sky-300/20 hover:border-sky-300/35",
-                        surface: "bg-sky-400/[0.065] hover:bg-sky-400/[0.095]",
+                        surface: "bg-sky-400/[0.055] hover:bg-sky-400/[0.085]",
                         rank: "border-sky-300/20 bg-sky-300/10 text-sky-200",
                         action: "text-sky-200",
                       },
                       {
                         border: "border-violet-300/15 hover:border-violet-300/30",
-                        surface: "bg-violet-400/[0.04] hover:bg-violet-400/[0.07]",
+                        surface: "bg-violet-400/[0.035] hover:bg-violet-400/[0.065]",
                         rank: "border-violet-300/15 bg-violet-300/[0.08] text-violet-200",
                         action: "text-violet-200",
                       },
                       {
                         border: "border-cyan-300/15 hover:border-cyan-300/30",
-                        surface: "bg-cyan-400/[0.035] hover:bg-cyan-400/[0.065]",
+                        surface: "bg-cyan-400/[0.03] hover:bg-cyan-400/[0.06]",
                         rank: "border-cyan-300/15 bg-cyan-300/[0.08] text-cyan-200",
                         action: "text-cyan-200",
-                      },
-                      {
-                        border: "border-white/[0.08] hover:border-emerald-300/25",
-                        surface: "bg-white/[0.025] hover:bg-emerald-400/[0.045]",
-                        rank: "border-white/[0.08] bg-white/[0.04] text-slate-400",
-                        action: "text-emerald-200",
                       },
                     ][index];
                     const accuracyLabel = recommendation.accuracy_pct === null
@@ -616,31 +718,22 @@ export default function DashboardPage() {
                       <li key={`${recommendation.topic}-${index}`}>
                         <Link
                           href={`/practice${recommendation.course_id ? `?courseId=${recommendation.course_id}` : ""}`}
-                          className={`group grid gap-3 rounded-2xl border p-4 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${priorityTone.border} ${priorityTone.surface}`}
+                          className={`group grid gap-3 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${priorityTone.border} ${priorityTone.surface}`}
                         >
-                          <span className={`grid h-9 w-9 place-items-center rounded-xl border text-[11px] font-bold tracking-[0.08em] ${priorityTone.rank}`}>
+                          <span className={`grid h-10 w-10 place-items-center rounded-xl border text-[10px] font-bold tracking-[0.1em] ${priorityTone.rank}`}>
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           <span className="min-w-0">
                             {recommendation.course_name ? (
-                              <span className="line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                {recommendation.course_name}
-                              </span>
+                              <span className="line-clamp-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-600">{recommendation.course_name}</span>
                             ) : null}
-                            <strong className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-white sm:text-[15px]">
-                              {recommendation.topic}
-                            </strong>
-                            <span className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-400">
-                              {recommendation.reason}
-                            </span>
+                            <strong className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-white sm:text-[15px]">{recommendation.topic}</strong>
+                            <span className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{recommendation.reason}</span>
                           </span>
-                          <span className="flex items-center gap-3 pl-12 sm:flex-col sm:items-end sm:gap-2 sm:pl-0">
-                            <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${accuracyTone}`}>
-                              {accuracyLabel}
-                            </span>
+                          <span className="flex items-center gap-3 pl-[3.25rem] sm:flex-col sm:items-end sm:gap-2 sm:pl-0">
+                            <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${accuracyTone}`}>{accuracyLabel}</span>
                             <span className={`inline-flex items-center gap-1 text-xs font-semibold ${priorityTone.action}`}>
-                              Practice
-                              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                              Practice <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                             </span>
                           </span>
                         </Link>
@@ -651,16 +744,19 @@ export default function DashboardPage() {
               )}
             </Panel>
 
-            <Panel title="Quick tools" subtitle="Start a focused task without hunting through navigation">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <Panel title="Quick launch" subtitle="Go directly to the learning tool you need">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 <QuickTool href="/practice" icon={<Target className="h-4 w-4" />} label="Practice" />
                 <QuickTool href="/notes" icon={<BookOpen className="h-4 w-4" />} label="Study guide" />
                 <QuickTool href="/flashcards" icon={<Sparkles className="h-4 w-4" />} label="Flashcards" />
                 <QuickTool href="/chat" icon={<MessageCircleQuestion className="h-4 w-4" />} label="Ask Smartlearn" />
               </div>
 
-              <div className="mt-5 border-t border-white/[0.07] pt-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">Workspace health</p>
+              <div className="mt-5 rounded-2xl border border-white/[0.07] bg-black/15 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-slate-600">Workspace health</p>
+                  <span className={`h-2 w-2 rounded-full ${canvasConnection ? "bg-emerald-300" : "bg-orange-300"}`} />
+                </div>
                 <dl className="mt-3 space-y-3 text-xs">
                   <div className="flex items-center justify-between gap-4">
                     <dt className="flex items-center gap-2 text-slate-500"><Link2 className="h-3.5 w-3.5" /> Canvas</dt>
@@ -668,11 +764,11 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="flex items-center gap-2 text-slate-500"><GraduationCap className="h-3.5 w-3.5" /> Active courses</dt>
-                    <dd className="text-slate-300">{courses.length}</dd>
+                    <dd className="tabular-nums text-slate-300">{courses.length}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="flex items-center gap-2 text-slate-500"><FileStack className="h-3.5 w-3.5" /> Indexed material</dt>
-                    <dd className="text-slate-300">{notesCount} items</dd>
+                    <dd className="tabular-nums text-slate-300">{notesCount} items</dd>
                   </div>
                 </dl>
               </div>
@@ -681,38 +777,52 @@ export default function DashboardPage() {
 
           <Panel
             title="Active courses"
-            subtitle="Course detail lives here; the dashboard stays focused on decisions"
-            action={<Link href="/courses" className="text-xs font-semibold text-sky-300 hover:text-sky-200">All courses</Link>}
+            subtitle="Course signals include only currently active Canvas classes and real upcoming work"
+            action={<Link href="/courses" className="inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-sky-200">All courses <ArrowUpRight className="h-3.5 w-3.5" /></Link>}
           >
             {courses.length === 0 ? (
-              <div className="flex flex-col items-center py-6 text-center">
+              <div className="flex flex-col items-center py-7 text-center">
                 <GraduationCap className="h-7 w-7 text-slate-600" aria-hidden="true" />
                 <p className="mt-2 text-sm text-slate-400">No active courses are synced.</p>
               </div>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {courses.slice(0, 6).map((course) => (
-                  <Link
-                    key={course.id}
-                    href={`/courses/${course.id}`}
-                    className="group flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-sm text-slate-200 transition-colors hover:border-white/[0.14] hover:bg-white/[0.045]"
-                  >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: course.color ?? "#7dd3fc" }} />
-                    <span className="min-w-0 flex-1 truncate">{course.name}</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-300" />
-                  </Link>
-                ))}
+              <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                {courses.slice(0, 6).map((course) => {
+                  const courseDeadlines = upcomingAssignments.filter((assignment) => assignment.course?.id === course.id);
+                  const nextDeadline = courseDeadlines[0];
+                  return (
+                    <Link
+                      key={course.id}
+                      href={`/courses/${course.id}`}
+                      className="group relative min-w-0 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.045]"
+                    >
+                      <span className="absolute inset-x-0 top-0 h-px opacity-75" style={{ backgroundColor: course.color ?? "#7dd3fc" }} />
+                      <div className="flex items-start gap-3">
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_12px_currentColor]" style={{ backgroundColor: course.color ?? "#7dd3fc", color: course.color ?? "#7dd3fc" }} />
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-100">{course.name}</p>
+                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                            <span>{courseDeadlines.length} due this week</span>
+                            <span className="h-1 w-1 rounded-full bg-slate-700" />
+                            <span>{nextDeadline ? deadlineLabel(nextDeadline.due, nowMs) : "Schedule clear"}</span>
+                          </div>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-700 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sky-300" aria-hidden="true" />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </Panel>
 
           {unreadNotifications.length > 0 ? (
             <Panel title="Updates" subtitle="Unread information that may affect your plan">
-              <ul className="grid gap-2 md:grid-cols-3">
+              <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {unreadNotifications.slice(0, 3).map((notification) => (
-                  <li key={notification.id} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
+                  <li key={notification.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
                     <p className="text-sm font-medium text-white">{notification.title}</p>
-                    {notification.body ? <p className="mt-1 text-xs leading-5 text-slate-500">{notification.body}</p> : null}
+                    {notification.body ? <p className="mt-1.5 line-clamp-3 text-xs leading-5 text-slate-500">{notification.body}</p> : null}
                   </li>
                 ))}
               </ul>
