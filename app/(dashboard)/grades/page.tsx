@@ -4,6 +4,11 @@ import { EmptyState } from "@/frontend/components/ui/empty-state";
 import { createClient } from "@/backend/supabase/server";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { GradesAutoSync } from "@/frontend/components/grades/grades-auto-sync";
+import {
+  GpaPredictor,
+  type PredictorAssignment,
+  type PredictorCourseSummary,
+} from "@/frontend/components/grades/gpa-predictor";
 
 type CourseRow = {
   id: string;
@@ -22,6 +27,15 @@ type GradeEventRow = {
   course: { name: string; color: string | null } | { name: string; color: string | null }[] | null;
 };
 
+type AssignmentRow = {
+  id: string;
+  course_id: string;
+  title: string;
+  points_possible: number | null;
+  weight: number | null;
+  due_date: string | null;
+};
+
 function percent(earned: number, possible: number) {
   return Math.round((earned / possible) * 100);
 }
@@ -32,7 +46,7 @@ export default async function GradesPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: courses }, { data: gradeEvents }] = await Promise.all([
+  const [{ data: courses }, { data: gradeEvents }, { data: assignments }] = await Promise.all([
     supabase
       .from("courses")
       .select("id, name, color, platform")
@@ -45,6 +59,15 @@ export default async function GradesPage() {
       .eq("user_id", user!.id)
       .eq("course.is_active", true)
       .order("occurred_at", { ascending: false }),
+    supabase
+      .from("assignments")
+      .select("id, course_id, title, points_possible, weight, due_date, course:courses!inner(is_active)")
+      .eq("user_id", user!.id)
+      .eq("course.is_active", true)
+      .eq("is_completed", false)
+      .gte("due_date", new Date().toISOString())
+      .order("due_date", { ascending: true })
+      .limit(100),
   ]);
 
   const totals = new Map<string, { earned: number; possible: number; count: number; latest: GradeEventRow | null }>();
@@ -63,6 +86,29 @@ export default async function GradesPage() {
 
   const activeCourses = (courses ?? []) as CourseRow[];
   const hasGrades = [...totals.values()].some((total) => total.count > 0);
+  const predictorCourses: PredictorCourseSummary[] = activeCourses.map((course) => {
+    const total = totals.get(course.id);
+    return {
+      id: course.id,
+      name: course.name,
+      color: course.color,
+      currentPercent: total && total.possible > 0 ? Math.round((total.earned / total.possible) * 10_000) / 100 : null,
+      earnedPoints: total?.earned ?? 0,
+      possiblePoints: total?.possible ?? 0,
+      gradedItems: total?.count ?? 0,
+    };
+  });
+  const predictorAssignments: PredictorAssignment[] = ((assignments ?? []) as unknown as AssignmentRow[]).map((assignment) => ({
+    id: assignment.id,
+    courseId: assignment.course_id,
+    title: assignment.title,
+    pointsPossible: assignment.points_possible === null ? null : Number(assignment.points_possible),
+    courseWeight: assignment.weight === null ? null : Number(assignment.weight),
+    dueDate: assignment.due_date,
+  }));
+  const predictorKey = predictorCourses
+    .map((course) => `${course.id}:${course.earnedPoints}:${course.possiblePoints}`)
+    .join("|");
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
@@ -75,11 +121,22 @@ export default async function GradesPage() {
         action={<GradesAutoSync />}
       />
 
+      <GpaPredictor
+        key={predictorKey}
+        initialCourses={predictorCourses}
+        upcomingAssignments={predictorAssignments}
+      />
+
+      <div className="mb-4 mt-10">
+        <h2 className="text-lg font-semibold tracking-[-0.02em] text-white">Synced grade detail</h2>
+        <p className="mt-1 text-sm text-slate-500">The real graded submissions currently available from Canvas.</p>
+      </div>
+
       {activeCourses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
           title="No courses synced yet"
-          description="Connect Canvas or run a sync to import real courses before grade insights can be shown."
+          description="Connect Canvas to import real courses, or use Add course above to calculate a manual GPA estimate."
           action={<Link href="/settings/setup/canvas" className="btn btn-primary">Connect Canvas</Link>}
         />
       ) : !hasGrades ? (

@@ -205,8 +205,59 @@ test.describe("hardening: authenticated workspace", () => {
     expect(requestBody.context).toContain("Question 2 — INCORRECT");
   });
 
+  test("GPA predictor supports a manual weighted what-if scenario", async ({ page }) => {
+    await page.route("**/api/chat/context", async (route) => {
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "" });
+    });
+    await page.goto("/grades");
+    const predictor = page.getByTestId("gpa-predictor");
+    await expect(predictor.getByRole("heading", { name: "GPA & grade predictor" })).toBeVisible();
+
+    await predictor.getByRole("button", { name: "Add course" }).click();
+    await predictor.getByLabel("Course name").last().fill("AP Biology");
+
+    const inclusionToggles = predictor.getByRole("checkbox");
+    const toggleCount = await inclusionToggles.count();
+    for (let index = 0; index < toggleCount - 1; index += 1) {
+      const toggle = inclusionToggles.nth(index);
+      if (await toggle.getAttribute("aria-checked") === "true") await toggle.click();
+    }
+
+    await predictor.getByLabel("AP Biology course grade percent").fill("95");
+    await predictor.getByLabel("AP Biology course rigor").selectOption("advanced");
+    await expect(predictor.getByText("Unweighted", { exact: true }).locator("..").getByText("4.00", { exact: true })).toBeVisible();
+    await expect(predictor.getByText("Weighted", { exact: true }).locator("..").getByText("5.00", { exact: true })).toBeVisible();
+
+    await predictor.getByLabel("Predicted points earned").fill("50");
+    await predictor.getByLabel("Predicted points possible").fill("100");
+    await predictor.getByLabel("Assignment percent of course grade").fill("50");
+    await expect(predictor.getByText("72.5%", { exact: true })).toBeVisible();
+    await expect(predictor.getByText("85%", { exact: true })).toBeVisible();
+
+    await predictor.getByRole("button", { name: "Apply to GPA" }).click();
+    await expect(predictor.getByText("Unweighted", { exact: true }).locator("..").getByText("2.00", { exact: true })).toBeVisible();
+    await expect(predictor.getByText("Weighted", { exact: true }).locator("..").getByText("3.00", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Open AI Assistant" }).click();
+    await page.getByPlaceholder("Ask anything...").fill("Explain my current GPA scenario.");
+    const requestPromise = page.waitForRequest("**/api/chat/context");
+    await page.getByRole("button", { name: "Send message" }).click();
+    const requestBody = (await requestPromise).postDataJSON() as { context?: string };
+    expect(requestBody.context).toContain("Estimated GPA: 2.00 unweighted; 3.00 weighted");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.content, "GPA predictor overflows on mobile").toBeLessThanOrEqual(dimensions.viewport + 1);
+  });
+
   test("retired planner surfaces cannot be used", async ({ page, request }) => {
-    await page.goto("/study");
+    // The redirected dashboard starts a background Canvas sync. The retired
+    // route contract only needs the document and redirect, not that external
+    // LMS request to settle.
+    await page.goto("/study", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByText("Study Planner", { exact: true })).toHaveCount(0);
 
