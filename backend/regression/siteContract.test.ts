@@ -8,6 +8,22 @@ function source(path: string): string {
   return readFileSync(join(ROOT, path), "utf8");
 }
 
+function relativeLuminance(hex: string): number {
+  const channels = hex.match(/[a-f\d]{2}/gi)?.map((value) => Number.parseInt(value, 16) / 255);
+  if (!channels || channels.length !== 3) throw new Error(`Invalid hex color: ${hex}`);
+  const [red, green, blue] = channels.map((channel) => (
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  ));
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05)
+    / (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
+
 const retiredPlannerApis = [
   "app/api/planner/export/route.ts",
   "app/api/planner/generate/route.ts",
@@ -84,6 +100,7 @@ describe("website product-surface contract", () => {
     expect(dashboard).toContain("notesCount");
     expect(dashboard).toContain("courseDeadlines.length");
     expect(dashboard).not.toContain("blur-[90px]");
+    expect(dashboard).not.toContain('aria-label="Breadcrumb"');
   });
 
   test("workspace shell uses flat document-style navigation", () => {
@@ -96,6 +113,39 @@ describe("website product-surface contract", () => {
     expect(header).toContain("sticky top-0");
     expect(sidebar).not.toContain("rounded-3xl");
     expect(header).not.toContain("rounded-2xl border border-border/70");
+  });
+
+  test("workspace palette has one documented accent and accessible contrast", () => {
+    const css = source("app/future-ui.css").toLowerCase();
+    const palette = {
+      canvas: "#0b1020",
+      surface: "#11192a",
+      borderControl: "#586a88",
+      textPrimary: "#f4f7fb",
+      textSecondary: "#c5cedd",
+      textMuted: "#95a2b8",
+      textTertiary: "#7887a0",
+      accent: "#83b9ff",
+      success: "#63d8aa",
+      warning: "#f6c177",
+      danger: "#ff8a9a",
+    } as const;
+
+    for (const color of Object.values(palette)) expect(css).toContain(color);
+    for (const color of [
+      palette.textPrimary,
+      palette.textSecondary,
+      palette.textMuted,
+      palette.textTertiary,
+      palette.accent,
+      palette.success,
+      palette.warning,
+      palette.danger,
+    ]) {
+      expect(contrastRatio(color, palette.surface), `${color} must pass normal-text contrast`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrastRatio(palette.borderControl, palette.surface)).toBeGreaterThanOrEqual(3);
+    expect(css).toContain("[data-dashboard-shell] nav");
   });
 
   test("dashboard redesign research covers at least fifty distinct references", () => {
@@ -149,5 +199,18 @@ describe("website product-surface contract", () => {
     expect(flashcards).toContain('questionUsesReadingLayout ? "items-start" : "items-center"');
     expect(flashcards).toContain('answerUsesReadingLayout ? "items-start" : "items-center"');
     expect(flashcards).toContain("touch-pan-y overflow-y-auto");
+  });
+
+  test("grades includes the tested GPA and assignment prediction workspace", () => {
+    const gradesPage = source("app/(dashboard)/grades/page.tsx");
+    const predictor = source("frontend/components/grades/gpa-predictor.tsx");
+    expect(gradesPage).toContain("GpaPredictor");
+    expect(gradesPage).toContain("points_possible, weight, due_date");
+    expect(predictor).toContain("GPA &amp; grade predictor");
+    expect(predictor).toContain("predictPointsBasedGrade");
+    expect(predictor).toContain("predictWeightedGrade");
+    expect(predictor).toContain("scoreNeededForPointsTarget");
+    expect(predictor).toContain("Estimate, not official");
+    expect(predictor).toContain("Smartlearn never writes these what-if values back to Canvas");
   });
 });

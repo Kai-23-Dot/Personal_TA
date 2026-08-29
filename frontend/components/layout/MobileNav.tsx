@@ -50,7 +50,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
       <div
         role="navigation"
         aria-label="Mobile navigation"
-        className="fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 gap-1 rounded-xl border border-white/10 bg-[rgba(9,12,20,0.96)] p-1.5 shadow-2xl backdrop-blur-xl md:hidden"
+        className="fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 gap-1 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl md:hidden"
       >
         {quickAccess.map((link) => {
           const Icon = link.icon;
@@ -88,7 +88,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
             className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] animate-slide-up overflow-y-auto rounded-t-3xl border-t border-white/10 bg-[rgba(9,12,24,0.97)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] animate-slide-up overflow-y-auto rounded-t-xl border-t border-border bg-card/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Navigate</p>
               <button
@@ -107,7 +107,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
                 "mb-3 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors",
                 isPaid
                   ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100"
-                  : "border-violet-400/25 bg-gradient-to-r from-violet-500/15 to-sky-500/10 text-white",
+                  : "border-sky-400/25 bg-sky-500/10 text-white",
                 isActive("/pricing") && "ring-1 ring-sky-300/50"
               )}
             >

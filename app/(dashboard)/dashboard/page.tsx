@@ -373,16 +373,18 @@ export default function DashboardPage() {
       label: "Due in 7 days",
       value: String(upcomingAssignments.length),
       note: urgentAssignments.length > 0 ? `${urgentAssignments.length} urgent` : "No urgent deadlines",
-      tone: "bg-orange-300/[0.08] text-orange-200",
-      line: "via-orange-300/70",
+      tone: urgentAssignments.length > 0
+        ? "bg-orange-300/[0.08] text-orange-200"
+        : "bg-sky-300/[0.08] text-sky-200",
+      line: urgentAssignments.length > 0 ? "via-orange-300/70" : "via-sky-300/70",
     },
     {
       icon: <Flame className="h-4 w-4" />,
       label: "Study streak",
       value: `${studyStreak} ${studyStreak === 1 ? "day" : "days"}`,
       note: studyStreak > 0 ? "Momentum active" : "Start with one session",
-      tone: "bg-violet-300/[0.08] text-violet-200",
-      line: "via-violet-300/70",
+      tone: "bg-sky-300/[0.08] text-sky-200",
+      line: "via-sky-300/70",
     },
     {
       icon: <Clock3 className="h-4 w-4" />,
@@ -397,8 +399,8 @@ export default function DashboardPage() {
       label: "Indexed material",
       value: String(notesCount),
       note: `${courses.length} active course${courses.length === 1 ? "" : "s"}`,
-      tone: "bg-emerald-300/[0.08] text-emerald-200",
-      line: "via-emerald-300/70",
+      tone: "bg-sky-300/[0.08] text-sky-200",
+      line: "via-sky-300/70",
     },
   ];
 
@@ -408,14 +410,8 @@ export default function DashboardPage() {
       data-dashboard-command-center
       data-dashboard-notion-workspace
     >
-      <header className="mb-7 border-b border-white/[0.07] pb-7">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[11px] text-slate-600">
-          <span>Smartlearn</span>
-          <ChevronRight className="h-3 w-3" aria-hidden="true" />
-          <span className="text-slate-400">Home</span>
-        </nav>
-
-        <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <header className="mb-6 border-b border-white/[0.07] pb-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-start gap-3.5">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-sky-300/20 bg-sky-300/[0.08] text-sky-200">
               <GraduationCap className="h-5 w-5" aria-hidden="true" />
@@ -674,7 +670,7 @@ export default function DashboardPage() {
                       ? "bg-white/[0.035] text-slate-500"
                       : recommendation.accuracy_pct < 60
                         ? "bg-amber-300/[0.08] text-amber-200"
-                        : "bg-cyan-300/[0.08] text-cyan-200";
+                        : "bg-emerald-300/[0.08] text-emerald-200";
 
                     return (
                       <li key={`${recommendation.topic}-${index}`}>

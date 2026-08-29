@@ -6,88 +6,87 @@
   :root {
     --nav-button: 0 0% 18%;
     --hero-bg: 0 0% 8%;
-    --background: 225 35% 4%;
-    --foreground: 222 28% 94%;
-    --card: 224 28% 8%;
-    --card-foreground: 222 28% 94%;
-    --popover: 224 30% 7%;
-    --popover-foreground: 222 28% 94%;
-    --primary: 217 92% 76%;
-    --primary-foreground: 224 45% 7%;
-    --secondary: 224 22% 13%;
-    --secondary-foreground: 222 20% 86%;
-    --muted: 224 22% 13%;
-    --muted-foreground: 221 12% 64%;
-    --accent: 222 70% 16%;
-    --accent-foreground: 217 92% 82%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 224 18% 18%;
-    --input: 224 18% 18%;
-    --ring: 217 92% 76%;
+    --background: 226 49% 8%;
+    --foreground: 214 47% 97%;
+    --card: 221 42% 12%;
+    --card-foreground: 214 47% 97%;
+    --popover: 220 42% 15%;
+    --popover-foreground: 214 47% 97%;
+    --primary: 214 100% 76%;
+    --primary-foreground: 226 49% 8%;
+    --secondary: 220 42% 15%;
+    --secondary-foreground: 218 26% 82%;
+    --muted: 220 42% 15%;
+    --muted-foreground: 218 20% 65%;
+    --accent: 216 54% 19%;
+    --accent-foreground: 213 100% 82%;
+    --destructive: 352 100% 77%;
+    --destructive-foreground: 226 49% 8%;
+    --border: 219 33% 25%;
+    --input: 218 21% 44%;
+    --ring: 214 100% 76%;
     --radius: 0.75rem;
-    --chart-1: 217 92% 76%;
+    --chart-1: 214 100% 76%;
     --chart-2: 184 60% 48%;
     --chart-3: 30 85% 55%;
     --chart-4: 265 45% 62%;
     --chart-5: 340 55% 58%;
-    --sidebar-background: 225 35% 5%;
-    --sidebar-foreground: 222 24% 90%;
-    --sidebar-primary: 217 92% 76%;
-    --sidebar-primary-foreground: 224 45% 7%;
-    --sidebar-accent: 224 22% 12%;
-    --sidebar-accent-foreground: 222 24% 90%;
-    --sidebar-border: 224 18% 15%;
-    --sidebar-ring: 217 92% 76%;
+    --sidebar-background: 223 47% 10%;
+    --sidebar-foreground: 218 26% 82%;
+    --sidebar-primary: 214 100% 76%;
+    --sidebar-primary-foreground: 226 49% 8%;
+    --sidebar-accent: 216 54% 19%;
+    --sidebar-accent-foreground: 214 47% 97%;
+    --sidebar-border: 219 33% 25%;
+    --sidebar-ring: 214 100% 76%;
 
-    /* Semantic surface layers — page / card / elevated-hover. Reuses the same
-       hues as --background/--card/--secondary so nothing visually changes;
-       exists so components can opt into a named elevation scale. */
-    --surface-0: 225 35% 4%;
-    --surface-1: 224 28% 8%;
-    --surface-2: 224 24% 11%;
+    /* Semantic surface layers — page / card / elevated-hover. Components use
+       these names instead of inventing one-off translucent backgrounds. */
+    --surface-0: 226 49% 8%;
+    --surface-1: 221 42% 12%;
+    --surface-2: 220 42% 15%;
 
     /* Semantic status colors — single source of truth for success/warning/
        danger instead of hardcoding Tailwind color names per component. */
-    --success: 158 64% 52%;
-    --warning: 43 96% 56%;
-    --danger: 351 95% 71%;
+    --success: 156 60% 62%;
+    --warning: 35 88% 72%;
+    --danger: 352 100% 77%;
   }
 
   .dark {
-    --background: 225 35% 4%;
-    --foreground: 222 28% 94%;
-    --card: 224 28% 8%;
-    --card-foreground: 222 28% 94%;
-    --popover: 224 30% 7%;
-    --popover-foreground: 222 28% 94%;
-    --primary: 217 92% 76%;
-    --primary-foreground: 224 45% 7%;
-    --secondary: 224 22% 13%;
-    --secondary-foreground: 222 20% 86%;
-    --muted: 224 22% 13%;
-    --muted-foreground: 221 12% 64%;
-    --accent: 222 70% 16%;
-    --accent-foreground: 217 92% 82%;
-    --destructive: 0 62% 40%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 224 18% 18%;
-    --input: 224 18% 18%;
-    --ring: 217 92% 76%;
-    --sidebar-background: 225 35% 5%;
-    --sidebar-foreground: 222 24% 90%;
-    --sidebar-primary: 217 92% 76%;
-    --sidebar-primary-foreground: 224 45% 7%;
-    --sidebar-accent: 224 22% 12%;
-    --sidebar-accent-foreground: 222 24% 90%;
-    --sidebar-border: 224 18% 15%;
-    --sidebar-ring: 217 92% 76%;
-    --surface-0: 225 35% 4%;
-    --surface-1: 224 28% 8%;
-    --surface-2: 224 24% 11%;
-    --success: 158 64% 52%;
-    --warning: 43 96% 56%;
-    --danger: 351 95% 71%;
+    --background: 226 49% 8%;
+    --foreground: 214 47% 97%;
+    --card: 221 42% 12%;
+    --card-foreground: 214 47% 97%;
+    --popover: 220 42% 15%;
+    --popover-foreground: 214 47% 97%;
+    --primary: 214 100% 76%;
+    --primary-foreground: 226 49% 8%;
+    --secondary: 220 42% 15%;
+    --secondary-foreground: 218 26% 82%;
+    --muted: 220 42% 15%;
+    --muted-foreground: 218 20% 65%;
+    --accent: 216 54% 19%;
+    --accent-foreground: 213 100% 82%;
+    --destructive: 352 100% 77%;
+    --destructive-foreground: 226 49% 8%;
+    --border: 219 33% 25%;
+    --input: 218 21% 44%;
+    --ring: 214 100% 76%;
+    --sidebar-background: 223 47% 10%;
+    --sidebar-foreground: 218 26% 82%;
+    --sidebar-primary: 214 100% 76%;
+    --sidebar-primary-foreground: 226 49% 8%;
+    --sidebar-accent: 216 54% 19%;
+    --sidebar-accent-foreground: 214 47% 97%;
+    --sidebar-border: 219 33% 25%;
+    --sidebar-ring: 214 100% 76%;
+    --surface-0: 226 49% 8%;
+    --surface-1: 221 42% 12%;
+    --surface-2: 220 42% 15%;
+    --success: 156 60% 62%;
+    --warning: 35 88% 72%;
+    --danger: 352 100% 77%;
   }
 
   /* Light-mode groundwork — not yet surfaced via a UI toggle (the app defaults
@@ -143,8 +142,7 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
     background:
-      radial-gradient(circle at 20% 0%, rgba(138, 180, 255, 0.12), transparent 34rem),
-      radial-gradient(circle at 100% 10%, rgba(168, 85, 247, 0.08), transparent 32rem),
+      radial-gradient(circle at 20% 0%, rgba(131, 185, 255, 0.10), transparent 34rem),
       hsl(var(--background));
   }
 }
@@ -161,7 +159,7 @@
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(215deg 18% 57% / 0.4); }
+::-webkit-scrollbar-thumb:hover { background: hsl(214deg 100% 76% / 0.4); }
 
 /* ─── Card depth ─────────────────────────────────────────────────────────── */
 /* Visible ring + drop shadow so cards clearly float above the background */
@@ -173,14 +171,14 @@
 
 /* ─── Primary button glow ────────────────────────────────────────────────── */
 .btn-primary-glow {
-  box-shadow: 0 10px 28px rgba(138, 180, 255, 0.14);
+  box-shadow: 0 10px 28px rgba(131, 185, 255, 0.14);
   transition: box-shadow 0.2s ease-out, transform 0.15s ease-out;
 }
 .btn-primary-glow:hover {
-  box-shadow: 0 0 0 1px rgba(138, 180, 255, 0.35), 0 14px 34px rgba(138, 180, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(131, 185, 255, 0.35), 0 14px 34px rgba(131, 185, 255, 0.18);
 }
 .btn-primary-glow:active {
-  box-shadow: 0 4px 12px rgba(138, 180, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(131, 185, 255, 0.12);
 }
 
 /* ─── Sidebar nav item states ────────────────────────────────────────────── */
@@ -193,9 +191,9 @@
   background-color: rgba(255, 255, 255, 0.045);
 }
 .nav-item.active {
-  background-color: rgba(138, 180, 255, 0.12);
-  color: #dbeafe;
-  box-shadow: inset 3px 0 0 #8ab4ff;
+  background-color: rgba(131, 185, 255, 0.12);
+  color: #f4f7fb;
+  box-shadow: inset 3px 0 0 #83b9ff;
 }
 .nav-icon {
   color: hsl(var(--sidebar-foreground) / 0.6);
@@ -205,7 +203,7 @@
   color: hsl(var(--sidebar-foreground) / 0.9);
 }
 .nav-item.active .nav-icon {
-  color: #8ab4ff;
+  color: #83b9ff;
 }
 
 .dark .nav-item {
@@ -216,7 +214,7 @@
   background-color: rgba(255, 255, 255, 0.06);
 }
 .dark .nav-item.active {
-  background-color: rgba(138, 180, 255, 0.12);
+  background-color: rgba(131, 185, 255, 0.12);
   color: #ffffff;
 }
 .dark .nav-icon {
@@ -226,7 +224,7 @@
   color: hsl(240deg 20% 88% / 0.8);
 }
 .dark .nav-item.active .nav-icon {
-  color: #8ab4ff;
+  color: #83b9ff;
 }
 
 /* ─── Interactive card lift ──────────────────────────────────────────────── */

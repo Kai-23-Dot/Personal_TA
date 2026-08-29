@@ -95,7 +95,7 @@ export function Header({ title, description, isAdmin = false }: HeaderProps) {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSearchOpen(false);
         }}
       >
-        <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-white/[0.025] px-3 py-2 text-sm text-muted-foreground transition focus-within:border-sky-400/45 focus-within:bg-white/[0.04] focus-within:ring-2 focus-within:ring-sky-400/10">
+        <div data-workspace-control className="flex items-center gap-2 rounded-lg border border-input bg-white/[0.025] px-3 py-2 text-sm text-muted-foreground transition focus-within:border-sky-400/45 focus-within:bg-white/[0.04] focus-within:ring-2 focus-within:ring-sky-400/10">
           <Search className="h-4 w-4" />
           <input
             ref={inputRef}
@@ -110,7 +110,7 @@ export function Header({ title, description, isAdmin = false }: HeaderProps) {
         </div>
 
         {searchOpen ? (
-          <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-border bg-[rgba(8,12,20,0.98)] p-2 shadow-2xl backdrop-blur-2xl">
+          <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-border bg-popover p-2 shadow-2xl backdrop-blur-2xl">
             {results.length > 0 ? results.map((item) => {
               const Icon = item.icon;
               return (

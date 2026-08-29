@@ -1,6 +1,7 @@
 # Smartlearn dashboard staging research
 
 Research date: August 26, 2026
+Color-system revision: August 28, 2026
 
 ## Goal and evaluation method
 
@@ -13,6 +14,39 @@ The dashboard is a daily decision surface for a student, not an admin analytics 
 5. Plausible desktop, tablet, and mobile adaptation
 
 The review deliberately included both proven product interfaces and visual concepts. Product interfaces were weighted more heavily for interaction patterns; concepts were used mainly for atmosphere, layout, and visual treatment.
+
+## Color-system revision
+
+The first staging pass mixed near-black surfaces, low-contrast gray labels, violet decoration, cyan decoration, green status, orange urgency, and course colors. That made the interface feel less deliberate and caused small metadata to fall below a comfortable reading contrast. The revised system follows four established patterns:
+
+- [Notion dashboards](https://www.notion.com/help/dashboards) prioritize an at-a-glance control center made from focused views and high-level entry points, so the Smartlearn canvas is quiet and its live information carries the hierarchy.
+- [GitHub Primer color usage](https://www.primer.style/product/getting-started/foundations/color-usage/) separates functional background, border, text, accent, and semantic roles instead of styling each component independently.
+- [Radix Colors](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale) assigns different ranges of one scale to surfaces, interactive states, borders, solid fills, and text. The Smartlearn scale uses the same progression and pairs blue with a blue-tinted slate neutral.
+- [W3C visual design guidance](https://www.w3.org/WAI/curricula/designer-modules/visual-design/) requires at least 4.5:1 contrast for normal text and 3:1 for meaningful UI graphics and component boundaries. Status is also communicated with labels or icons, not color alone.
+
+### Authenticated workspace palette
+
+| Role | Value | Use |
+|---|---|---|
+| Canvas | `#0B1020` | Page background |
+| Sidebar | `#0E1527` | Persistent product navigation |
+| Surface | `#11192A` | Cards, panels, menus |
+| Raised surface | `#172238` | Hover and elevated controls |
+| Border | `#2A3954` | Quiet grouping boundaries |
+| Control border | `#586A88` | Inputs and controls requiring a 3:1 boundary |
+| Primary text | `#F4F7FB` | Headings and primary values |
+| Secondary text | `#C5CEDD` | Body copy and labels |
+| Muted text | `#95A2B8` | Supporting copy |
+| Tertiary text | `#7887A0` | Small metadata; still at least 4.5:1 |
+| Brand/action | `#83B9FF` | Links, active navigation, focus, primary actions |
+| Brand hover | `#A3CCFF` | Hovered action text or fill |
+| Success | `#63D8AA` | Connected, complete, healthy |
+| Warning | `#F6C177` | Urgent or attention required |
+| Danger | `#FF8A9A` | Errors and destructive actions |
+
+Measured against the primary `#11192A` surface, the primary, secondary, muted, tertiary, brand, success, warning, and danger text colors have contrast ratios of 16.34:1, 11.07:1, 6.80:1, 4.82:1, 8.65:1, 9.98:1, 10.71:1, and 7.82:1 respectively. The `#586A88` control border has 3.20:1 contrast against that surface.
+
+Course colors remain user-data identifiers. Orange, green, and red are otherwise reserved for warning, success, and failure; violet and cyan are no longer decorative categories on the home dashboard.
 
 ## Examples reviewed (65)
 

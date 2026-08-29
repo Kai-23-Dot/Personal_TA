@@ -2,34 +2,60 @@
    Loaded last so public pages and the authenticated workspace use one system. */
 
 :root {
-  --future-blue: #72a7ff;
-  --future-cyan: #61e7dc;
-  --future-violet: #9b87ff;
-  --future-line: rgba(139, 180, 255, 0.14);
-  --future-panel: rgba(8, 13, 27, 0.82);
+  --future-blue: #83b9ff;
+  --future-cyan: #a3ccff;
+  --future-violet: #83b9ff;
+  --future-line: #2a3954;
+  --future-panel: #11192a;
 }
 
 html { scroll-behavior: smooth; }
 
 body {
-  background-color: #050812;
+  background-color: #0b1020;
   background-image:
-    radial-gradient(circle at 18% -10%, rgba(72, 119, 255, 0.16), transparent 34rem),
-    radial-gradient(circle at 92% 8%, rgba(121, 82, 255, 0.10), transparent 30rem),
-    linear-gradient(rgba(116, 160, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(116, 160, 255, 0.025) 1px, transparent 1px);
-  background-size: auto, auto, 48px 48px, 48px 48px;
+    radial-gradient(circle at 18% -10%, rgba(131, 185, 255, 0.10), transparent 34rem),
+    linear-gradient(#0b1020, #0b1020);
 }
 
-::selection { background: rgba(114, 167, 255, 0.28); color: #fff; }
+::selection { background: rgba(131, 185, 255, 0.30); color: #f4f7fb; }
 
 [data-dashboard-shell] {
   position: relative;
-  background: #070a12;
+  background: #0b1020;
 }
 
 [data-notion-workspace-shell] {
+  --workspace-canvas: #0b1020;
+  --workspace-sidebar: #0e1527;
+  --workspace-surface: #11192a;
+  --workspace-surface-raised: #172238;
+  --workspace-surface-hover: #1d2a44;
+  --workspace-border: #2a3954;
+  --workspace-border-control: #586a88;
+  --workspace-text-primary: #f4f7fb;
+  --workspace-text-secondary: #c5cedd;
+  --workspace-text-muted: #95a2b8;
+  --workspace-text-tertiary: #7887a0;
+  --workspace-accent: #83b9ff;
+  --workspace-accent-hover: #a3ccff;
+  --workspace-accent-soft: #162a49;
+  --workspace-success: #63d8aa;
+  --workspace-warning: #f6c177;
+  --workspace-danger: #ff8a9a;
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--workspace-text-primary);
+  background: var(--workspace-canvas);
+}
+
+/* chain-summit.css contains an unscoped public-site `nav` rule. Reset it in
+   the authenticated product so future document navigation cannot be stretched
+   into a three-column public header. */
+[data-dashboard-shell] nav {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 
 [data-dashboard-shell]::before {
@@ -41,15 +67,33 @@ body {
   box-shadow: none;
 }
 
+.workspace-sidebar {
+  border-color: var(--workspace-border) !important;
+  background: rgba(14, 21, 39, 0.98) !important;
+}
+
+.workspace-topbar {
+  border-color: var(--workspace-border) !important;
+  background: rgba(11, 16, 32, 0.94) !important;
+}
+
 .workspace-sidebar::before,
 .workspace-topbar::before {
   display: none;
 }
 
-.nav-item { border: 1px solid transparent; }
-.nav-item:hover { border-color: transparent; }
-.nav-item.active {
-  background: rgba(114,167,255,0.12);
+[data-notion-workspace-shell] .nav-item {
+  border: 1px solid transparent;
+  color: var(--workspace-text-muted);
+}
+[data-notion-workspace-shell] .nav-item:hover {
+  border-color: transparent;
+  color: var(--workspace-text-primary);
+  background: rgba(131, 185, 255, 0.07);
+}
+[data-notion-workspace-shell] .nav-item.active {
+  color: var(--workspace-text-primary);
+  background: var(--workspace-accent-soft);
   border-color: transparent;
   box-shadow: none;
 }
@@ -64,15 +108,77 @@ body {
   background: transparent;
 }
 
-.nav-item.active .nav-icon-shell {
+[data-notion-workspace-shell] .nav-item.active .nav-icon-shell {
   background: transparent;
   box-shadow: none;
 }
 
-[data-notion-workspace-shell] [data-notion-surface],
+[data-notion-workspace-shell] .nav-icon {
+  color: var(--workspace-text-tertiary);
+}
+
+[data-notion-workspace-shell] .nav-item:hover .nav-icon,
+[data-notion-workspace-shell] .nav-item.active .nav-icon {
+  color: var(--workspace-accent);
+}
+
+[data-notion-workspace-shell] [data-notion-surface] {
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-surface) !important;
+  box-shadow: none !important;
+}
+
+[data-notion-workspace-shell] .group[data-notion-surface]:hover {
+  background: var(--workspace-surface-raised) !important;
+}
+
 [data-notion-workspace-shell] [data-dashboard-command-center] .rounded-2xl,
 [data-notion-workspace-shell] [data-dashboard-command-center] .rounded-3xl {
   box-shadow: none !important;
+}
+
+[data-notion-workspace-shell] [class*="border-white/"] {
+  border-color: var(--workspace-border) !important;
+}
+
+[data-notion-workspace-shell] [data-workspace-control],
+[data-notion-workspace-shell] button[class*="border"],
+[data-notion-workspace-shell] a[class*="border"],
+[data-notion-workspace-shell] [role="button"][class*="border"] {
+  border-color: var(--workspace-border-control) !important;
+}
+
+[data-notion-workspace-shell] [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--workspace-border) !important;
+}
+
+[data-notion-workspace-shell] .text-white,
+[data-notion-workspace-shell] .text-slate-100 {
+  color: var(--workspace-text-primary) !important;
+}
+
+[data-notion-workspace-shell] .text-slate-200,
+[data-notion-workspace-shell] .text-slate-300 {
+  color: var(--workspace-text-secondary) !important;
+}
+
+[data-notion-workspace-shell] .text-slate-400,
+[data-notion-workspace-shell] .text-slate-500 {
+  color: var(--workspace-text-muted) !important;
+}
+
+[data-notion-workspace-shell] .text-slate-600,
+[data-notion-workspace-shell] .text-slate-700 {
+  color: var(--workspace-text-tertiary) !important;
+}
+
+[data-notion-workspace-shell] .text-sky-200,
+[data-notion-workspace-shell] .text-sky-300 {
+  color: var(--workspace-accent) !important;
+}
+
+[data-notion-workspace-shell] :focus-visible {
+  outline-color: var(--workspace-accent);
 }
 
 .card-raised,
@@ -141,16 +247,16 @@ input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
   border-radius: 0.9rem !important;
-  border-color: rgba(139,180,255,0.13) !important;
-  background-color: rgba(7,12,25,0.75) !important;
+  border-color: #586a88 !important;
+  background-color: #11192a !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: rgba(114,167,255,0.52) !important;
-  box-shadow: 0 0 0 4px rgba(114,167,255,0.08) !important;
+  border-color: #83b9ff !important;
+  box-shadow: 0 0 0 4px rgba(131,185,255,0.10) !important;
 }
 
 .premium-backdrop {
