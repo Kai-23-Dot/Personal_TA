@@ -11,4 +11,5 @@ out
 .git
 .vercel
 .supabase
+.codex
 .DS_Store

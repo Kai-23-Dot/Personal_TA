@@ -8,8 +8,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("focus_sessions")
-    .select("duration_minutes, started_at")
+    .select("id, duration_minutes, started_at, ended_at, status")
     .eq("user_id", user.id)
+    .eq("status", "completed")
     .order("started_at", { ascending: false })
     .limit(50);
 

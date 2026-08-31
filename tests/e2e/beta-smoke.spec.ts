@@ -82,10 +82,8 @@ test.describe("beta smoke coverage", () => {
   }
 
   test("the workspace logo opens home without ending the session", async ({ page }) => {
-    await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Return to the Smartlearn home page" }).first().click();
-    await expect(page).toHaveURL(/\/$/);
-    await page.goto("/dashboard");
+    await page.goto("/grades");
+    await page.getByRole("link", { name: "Smartlearn dashboard" }).first().click();
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 
@@ -130,7 +128,9 @@ test.describe("beta smoke coverage", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     for (const path of ["/dashboard", "/assignments", "/groups", "/settings"]) {
       await page.goto(path);
+      await page.getByRole("button", { name: "Open full navigation menu" }).click();
       await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
+      await page.getByRole("button", { name: "Close menu" }).click();
       const dimensions = await page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,
         content: document.documentElement.scrollWidth,

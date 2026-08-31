@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/backend/supabase/server";
-import { Header } from "@/frontend/components/layout/Header";
-import { Sidebar } from "@/frontend/components/layout/Sidebar";
-import { MobileNav } from "@/frontend/components/layout/MobileNav";
 import { DashboardClientWrapper } from "@/frontend/components/layout/DashboardClientWrapper";
+import { WorkspaceShell } from "@/frontend/components/layout/WorkspaceShell";
 import { getUserPlan } from "@/backend/billing/limits";
 import { isAdminIdentity } from "@/backend/admin/access";
 import type { Profile } from "@/types";
@@ -27,7 +25,7 @@ export default async function DashboardLayout({
     { data: profile },
   ] = await Promise.all([
     supabase.from("user_onboarding").select("completed").eq("user_id", user.id).maybeSingle(),
-    supabase.from("lms_connections").select("id").eq("user_id", user.id).eq("is_active", true).limit(1).maybeSingle(),
+    supabase.from("lms_connections").select("id, last_synced_at").eq("user_id", user.id).eq("platform", "canvas").eq("is_active", true).limit(1).maybeSingle(),
     supabase
       .from("lms_connections")
       .select("id, canvas_domain")
@@ -53,33 +51,28 @@ export default async function DashboardLayout({
   const showOnboardingBanner = !onboarding?.completed && !canvasConn;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-dashboard-shell data-notion-workspace-shell>
-      <Sidebar profile={profile ?? null} plan={plan} isAdmin={isAdmin} />
-      <div className="min-h-screen md:pl-60">
-        <Header title="Smartlearn" description="Your courses, notes, practice tests, and study sets — all in one place." isAdmin={isAdmin} />
-        {/* Legacy .app-container (chain-summit.css) is deliberately NOT used here:
-            its `padding` shorthand zeroed the top padding and capped width at
-            1200px, silently overriding these utilities. */}
-        <main className="w-full px-4 pb-28 pt-7 sm:px-6 md:pb-10 lg:px-8">
-        <DashboardClientWrapper pendingCanvasAgreement={pendingCanvasAgreement ?? null}>
-          {showOnboardingBanner ? (
-            <div className="mb-6 rounded-lg border border-sky-400/20 bg-sky-500/[0.08] p-4" data-notion-surface>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <strong className="text-sm text-sky-100">Finish onboarding</strong>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Connect your classes, upload notes, and generate your first plan.
-                  </p>
-                </div>
-                <a className="btn btn-primary w-fit" href="/onboarding">Go to onboarding</a>
+    <WorkspaceShell
+      profile={profile ?? null}
+      plan={plan}
+      isAdmin={isAdmin}
+      canvasConnection={canvasConn ?? null}
+    >
+      <DashboardClientWrapper pendingCanvasAgreement={pendingCanvasAgreement ?? null}>
+        {showOnboardingBanner ? (
+          <div className="mb-6 rounded-lg border border-sky-400/20 bg-sky-500/[0.08] p-4" data-notion-surface>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <strong className="text-sm text-sky-100">Finish onboarding</strong>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Connect your classes, upload notes, and create your first study set.
+                </p>
               </div>
+              <a className="btn btn-primary w-fit" href="/onboarding">Go to onboarding</a>
             </div>
-          ) : null}
-          {children}
-        </DashboardClientWrapper>
-        </main>
-      </div>
-      <MobileNav plan={plan} isAdmin={isAdmin} />
-    </div>
+          </div>
+        ) : null}
+        {children}
+      </DashboardClientWrapper>
+    </WorkspaceShell>
   );
 }

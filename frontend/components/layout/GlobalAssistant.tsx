@@ -57,13 +57,13 @@ export function GlobalAssistant() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
-        className="fixed bottom-[88px] right-4 z-40 flex h-13 w-13 items-center justify-center rounded-full border border-sky-400/30 bg-[rgba(9,12,24,0.9)] shadow-[0_0_24px_rgba(56,189,248,0.15)] backdrop-blur transition-all hover:border-sky-400/50 hover:shadow-[0_0_32px_rgba(56,189,248,0.25)] active:scale-95 md:bottom-8"
+        className="fixed bottom-[88px] right-4 z-40 flex h-13 w-13 items-center justify-center rounded-full border border-border bg-surface-1 text-primary shadow-md transition-[transform,background-color,border-color] duration-150 hover:border-primary/40 hover:bg-surface-2 active:scale-95 motion-reduce:transition-none md:bottom-8"
         style={{ height: "52px", width: "52px" }}
       >
         {open ? (
-          <X className="h-5 w-5 text-sky-300" />
+          <X className="h-5 w-5" />
         ) : (
-          <MessageCircle className="h-5 w-5 text-sky-300" />
+          <MessageCircle className="h-5 w-5" />
         )}
       </button>
 
@@ -75,20 +75,20 @@ export function GlobalAssistant() {
           transform: open ? "translateY(0) scale(1)" : "translateY(12px) scale(0.97)",
           pointerEvents: open ? "auto" : "none",
         }}
-        className="fixed bottom-[160px] right-4 z-40 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.97)] shadow-2xl backdrop-blur md:bottom-28 md:w-[380px]"
+        className="fixed bottom-[160px] right-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg motion-reduce:transition-none md:bottom-28 md:w-[380px]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-white">AI Assistant</p>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-sm font-semibold text-foreground">AI Assistant</p>
+            <p className="text-[11px] text-muted-foreground">
               {screenContent ? "Current screen context connected" : "Aware of your current page"}
             </p>
           </div>
           <button
             onClick={() => setOpen(false)}
             aria-label="Close AI Assistant panel"
-            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/5 hover:text-slate-300"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -97,17 +97,17 @@ export function GlobalAssistant() {
         {/* Messages */}
         <div className="flex min-h-[180px] max-h-[340px] flex-col gap-3 overflow-y-auto p-4 scroll-smooth">
           {messages.length === 0 ? (
-            <p className="mt-6 text-center text-xs text-slate-500 leading-relaxed px-4">
+            <p className="mt-6 px-4 text-center text-xs leading-relaxed text-muted-foreground">
               Ask anything about your courses, assignments, or learning progress. I know what page you&apos;re on.
             </p>
           ) : (
             messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
                     m.role === "user"
-                      ? "rounded-br-sm bg-sky-500/20 text-sky-100"
-                      : "rounded-bl-sm bg-white/5 text-slate-200"
+                      ? "rounded-br-sm bg-primary/15 text-foreground"
+                      : "rounded-bl-sm bg-surface-2 text-foreground"
                   }`}
                 >
                   {m.content}
@@ -117,17 +117,17 @@ export function GlobalAssistant() {
           )}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-sm bg-white/5 px-3 py-2.5">
+              <div className="rounded-lg rounded-bl-sm bg-surface-2 px-3 py-2.5">
                 <div className="flex gap-1">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms] motion-reduce:animate-none" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms] motion-reduce:animate-none" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms] motion-reduce:animate-none" />
                 </div>
               </div>
             </div>
           )}
           {error && (
-            <p className="text-center text-xs text-red-400 px-2 py-1">
+            <p className="px-2 py-1 text-center text-xs text-danger">
               Something went wrong. Please try again.
             </p>
           )}
@@ -137,19 +137,19 @@ export function GlobalAssistant() {
         {/* Input */}
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-2 border-t border-white/8 p-3"
+          className="flex items-center gap-2 border-t border-border p-3"
         >
           <input
             value={input}
             onChange={handleInputChange}
             placeholder="Ask anything..."
-            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-400/30 focus:bg-sky-500/5 transition-colors"
+            className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
           <button
             type="submit"
             aria-label="Send message"
             disabled={isLoading || !input.trim()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-300 transition hover:bg-sky-500/30 disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </button>

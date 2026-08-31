@@ -1,88 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BookOpen, ChevronDown, X } from "lucide-react";
-import { usePersistentState, clearPersistentState } from "@/frontend/hooks/usePersistentState";
+import { BookOpen, ChevronRight, FileText, Focus, Search, X } from "lucide-react";
 import { cn } from "@/backend/utils";
-import { PageHero } from "@/frontend/components/ui/page-hero";
-import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
+import { usePersistentState, clearPersistentState } from "@/frontend/hooks/usePersistentState";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/frontend/components/ui/select";
+  StatusTag,
+  WorkspacePage,
+  WorkspacePageHeader,
+  WorkspaceSectionHeader,
+  WorkspaceSurface,
+} from "@/frontend/components/workspace/workspace-primitives";
 
-type SavedGuide = {
-  id: string;
-  title: string;
-  courseName: string;
-  style: string;
-  content: string;
-  savedAt: string;
-};
+type SavedGuide = { id: string; title: string; courseName: string; style: string; content: string; savedAt: string };
+type Course = { id: string; name: string };
+type ModuleItem = { itemKey: string; moduleId: number; moduleName: string; itemId: number; title: string; type: string; page_url: string | null; external_url: string | null; content_id: number | null; content_details: { "content-type"?: string; url?: string } | null; note_id?: string | null; source_file_id?: string | null };
+type NoteRecord = { id: string; title: string | null; updated_at: string; course_id: string | null; unit_name: string | null; file_name: string | null; file_type: string | null; source_type?: string | null };
+type NoteDetail = NoteRecord & { content: string | null; source_type: string; source_url: string | null; word_count: number | null; topic_tags: string[] | null; is_processed: boolean; course: { id: string; name: string; color: string | null } | null };
 
 const STORAGE_KEY = "smartlearn_study_guides";
+const summaryOptions = [{ value: "bullet_points", label: "Bullet points" }, { value: "outline", label: "Outline" }, { value: "detailed", label: "Detailed" }];
 
-function loadSavedGuides(): SavedGuide[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function persistGuide(guide: SavedGuide) {
-  try {
-    const guides = loadSavedGuides();
-    guides.unshift(guide);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(guides.slice(0, 20)));
-  } catch {}
-}
-
-function deleteGuide(id: string) {
-  try {
-    const guides = loadSavedGuides().filter((g) => g.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(guides));
-  } catch {}
-}
-
-const summaryOptions = [
-  { value: "bullet_points", label: "Bullet points" },
-  { value: "outline", label: "Outline" },
-  { value: "detailed", label: "Detailed" },
-];
-
-type Course = {
-  id: string;
-  name: string;
-};
-
-type ModuleItem = {
-  itemKey: string;
-  moduleId: number;
-  moduleName: string;
-  itemId: number;
-  title: string;
-  type: string;
-  page_url: string | null;
-  external_url: string | null;
-  content_id: number | null;
-  content_details: { "content-type"?: string; url?: string } | null;
-  note_id?: string | null;
-  source_file_id?: string | null;
-};
+function loadSavedGuides(): SavedGuide[] { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); return Array.isArray(value) ? value : []; } catch { return []; } }
+function persistGuide(guide: SavedGuide) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify([guide, ...loadSavedGuides()].slice(0, 20))); } catch {} }
+function deleteGuide(id: string) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(loadSavedGuides().filter((guide) => guide.id !== id))); } catch {} }
+function sourceLabel(source: string) { if (source === "canvas") return "Imported from Canvas"; if (source === "manual") return "User-created"; return "Imported material"; }
 
 export default function NotesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedNoteId = searchParams.get("noteId");
+  const requestedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId") ?? "";
   const [courses, setCourses] = useState<Course[]>([]);
-  // Draft builder state — persisted so an unfinished study guide survives exit.
-  const [courseId, setCourseId] = usePersistentState("smartlearn:notes:courseId", "");
+  const [noteRecords, setNoteRecords] = useState<NoteRecord[]>([]);
+  const [noteQuery, setNoteQuery] = useState("");
+  const [libraryCourse, setLibraryCourse] = useState(requestedCourseId || "all");
+  const [selectedNote, setSelectedNote] = useState<NoteDetail | null>(null);
+  const [noteLoading, setNoteLoading] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [focusedReading, setFocusedReading] = useState(false);
+  const [courseId, setCourseId] = usePersistentState("smartlearn:notes:courseId", requestedCourseId);
   const [studyGuideStyle, setStudyGuideStyle] = usePersistentState("smartlearn:notes:style", "bullet_points");
   const [studyGuideLoading, setStudyGuideLoading] = useState(false);
   const [studyGuideSummary, setStudyGuideSummary] = useState<string | null>(null);
@@ -96,447 +59,123 @@ export default function NotesPage() {
   const [unitName, setUnitName] = usePersistentState("smartlearn:notes:unitName", "");
   const [inputMode, setInputMode] = usePersistentState<"items" | "unit">("smartlearn:notes:inputMode", "items");
 
+  useEffect(() => { setSavedGuides(loadSavedGuides()); }, []);
   useEffect(() => {
-    setSavedGuides(loadSavedGuides());
+    let active = true;
+    Promise.all([fetch("/api/courses").then((response) => response.ok ? response.json() : []), fetch("/api/notes/list").then((response) => response.ok ? response.json() : [])]).then(([courseData, notesData]) => { if (!active) return; setCourses(Array.isArray(courseData) ? courseData : []); setNoteRecords(Array.isArray(notesData) ? notesData : []); });
+    return () => { active = false; };
   }, []);
+  useEffect(() => { if (requestedCourseId) { setCourseId(requestedCourseId); setLibraryCourse(requestedCourseId); } }, [requestedCourseId, setCourseId]);
+  useEffect(() => {
+    let active = true;
+    if (!requestedNoteId) { setSelectedNote(null); setNoteError(null); setFocusedReading(false); return; }
+    setNoteLoading(true); setNoteError(null); setViewingGuide(null);
+    fetch(`/api/notes/${encodeURIComponent(requestedNoteId)}`).then(async (response) => { const data = await response.json().catch(() => null); if (!response.ok) throw new Error(data?.error ?? "The note could not be loaded."); return data; }).then((data) => { if (active) setSelectedNote(data); }).catch((error) => { if (active) { setSelectedNote(null); setNoteError(error instanceof Error ? error.message : "The note could not be loaded."); } }).finally(() => { if (active) setNoteLoading(false); });
+    return () => { active = false; };
+  }, [requestedNoteId]);
+  useEffect(() => {
+    if (focusedReading) document.documentElement.dataset.smartlearnReadingMode = "true";
+    else delete document.documentElement.dataset.smartlearnReadingMode;
+    return () => { delete document.documentElement.dataset.smartlearnReadingMode; };
+  }, [focusedReading]);
 
   useEffect(() => {
-    let mounted = true;
-    fetch("/api/courses")
-      .then((res) => res.json())
-      .then((data) => { if (mounted) setCourses(data ?? []); })
-      .catch(() => { if (mounted) setCourses([]); });
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
+    let active = true;
     async function loadModuleItems() {
-      if (!courseId) return;
+      if (!courseId) { setModuleItems([]); return; }
       try {
-        const res = await fetch(`/api/canvas/module-items?courseId=${courseId}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Failed to load Canvas module items");
-        if (mounted) {
-          const items = Array.isArray(data) ? data : [];
-          setModuleItems(items);
-          setSelectedModuleItems({});
-          setLessonFilter("");
-          if (items.length === 0) setInputMode("unit");
-          else setInputMode("items");
-        }
-      } catch {
-        if (mounted) {
-          setModuleItems([]);
-          setSelectedModuleItems({});
-          setInputMode("unit");
-        }
-      }
+        const response = await fetch(`/api/canvas/module-items?courseId=${encodeURIComponent(courseId)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "Failed to load Canvas module items");
+        if (!active) return;
+        const items = Array.isArray(data) ? data : [];
+        setModuleItems(items); setSelectedModuleItems({}); setLessonFilter(""); setInputMode(items.length === 0 ? "unit" : "items");
+      } catch { if (active) { setModuleItems([]); setSelectedModuleItems({}); setInputMode("unit"); } }
     }
-    loadModuleItems();
-    return () => { mounted = false; };
+    void loadModuleItems();
+    return () => { active = false; };
   }, [courseId, setInputMode, setSelectedModuleItems]);
 
-  // When the filter changes, auto-select ONLY the matching items (clears unmatched ones).
-  // This means typing "Module 3" in the filter immediately scopes the study guide to Module 3.
   useEffect(() => {
     if (!lessonFilter.trim() || moduleItems.length === 0) return;
     const needle = lessonFilter.toLowerCase();
-    const matched = moduleItems.filter(
-      (item) =>
-        item.title.toLowerCase().includes(needle) ||
-        item.moduleName.toLowerCase().includes(needle)
-    );
-    if (matched.length === 0) return;
+    const matched = moduleItems.filter((item) => item.title.toLowerCase().includes(needle) || item.moduleName.toLowerCase().includes(needle));
+    if (!matched.length) return;
     const next: Record<string, boolean> = {};
     matched.forEach((item) => { next[item.itemKey] = true; });
     setSelectedModuleItems(next);
   }, [lessonFilter, moduleItems, setSelectedModuleItems]);
 
-  async function handleStudyGuide(e: React.FormEvent) {
-    e.preventDefault();
-    setStudyGuideError(null);
-    setStudyGuideSummary(null);
-    setStudyGuideWarning(null);
-
-    if (!courseId) {
-      setStudyGuideError("Select a course for the study guide.");
-      return;
-    }
-
+  async function handleStudyGuide(event: React.FormEvent) {
+    event.preventDefault(); setStudyGuideError(null); setStudyGuideSummary(null); setStudyGuideWarning(null);
+    if (!courseId) { setStudyGuideError("Select a course for the study guide."); return; }
     let requestBody: Record<string, unknown>;
-
     if (inputMode === "unit") {
-      if (!unitName.trim()) {
-        setStudyGuideError("Enter a unit name to search your Canvas pages.");
-        return;
-      }
+      if (!unitName.trim()) { setStudyGuideError("Enter a unit name to search your Canvas pages."); return; }
       requestBody = { unitName: unitName.trim(), summaryStyle: studyGuideStyle, courseId };
     } else {
-      const selectedItems = Object.entries(selectedModuleItems)
-        .filter(([, selected]) => selected)
-        .map(([itemKey]) => moduleItems.find((item) => item.itemKey === itemKey))
-        .filter((item): item is ModuleItem => Boolean(item));
-
-      if (selectedItems.length === 0) {
-        setStudyGuideError("Select at least one lesson content to build a study guide.");
-        return;
-      }
-      requestBody = {
-        lessonItems: selectedItems.map((item) => ({
-          itemKey: item.itemKey,
-          itemId: item.itemId,
-          type: item.type,
-          pageUrl: item.page_url,
-          externalUrl: item.external_url,
-          contentId: item.content_id,
-          noteId: item.note_id ?? null,
-        })),
-        summaryStyle: studyGuideStyle,
-        courseId,
-      };
+      const selectedItems = Object.entries(selectedModuleItems).filter(([, selected]) => selected).map(([itemKey]) => moduleItems.find((item) => item.itemKey === itemKey)).filter((item): item is ModuleItem => Boolean(item));
+      if (!selectedItems.length) { setStudyGuideError("Select at least one lesson to build a study guide."); return; }
+      requestBody = { lessonItems: selectedItems.map((item) => ({ itemKey: item.itemKey, itemId: item.itemId, type: item.type, pageUrl: item.page_url, externalUrl: item.external_url, contentId: item.content_id, noteId: item.note_id ?? null })), summaryStyle: studyGuideStyle, courseId };
     }
-
     setStudyGuideLoading(true);
     try {
-      const res = await fetch("/api/notes/study-guide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.success === false) {
-        setStudyGuideError(data?.error || "Study guide failed.");
-        return;
-      }
+      const response = await fetch("/api/notes/study-guide", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
+      const data = await response.json();
+      if (!response.ok || data?.success === false) { setStudyGuideError(data?.error || "Study guide failed."); return; }
       const summary = data?.summary || "Study guide generated.";
       setStudyGuideSummary(summary);
-      const courseName = courses.find((c) => c.id === courseId)?.name ?? "Unknown course";
-      const guideTitle = inputMode === "unit" ? unitName || courseName : courseName;
-      const newGuide: SavedGuide = {
-        id: crypto.randomUUID(),
-        title: guideTitle,
-        courseName,
-        style: studyGuideStyle,
-        content: summary,
-        savedAt: new Date().toISOString(),
-      };
-      persistGuide(newGuide);
-      setSavedGuides(loadSavedGuides());
-      // Guide is done — clear the in-progress selection so the builder resets.
-      setSelectedModuleItems({});
-      setUnitName("");
-      clearPersistentState("smartlearn:notes:selectedItems");
-      clearPersistentState("smartlearn:notes:unitName");
-      if (!data?.lessonContentIncluded) {
-        setStudyGuideWarning(
-          "Lesson slides could not be accessed. If the Google Slides link is private, publish or share it, or attach the PPTX file in Canvas."
-        );
-      }
-    } catch (err) {
-      setStudyGuideError((err as Error).message);
-    } finally {
-      setStudyGuideLoading(false);
-    }
+      const courseName = courses.find((course) => course.id === courseId)?.name ?? "Unknown course";
+      const guide: SavedGuide = { id: crypto.randomUUID(), title: inputMode === "unit" ? unitName || courseName : courseName, courseName, style: studyGuideStyle, content: summary, savedAt: new Date().toISOString() };
+      persistGuide(guide); setSavedGuides(loadSavedGuides()); setSelectedModuleItems({}); setUnitName(""); clearPersistentState("smartlearn:notes:selectedItems"); clearPersistentState("smartlearn:notes:unitName");
+      if (!data?.lessonContentIncluded) setStudyGuideWarning("Some linked slides could not be accessed. Share the source file or attach the PowerPoint in Canvas, then try again.");
+    } catch (error) { setStudyGuideError(error instanceof Error ? error.message : "Study guide failed."); } finally { setStudyGuideLoading(false); }
   }
 
-  // Group module items by unit name, filtered by search
-  const filteredModuleItems = lessonFilter
-    ? moduleItems.filter(
-        (item) =>
-          item.title.toLowerCase().includes(lessonFilter.toLowerCase()) ||
-          item.moduleName.toLowerCase().includes(lessonFilter.toLowerCase())
-      )
-    : moduleItems;
-
-  const groupedByUnit = filteredModuleItems.reduce<Record<string, ModuleItem[]>>((acc, item) => {
-    if (!acc[item.moduleName]) acc[item.moduleName] = [];
-    acc[item.moduleName].push(item);
-    return acc;
-  }, {});
-
+  const filteredModuleItems = lessonFilter ? moduleItems.filter((item) => item.title.toLowerCase().includes(lessonFilter.toLowerCase()) || item.moduleName.toLowerCase().includes(lessonFilter.toLowerCase())) : moduleItems;
+  const groupedByUnit = filteredModuleItems.reduce<Record<string, ModuleItem[]>>((groups, item) => { (groups[item.moduleName] ??= []).push(item); return groups; }, {});
   const totalSelected = Object.values(selectedModuleItems).filter(Boolean).length;
+  const visibleNotes = useMemo(() => noteRecords.filter((note) => (libraryCourse === "all" || note.course_id === libraryCourse) && [note.title, note.file_name, note.unit_name].some((value) => value?.toLowerCase().includes(noteQuery.trim().toLowerCase()))), [libraryCourse, noteQuery, noteRecords]);
+
+  function openNote(note: NoteRecord) { const params = new URLSearchParams(searchParams.toString()); params.set("noteId", note.id); router.push(`/notes?${params.toString()}`, { scroll: false }); }
+  function closeReader() { const params = new URLSearchParams(searchParams.toString()); params.delete("noteId"); router.replace(params.size ? `/notes?${params.toString()}` : "/notes", { scroll: false }); setViewingGuide(null); setFocusedReading(false); }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-16 pt-6">
-      <PageHero
-        icon={BookOpen}
-        badgeLabel="AI Study Guides"
-        title="Notes"
-        description="Build AI-generated study guides from your Canvas lessons — pick a course, choose the scope, and pick a style."
-      />
+    <WorkspacePage wide={focusedReading} className={focusedReading ? "max-w-[900px]" : undefined}>
+      {!focusedReading ? <WorkspacePageHeader icon={BookOpen} eyebrow="Learn" title="Notes & materials" description="Read imported course material and build focused study guides from Canvas modules and linked presentations." /> : null}
+      <div className={cn("mt-5 grid items-start gap-4", focusedReading ? "grid-cols-1" : "lg:grid-cols-[17rem_minmax(0,1fr)]")}>
+        {!focusedReading ? <WorkspaceSurface className={cn("lg:sticky lg:top-20", (selectedNote || viewingGuide) && "hidden lg:block")}>
+          <WorkspaceSectionHeader title="Library" description={`${visibleNotes.length} indexed material${visibleNotes.length === 1 ? "" : "s"}`} />
+          <div className="space-y-2 border-b border-border p-3">
+            <label className="relative block"><span className="sr-only">Search notes and materials</span><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={noteQuery} onChange={(event) => setNoteQuery(event.target.value)} placeholder="Search library…" className="h-10 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            <select value={libraryCourse} onChange={(event) => setLibraryCourse(event.target.value)} aria-label="Filter library by course" className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="all">All courses</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select>
+          </div>
+          <div className="max-h-[42vh] overflow-y-auto border-b border-border">
+            <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Course materials</p>
+            {visibleNotes.length === 0 ? <p className="px-3 py-6 text-center text-xs text-muted-foreground">No matching material.</p> : visibleNotes.map((note) => <button key={note.id} type="button" onClick={() => openNote(note)} className={cn("flex min-h-12 w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring", selectedNote?.id === note.id && "bg-accent")}><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-foreground">{note.title || note.file_name || "Untitled material"}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{note.unit_name || note.file_type || "Material"}</span></span><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /></button>)}
+          </div>
+          <div className="max-h-64 overflow-y-auto pb-2"><p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Generated guides</p>{savedGuides.length === 0 ? <p className="px-3 py-4 text-center text-xs text-muted-foreground">No saved guides yet.</p> : savedGuides.map((guide) => <div key={guide.id} className="group flex items-center"><button type="button" onClick={() => { setViewingGuide(guide); setSelectedNote(null); }} className="min-h-12 min-w-0 flex-1 px-3 py-2 text-left hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><span className="block truncate text-xs font-medium">{guide.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{guide.courseName} · {guide.style.replace("_", " ")}</span></button><button type="button" onClick={() => { deleteGuide(guide.id); setSavedGuides(loadSavedGuides()); }} aria-label={`Delete ${guide.title}`} className="mr-2 grid h-9 w-9 place-items-center rounded-md text-muted-foreground opacity-0 hover:bg-danger/10 hover:text-danger focus:opacity-100 group-hover:opacity-100"><X className="h-3.5 w-3.5" /></button></div>)}</div>
+        </WorkspaceSurface> : null}
 
-      {/* ── Viewing a saved guide ── */}
-      {viewingGuide ? (
-        <Card variant="panel" className="overflow-hidden">
-          <div className="flex items-center justify-between gap-4 border-b border-white/8 px-6 py-4">
-            <div>
-              <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Saved study guide</p>
-              <h3 className="text-base font-semibold text-foreground">{viewingGuide.title}</h3>
-              <p className="text-xs text-muted-foreground">{viewingGuide.courseName} · {new Date(viewingGuide.savedAt).toLocaleDateString()}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setViewingGuide(null)}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-white/10 hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="px-6 py-5">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{viewingGuide.content}</ReactMarkdown>
-          </div>
-        </Card>
-      ) : null}
-
-      {/* ── My Study Guides library ── */}
-      {savedGuides.length > 0 && !viewingGuide ? (
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-sky-300" />
-            <h3 className="text-sm font-semibold text-foreground">My Study Guides</h3>
-            <span className="text-xs text-muted-foreground">({savedGuides.length})</span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {savedGuides.map((guide) => (
-              <div
-                key={guide.id}
-                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition-colors duration-150 hover:border-sky-400/30 hover:bg-sky-400/5"
-                onClick={() => setViewingGuide(guide)}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{guide.title}</p>
-                  <p className="text-xs text-muted-foreground">{guide.courseName} · {guide.style.replace("_", " ")}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <ChevronDown className="h-3.5 w-3.5 -rotate-90 text-muted-foreground transition-colors duration-150 group-hover:text-foreground/70" />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteGuide(guide.id);
-                      setSavedGuides(loadSavedGuides());
-                    }}
-                    className="rounded p-0.5 text-muted-foreground transition-colors duration-150 hover:text-rose-400"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+        <div className="min-w-0 space-y-4">
+          {noteLoading ? <WorkspaceSurface className="p-6"><div className="skeleton-shimmer h-6 w-48 rounded-md" /><div className="mt-6 space-y-3">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton-shimmer h-4 rounded-md" />)}</div></WorkspaceSurface> : noteError ? <WorkspaceSurface className="p-6 text-center"><p className="text-sm text-danger">{noteError}</p><Button variant="secondary" className="mt-4" onClick={closeReader}>Back to library</Button></WorkspaceSurface> : selectedNote ? <WorkspaceSurface className="overflow-visible">
+            <header className="border-b border-border px-5 py-4 sm:px-7"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="text-xs text-muted-foreground">{selectedNote.course?.name ?? "Notes"} / {selectedNote.unit_name ?? sourceLabel(selectedNote.source_type)}</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">{selectedNote.title || selectedNote.file_name || "Untitled material"}</h2><div className="mt-3 flex flex-wrap items-center gap-2"><StatusTag tone={selectedNote.source_type === "manual" ? "accent" : "neutral"}>{sourceLabel(selectedNote.source_type)}</StatusTag><span className="text-xs text-muted-foreground">Updated {new Date(selectedNote.updated_at).toLocaleString()}</span>{selectedNote.word_count ? <span className="text-xs text-muted-foreground">{selectedNote.word_count.toLocaleString()} words</span> : null}</div></div><div className="flex gap-1"><button type="button" onClick={() => setFocusedReading((value) => !value)} aria-label={focusedReading ? "Exit focused reading mode" : "Enter focused reading mode"} className="grid h-11 w-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><Focus className="h-4 w-4" /></button><button type="button" onClick={closeReader} aria-label="Close material" className="grid h-11 w-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button></div></div></header>
+            <article className="mx-auto max-w-3xl px-5 py-7 sm:px-8 sm:py-10">{selectedNote.content ? <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{selectedNote.content}</ReactMarkdown> : <p className="text-sm text-muted-foreground">This material has no readable extracted text yet.</p>}{selectedNote.source_url ? <p className="mt-8 border-t border-border pt-4"><a href={selectedNote.source_url} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary hover:underline">Open original source</a></p> : null}</article>
+          </WorkspaceSurface> : viewingGuide ? <WorkspaceSurface><header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4"><div><p className="text-xs text-muted-foreground">Saved study guide · {viewingGuide.courseName}</p><h2 className="mt-1 text-xl font-semibold">{viewingGuide.title}</h2></div><button type="button" onClick={() => setViewingGuide(null)} aria-label="Close study guide" className="grid h-11 w-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button></header><article className="mx-auto max-w-3xl px-5 py-8 sm:px-8"><ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{viewingGuide.content}</ReactMarkdown></article></WorkspaceSurface> : <WorkspaceSurface>
+            <WorkspaceSectionHeader title="Build a study guide" description="Choose the exact Canvas modules, pages, and linked presentations to include." />
+            <form className="space-y-6 p-4 sm:p-5" onSubmit={handleStudyGuide}>
+              <div className="space-y-1.5"><Label htmlFor="studyGuideCourse">Course</Label><select id="studyGuideCourse" value={courseId} onChange={(event) => setCourseId(event.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="">Select a course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></div>
+              <div>{moduleItems.length > 0 ? <div className="mb-3 flex gap-1 border-b border-border pb-2">{(["items", "unit"] as const).map((mode) => <button key={mode} type="button" onClick={() => setInputMode(mode)} className={cn("min-h-10 rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground", inputMode === mode && "bg-accent text-accent-foreground")}>{mode === "items" ? "Select lessons" : "Type unit name"}</button>)}</div> : null}
+                {inputMode === "unit" ? <div className="space-y-1.5"><Label htmlFor="unitName">Unit name</Label><Input id="unitName" placeholder="e.g. Unit 3, Chapter 4, Quadratic Functions…" value={unitName} onChange={(event) => setUnitName(event.target.value)} /><p className="text-xs leading-5 text-muted-foreground">Smartlearn searches Canvas pages and linked files for this unit.</p></div> : <div className="space-y-2"><Label>Lesson content {totalSelected > 0 ? <span className="ml-1 text-primary">({totalSelected} selected)</span> : null}</Label><Input placeholder="Filter by module or lesson…" value={lessonFilter} onChange={(event) => setLessonFilter(event.target.value)} /><div className="max-h-[22rem] overflow-y-auto rounded-lg border border-border">{Object.entries(groupedByUnit).map(([groupName, items]) => { const allChecked = items.every((item) => selectedModuleItems[item.itemKey]); return <section key={groupName}><div className="flex items-center gap-2 border-b border-border bg-surface-1 px-3 py-2"><h3 className="min-w-0 flex-1 truncate text-xs font-semibold">{groupName}</h3><button type="button" onClick={() => setSelectedModuleItems(() => { const next: Record<string, boolean> = {}; if (!allChecked) items.forEach((item) => { next[item.itemKey] = true; }); return next; })} className="min-h-8 rounded px-2 text-[11px] text-primary hover:bg-accent">{allChecked ? "Deselect" : "Select module"}</button></div>{items.map((item) => <label key={item.itemKey} className="flex min-h-11 cursor-pointer items-start gap-2.5 border-b border-border px-3 py-2.5 last:border-b-0 hover:bg-surface-2"><input type="checkbox" checked={Boolean(selectedModuleItems[item.itemKey])} onChange={(event) => setSelectedModuleItems((current) => ({ ...current, [item.itemKey]: event.target.checked }))} className="mt-0.5" /><span className="text-sm leading-5">{item.title}</span></label>)}</section>; })}{filteredModuleItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-muted-foreground">{courseId ? "No module items match this filter. Use a unit name instead." : "Select a course to load its modules."}</p> : null}</div><div className="flex gap-2"><Button type="button" size="sm" onClick={() => { const next: Record<string, boolean> = {}; moduleItems.forEach((item) => { next[item.itemKey] = true; }); setSelectedModuleItems(next); }}>Select all</Button><Button type="button" variant="secondary" size="sm" onClick={() => setSelectedModuleItems({})}>Clear</Button></div><p className="text-xs leading-5 text-muted-foreground">Canvas pages, Google Slides, and PowerPoint files linked inside the selected module are retrieved when accessible.</p></div>}
               </div>
-            ))}
-          </div>
+              <div className="space-y-1.5"><Label htmlFor="studyGuideStyle">Study guide style</Label><select id="studyGuideStyle" value={studyGuideStyle} onChange={(event) => setStudyGuideStyle(event.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm">{summaryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+              <Button type="submit" disabled={studyGuideLoading} className="h-11">{studyGuideLoading ? "Generating…" : "Generate study guide"}</Button>
+              {studyGuideError ? <p className="rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">{studyGuideError}</p> : null}{studyGuideWarning ? <p className="rounded-md border border-warning/25 bg-warning/10 px-3 py-2 text-sm text-warning">{studyGuideWarning}</p> : null}
+            </form>
+          </WorkspaceSurface>}
+          {studyGuideSummary && !selectedNote && !viewingGuide ? <WorkspaceSurface><WorkspaceSectionHeader title="Generated study guide" /><article className="mx-auto max-w-3xl px-5 py-8"><ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">{studyGuideSummary}</ReactMarkdown></article></WorkspaceSurface> : null}
         </div>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Build a study guide</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleStudyGuide}>
-            <div className="space-y-1.5">
-              <Label htmlFor="studyGuideCourse">Course</Label>
-              <Select value={courseId} onValueChange={setCourseId}>
-                <SelectTrigger id="studyGuideCourse">
-                  <SelectValue placeholder="Select a course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              {/* Mode toggle — only shown when the course has module items */}
-              {moduleItems.length > 0 && (
-                <div className="mb-3 flex gap-2">
-                  {(["items", "unit"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setInputMode(mode)}
-                      className={cn(
-                        "rounded-lg border px-3.5 py-1.5 text-xs font-medium transition-colors duration-150",
-                        inputMode === mode
-                          ? "border-sky-400/30 bg-sky-500/15 text-sky-200"
-                          : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {mode === "items" ? "Select lessons" : "Type unit name"}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Unit name input mode */}
-              {inputMode === "unit" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="unitName">Unit name</Label>
-                  <Input
-                    id="unitName"
-                    type="text"
-                    placeholder="e.g. Unit 3, Chapter 4, Quadratic Functions…"
-                    value={unitName}
-                    onChange={(e) => setUnitName(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Smartlearn searches your Canvas pages for this unit and uses vision AI to extract diagrams, formulas, and notes.
-                  </p>
-                </div>
-              )}
-
-              {/* Checklist mode */}
-              {inputMode === "items" && (
-                <div className="space-y-1.5">
-                  <Label>
-                    Lesson content to include
-                    {totalSelected > 0 && (
-                      <span className="ml-2 font-medium text-sky-300">({totalSelected} selected)</span>
-                    )}
-                  </Label>
-
-                  {/* Filter — also auto-scopes the study guide to matching content */}
-                  <Input
-                    type="text"
-                    placeholder="Type a module name to scope (e.g. Module 3)…"
-                    value={lessonFilter}
-                    onChange={(e) => setLessonFilter(e.target.value)}
-                  />
-
-                  {/* Grouped unit list */}
-                  <div className="max-h-[340px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    {Object.entries(groupedByUnit).map(([groupName, items]) => {
-                      const allChecked = items.every((i) => selectedModuleItems[i.itemKey]);
-                      const someChecked = items.some((i) => selectedModuleItems[i.itemKey]);
-                      return (
-                        <div key={groupName} className="mb-3">
-                          <div className="mb-1 flex items-center gap-2 border-b border-white/8 py-1.5">
-                            <span className="flex-grow text-xs font-bold uppercase tracking-wider text-sky-300">
-                              {groupName}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (allChecked) {
-                                  // Already exclusively selected → deselect
-                                  setSelectedModuleItems((prev) => {
-                                    const next = { ...prev };
-                                    items.forEach((i) => { next[i.itemKey] = false; });
-                                    return next;
-                                  });
-                                } else {
-                                  // Select ONLY this unit, clear everything else
-                                  setSelectedModuleItems(() => {
-                                    const next: Record<string, boolean> = {};
-                                    items.forEach((i) => { next[i.itemKey] = true; });
-                                    return next;
-                                  });
-                                }
-                              }}
-                              className={cn(
-                                "flex-shrink-0 rounded px-1.5 py-0.5 text-[11px]",
-                                allChecked
-                                  ? "border border-sky-400/30 bg-sky-500/10 text-sky-300"
-                                  : someChecked
-                                    ? "text-sky-300/80"
-                                    : "text-muted-foreground"
-                              )}
-                            >
-                              {allChecked ? "deselect" : "select only this"}
-                            </button>
-                          </div>
-                          {items.map((item) => (
-                            <label
-                              key={item.itemKey}
-                              className="flex cursor-pointer items-start gap-2.5 py-1 pl-2 text-foreground"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={Boolean(selectedModuleItems[item.itemKey])}
-                                onChange={(e) =>
-                                  setSelectedModuleItems((prev) => ({ ...prev, [item.itemKey]: e.target.checked }))
-                                }
-                                className="mt-0.5 flex-shrink-0 rounded accent-sky-400"
-                              />
-                              <span className="text-sm leading-tight">{item.title}</span>
-                            </label>
-                          ))}
-                        </div>
-                      );
-                    })}
-                    {filteredModuleItems.length === 0 && lessonFilter && (
-                      <p className="py-2 text-sm text-muted-foreground">
-                        No lessons match &quot;{lessonFilter}&quot;
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Bulk actions */}
-                  <div className="flex flex-wrap gap-2 pt-0.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => {
-                        const next: Record<string, boolean> = {};
-                        moduleItems.forEach((item) => { next[item.itemKey] = true; });
-                        setSelectedModuleItems(next);
-                      }}
-                    >
-                      Select all
-                    </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedModuleItems({})}>
-                      Clear
-                    </Button>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    {totalSelected > 0
-                      ? "Canvas pages with embedded images will be read using vision AI. Google Slides and PowerPoint files are extracted automatically."
-                      : "Click \"select only this\" on a module to study that module exclusively."}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="studyGuideStyle">Study guide style</Label>
-              <Select value={studyGuideStyle} onValueChange={setStudyGuideStyle}>
-                <SelectTrigger id="studyGuideStyle">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {summaryOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button type="submit" disabled={studyGuideLoading}>
-                {studyGuideLoading ? "Generating..." : "Generate study guide"}
-              </Button>
-            </div>
-
-            {studyGuideError ? <p className="text-sm text-rose-400">{studyGuideError}</p> : null}
-            {studyGuideWarning ? <p className="text-sm text-amber-400">{studyGuideWarning}</p> : null}
-          </form>
-        </CardContent>
-      </Card>
-
-      {studyGuideSummary ? (
-        <Card variant="panel" className="p-8">
-          <div className="mb-6 flex items-center gap-3 border-b border-white/8 pb-4">
-            <div className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
-            <h3 className="text-base font-semibold text-foreground">Study Guide</h3>
-          </div>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">
-            {studyGuideSummary}
-          </ReactMarkdown>
-        </Card>
-      ) : null}
-    </div>
+      </div>
+    </WorkspacePage>
   );
 }

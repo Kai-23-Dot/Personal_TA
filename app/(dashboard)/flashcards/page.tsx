@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Layers3, RotateCcw } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
@@ -9,6 +10,8 @@ import {
   groupFlashcardsIntoDecks,
   type FlashcardDeck,
 } from "@/frontend/lib/flashcardDecks";
+import { Button } from "@/frontend/components/ui/button";
+import { StatusTag, WorkspacePage, WorkspaceSectionHeader, WorkspaceSurface } from "@/frontend/components/workspace/workspace-primitives";
 
 type Course = { id: string; name: string };
 type Flashcard = {
@@ -27,6 +30,8 @@ type Flashcard = {
 type SavedSet = FlashcardDeck<Flashcard>;
 
 export default function FlashcardsPage() {
+  const searchParams = useSearchParams();
+  const requestedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId") ?? "";
   const [courses, setCourses] = useState<Course[]>([]);
   // Draft form state — persisted so a half-configured set survives exit.
   const [courseId, setCourseId] = usePersistentState("smartlearn:flashcards:courseId", "");
@@ -50,6 +55,8 @@ export default function FlashcardsPage() {
       .catch(() => { if (mounted) setCourses([]); });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => { if (requestedCourseId) setCourseId(requestedCourseId); }, [requestedCourseId, setCourseId]);
 
   useEffect(() => {
     let mounted = true;
@@ -144,6 +151,7 @@ export default function FlashcardsPage() {
   }
 
   const current = cards[currentIndex];
+  const dueCardCount = useMemo(() => savedSets.reduce((total, set) => total + set.cards.filter((card) => new Date(card.next_review).getTime() <= Date.now()).length, 0), [savedSets]);
 
   // Push visible card content so the AI Assistant can see it
   const screenContent = useMemo(() => {
@@ -167,12 +175,12 @@ export default function FlashcardsPage() {
       current.back.length > 280 || current.back.includes("\n");
 
     return (
-      <div className="mx-auto max-w-3xl px-4 pb-20 pt-4 sm:px-6 sm:pt-6">
+      <WorkspacePage className="max-w-3xl pt-1">
         <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={handleNewDeck}
-            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-10"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             New deck
@@ -201,10 +209,10 @@ export default function FlashcardsPage() {
           aria-valuemin={1}
           aria-valuemax={cards.length}
           aria-valuenow={currentIndex + 1}
-          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
+          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-surface-2"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 shadow-[0_0_14px_rgba(56,189,248,0.35)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
+            className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out motion-reduce:transition-none"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
@@ -225,7 +233,7 @@ export default function FlashcardsPage() {
               }
             }}
             aria-pressed={isFlipped}
-            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full cursor-pointer rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
+            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full cursor-pointer rounded-xl text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
           >
             <span className="sr-only">
               {isFlipped
@@ -233,7 +241,7 @@ export default function FlashcardsPage() {
                 : "Showing the question. Activate to reveal the answer."}
             </span>
             <div
-              className="relative h-full w-full transition-transform duration-700 motion-reduce:transition-none"
+              className="relative h-full w-full transition-transform duration-300 motion-reduce:transition-none"
               data-side={isFlipped ? "answer" : "question"}
               style={{
                 transformStyle: "preserve-3d",
@@ -244,16 +252,15 @@ export default function FlashcardsPage() {
             >
               <div
                 aria-hidden={isFlipped}
-                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.98),rgba(7,12,26,0.97))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:p-8 md:p-10"
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 sm:p-8 md:p-10"
                 style={{
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
                 }}
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(139,92,246,0.14),transparent_42%),radial-gradient(circle_at_90%_90%,rgba(56,189,248,0.08),transparent_38%)]" />
                 <div className="relative flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-300 sm:text-sm">
-                    <span className="size-2 rounded-full bg-violet-300 shadow-[0_0_12px_rgba(196,181,253,0.7)]" />
+                    <span className="size-2 rounded-full bg-violet-300" />
                     Question
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -292,17 +299,16 @@ export default function FlashcardsPage() {
 
               <div
                 aria-hidden={!isFlipped}
-                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-sky-300/25 bg-[linear-gradient(145deg,rgba(8,22,42,0.99),rgba(6,13,29,0.98))] p-5 shadow-[0_24px_90px_rgba(14,116,144,0.16),0_24px_70px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-8 md:p-10"
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border border-primary/30 bg-surface-1 p-5 sm:p-8 md:p-10"
                 style={{
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
                   transform: "rotateY(180deg)",
                 }}
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_8%,rgba(34,211,238,0.13),transparent_40%),radial-gradient(circle_at_10%_90%,rgba(59,130,246,0.08),transparent_38%)]" />
                 <div className="relative flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-300 sm:text-sm">
-                    <span className="size-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.75)]" />
+                    <span className="size-2 rounded-full bg-cyan-300" />
                     Answer
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -346,10 +352,10 @@ export default function FlashcardsPage() {
           <button
             type="button"
             onClick={() => setIsFlipped((flipped) => !flipped)}
-            className={`inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base ${
+            className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border px-5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:text-base ${
               isFlipped
-                ? "border-white/[0.12] bg-white/[0.055] text-slate-200 hover:border-sky-300/30 hover:bg-sky-300/[0.08] hover:text-white"
-                : "border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] hover:from-white hover:to-cyan-100"
+                ? "border-border bg-card text-foreground hover:bg-surface-2"
+                : "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >
             <RotateCcw
@@ -365,7 +371,7 @@ export default function FlashcardsPage() {
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 px-5 text-sm font-bold text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] transition-all duration-200 hover:from-white hover:to-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-primary bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:text-base"
             >
               {currentIndex + 1 >= cards.length
                 ? "Review deck again"
@@ -382,29 +388,30 @@ export default function FlashcardsPage() {
         <p className="mt-4 text-center text-xs leading-5 text-slate-600">
           You can flip the current card as many times as you need before moving on.
         </p>
-      </div>
+      </WorkspacePage>
     );
   }
 
   // ── Form view ──
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-20 pt-6">
+    <WorkspacePage className="max-w-3xl">
       <PageHero
         className="mb-8"
         icon={Layers3}
-        badgeLabel="Spaced Repetition"
+        badgeLabel="Study"
         title="Flashcards"
-        description="Generate AI flashcard sets from your notes and courses, then study them with spaced repetition."
+        description="Review cards due today, continue a deck, or create a source-grounded set from a course."
+        action={<Button type="button" onClick={() => document.getElementById("create-flashcards")?.scrollIntoView({ behavior: "smooth" })}>Create deck</Button>}
       />
+
+      <WorkspaceSurface className="mb-5">
+        <div className="flex items-center gap-3 px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary"><Layers3 className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="text-sm font-semibold">Due today</p><p className="text-xs text-muted-foreground">{dueCardCount > 0 ? `${dueCardCount} card${dueCardCount === 1 ? "" : "s"} ready for spaced-repetition review` : "Your review queue is clear"}</p></div>{dueCardCount > 0 ? <StatusTag tone="warning">{dueCardCount} due</StatusTag> : <StatusTag tone="success">Clear</StatusTag>}</div>
+      </WorkspaceSurface>
 
       {/* ── Saved sets library ── */}
       {(loadingSets || savedSets.length > 0) && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <Layers3 className="h-4 w-4 text-violet-300" />
-            <h3 className="text-sm font-semibold text-white">My Flashcard Sets</h3>
-            {!loadingSets && <span className="text-xs text-slate-500">({savedSets.length})</span>}
-          </div>
+        <WorkspaceSurface className="mb-5">
+          <WorkspaceSectionHeader title="Decks" description={!loadingSets ? `${savedSets.length} saved deck${savedSets.length === 1 ? "" : "s"}` : "Loading saved decks"} />
           {loadingSets ? (
             <div className="grid gap-2">
               {[1,2].map((i) => <div key={i} className="skeleton-shimmer h-14 rounded-xl" />)}
@@ -416,25 +423,25 @@ export default function FlashcardsPage() {
                   key={set.id}
                   type="button"
                   onClick={() => startSet(set)}
-                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-left transition-all hover:border-violet-400/30 hover:bg-violet-400/5 active:scale-[0.99]"
+                className="group flex min-h-14 w-full items-center gap-3 border-b border-border px-4 py-2.5 text-left transition-colors last:border-b-0 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                     <Layers3 className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{set.name}</p>
-                    <p className="text-xs text-slate-500">{set.count} card{set.count !== 1 ? "s" : ""}</p>
+                    <p className="truncate text-sm font-medium text-foreground">{set.name}</p>
+                    <p className="text-xs text-muted-foreground">{set.count} card{set.count !== 1 ? "s" : ""} · {set.cards.filter((card) => new Date(card.next_review).getTime() <= Date.now()).length} due</p>
                   </div>
-                  <span className="text-xs text-slate-600 group-hover:text-slate-400 transition-colors">Study →</span>
+                  <span className="text-xs text-muted-foreground transition-colors group-hover:text-foreground">Study →</span>
                 </button>
               ))}
             </div>
           )}
-        </div>
+        </WorkspaceSurface>
       )}
 
       {/* Generate form */}
-      <div className="mb-10 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.72)] p-6 shadow-sm backdrop-blur">
+      <WorkspaceSurface id="create-flashcards" className="mb-10 p-5 sm:p-6">
         <h2 className="mb-1 text-base font-semibold text-white">Generate flashcards</h2>
         <p className="mb-5 text-sm text-slate-400">Generate AI flashcards from your course notes.</p>
         <form onSubmit={handleGenerate} className="space-y-4">
@@ -472,10 +479,10 @@ export default function FlashcardsPage() {
             <div className="grid grid-cols-4 gap-2">
               {(["mixed", "easy", "medium", "hard"] as const).map((d) => {
                 const colors: Record<string, string> = {
-                  mixed: "border-sky-400/50 bg-sky-400/15 text-sky-100 shadow-[0_0_12px_rgba(56,189,248,0.1)]",
-                  easy: "border-emerald-400/50 bg-emerald-400/15 text-emerald-100 shadow-[0_0_12px_rgba(52,211,153,0.1)]",
-                  medium: "border-amber-400/50 bg-amber-400/15 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.1)]",
-                  hard: "border-red-400/50 bg-red-400/15 text-red-100 shadow-[0_0_12px_rgba(248,113,113,0.1)]",
+                  mixed: "border-sky-400/50 bg-sky-400/15 text-sky-100",
+                  easy: "border-emerald-400/50 bg-emerald-400/15 text-emerald-100",
+                  medium: "border-amber-400/50 bg-amber-400/15 text-amber-100",
+                  hard: "border-red-400/50 bg-red-400/15 text-red-100",
                 };
                 const inactive = "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200";
                 return (
@@ -519,7 +526,7 @@ export default function FlashcardsPage() {
             <p className="text-center text-sm text-red-400">{message}</p>
           ) : null}
         </form>
-      </div>
-    </div>
+      </WorkspaceSurface>
+    </WorkspacePage>
   );
 }

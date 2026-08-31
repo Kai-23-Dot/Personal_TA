@@ -98,7 +98,7 @@ export default function OnboardingPage() {
           setCanvasWizardOpen(open);
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto rounded-xl p-4 pt-10 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] sm:rounded-2xl sm:p-6">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto rounded-lg p-4 pt-10 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] sm:p-6">
           <DialogHeader className="sr-only">
             <DialogTitle>Connect Canvas</DialogTitle>
             <DialogDescription>Step-by-step Canvas connection setup.</DialogDescription>

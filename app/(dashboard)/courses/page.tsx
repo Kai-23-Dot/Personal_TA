@@ -1,173 +1,92 @@
 import Link from "next/link";
-import { BookOpen, CalendarDays, RefreshCw, Sparkles } from "lucide-react";
-import { EmptyState } from "@/frontend/components/ui/empty-state";
+import { BookOpen, RefreshCw } from "lucide-react";
 import { createClient } from "@/backend/supabase/server";
-import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Button } from "@/frontend/components/ui/button";
+import { EmptyState } from "@/frontend/components/ui/empty-state";
+import { CourseDatabase, type CourseDatabaseRow } from "@/frontend/components/courses/course-database";
+import { WorkspacePage, WorkspacePageHeader } from "@/frontend/components/workspace/workspace-primitives";
 
 type CourseRow = {
   id: string;
   name: string;
   platform: string;
-  platform_id: string | null;
   teacher_name: string | null;
   section: string | null;
   color: string | null;
-  updated_at: string;
+  is_active: boolean;
+  academic_year: string | null;
+  semester: string | null;
 };
-
-type AssignmentRow = {
-  id: string;
-  course_id: string;
-  due_date: string | null;
-  is_completed: boolean;
-};
-
-function initialsFor(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 3)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
+type AssignmentRow = { course_id: string; due_date: string | null; is_completed: boolean };
+type NoteRow = { course_id: string | null };
+type GradeRow = { course_id: string; points_earned: number | null; points_possible: number | null };
 
 export default async function CoursesPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const [{ data: courses }, { data: assignments }, { data: canvasConnection }] = await Promise.all([
-    supabase
-      .from("courses")
-      .select("id, name, platform, platform_id, teacher_name, section, color, updated_at")
-      .eq("user_id", user!.id)
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("assignments")
-      .select("id, course_id, due_date, is_completed")
-      .eq("user_id", user!.id),
-    supabase
-      .from("lms_connections")
-      .select("id, last_synced_at, canvas_domain")
-      .eq("user_id", user!.id)
-      .eq("platform", "canvas")
-      .eq("is_active", true)
-      .maybeSingle(),
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user!.id;
+  const [{ data: courses }, { data: assignments }, { data: notes }, { data: gradeEvents }, { data: canvasConnection }] = await Promise.all([
+    supabase.from("courses").select("id, name, platform, teacher_name, section, color, is_active, academic_year, semester").eq("user_id", userId).order("is_active", { ascending: false }).order("name"),
+    supabase.from("assignments").select("course_id, due_date, is_completed").eq("user_id", userId),
+    supabase.from("notes").select("course_id").eq("user_id", userId),
+    supabase.from("grade_events").select("course_id, points_earned, points_possible").eq("user_id", userId),
+    supabase.from("lms_connections").select("id, last_synced_at").eq("user_id", userId).eq("platform", "canvas").eq("is_active", true).maybeSingle(),
   ]);
 
-  const assignmentCounts = new Map<string, { total: number; upcoming: number }>();
   const now = Date.now();
+  const assignmentSummary = new Map<string, { upcoming: number; next: string | null }>();
   for (const assignment of (assignments ?? []) as AssignmentRow[]) {
-    const current = assignmentCounts.get(assignment.course_id) ?? { total: 0, upcoming: 0 };
-    current.total += 1;
-    if (assignment.due_date && !assignment.is_completed && new Date(assignment.due_date).getTime() >= now) {
-      current.upcoming += 1;
-    }
-    assignmentCounts.set(assignment.course_id, current);
+    if (assignment.is_completed || !assignment.due_date || new Date(assignment.due_date).getTime() < now) continue;
+    const current = assignmentSummary.get(assignment.course_id) ?? { upcoming: 0, next: null };
+    current.upcoming += 1;
+    if (!current.next || new Date(assignment.due_date) < new Date(current.next)) current.next = assignment.due_date;
+    assignmentSummary.set(assignment.course_id, current);
+  }
+  const noteCounts = new Map<string, number>();
+  for (const note of (notes ?? []) as NoteRow[]) if (note.course_id) noteCounts.set(note.course_id, (noteCounts.get(note.course_id) ?? 0) + 1);
+  const gradeTotals = new Map<string, { earned: number; possible: number }>();
+  for (const grade of (gradeEvents ?? []) as GradeRow[]) {
+    if (grade.points_earned === null || grade.points_possible === null || grade.points_possible <= 0) continue;
+    const total = gradeTotals.get(grade.course_id) ?? { earned: 0, possible: 0 };
+    total.earned += Number(grade.points_earned);
+    total.possible += Number(grade.points_possible);
+    gradeTotals.set(grade.course_id, total);
   }
 
+  const rows: CourseDatabaseRow[] = ((courses ?? []) as CourseRow[]).map((course) => {
+    const assignment = assignmentSummary.get(course.id);
+    const grade = gradeTotals.get(course.id);
+    return {
+      id: course.id,
+      name: course.name,
+      teacherName: course.teacher_name,
+      section: course.section,
+      term: [course.semester, course.academic_year].filter(Boolean).join(" · ") || "Current term",
+      color: course.color,
+      active: course.is_active,
+      platform: course.platform,
+      nextDeadline: assignment?.next ?? null,
+      upcomingCount: assignment?.upcoming ?? 0,
+      indexedCount: noteCounts.get(course.id) ?? 0,
+      gradePercent: grade && grade.possible > 0 ? Math.round((grade.earned / grade.possible) * 1000) / 10 : null,
+    };
+  });
+
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
-      <PageHero
-        className="mb-2"
-        icon={Sparkles}
-        badgeLabel="Canvas courses"
+    <WorkspacePage wide>
+      <WorkspacePageHeader
+        icon={BookOpen}
+        eyebrow="Learn"
         title="Courses"
-        description="Your active courses pulled from Canvas. Run a sync to keep them up to date."
-        action={
-          <>
-            <Button variant="secondary" asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/settings/setup/canvas">{canvasConnection ? "Manage Canvas" : "Connect Canvas"}</Link>
-            </Button>
-          </>
-        }
+        description="Current classes, materials, deadlines, and synced progress in one searchable view."
+        action={<Button asChild variant="secondary" className="h-11 sm:h-10"><Link href="/settings/setup/canvas"><RefreshCw className="h-4 w-4" />{canvasConnection ? "Manage Canvas" : "Connect Canvas"}</Link></Button>}
+        meta={canvasConnection?.last_synced_at ? <span>Canvas updated {new Date(canvasConnection.last_synced_at).toLocaleString()}</span> : undefined}
       />
-      <div className="mb-8">
-        {canvasConnection?.last_synced_at ? (
-          <p className="text-xs text-slate-400">
-            Last Canvas sync: {new Date(canvasConnection.last_synced_at).toLocaleString()}
-          </p>
-        ) : null}
+      <div className="mt-5">
+        {rows.length === 0 ? (
+          <EmptyState icon={BookOpen} title={canvasConnection ? "No synced courses yet" : "Connect Canvas to import courses"} description={canvasConnection ? "Canvas is connected, but no active or archived courses were imported. Run a sync from Today." : "Connect your school’s Canvas account to build your course workspace."} action={<Button asChild><Link href={canvasConnection ? "/dashboard" : "/settings/setup/canvas"}>{canvasConnection ? "Open Today" : "Connect Canvas"}</Link></Button>} />
+        ) : <CourseDatabase courses={rows} />}
       </div>
-
-      {(courses ?? []).length === 0 ? (
-        <EmptyState
-          icon={BookOpen}
-          title={canvasConnection ? "No synced courses yet" : "Connect Canvas to import courses"}
-          description={
-            canvasConnection
-              ? "Canvas is connected, but no active courses were imported. Run a sync from the dashboard to pull the latest Canvas classes."
-              : "Connect your school’s Canvas account to import its active courses here."
-          }
-          action={
-            <Link href={canvasConnection ? "/dashboard" : "/settings/setup/canvas"} className="btn btn-primary">
-              {canvasConnection ? "Run sync from dashboard" : "Connect Canvas"}
-            </Link>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {((courses ?? []) as CourseRow[]).map((course) => {
-            const counts = assignmentCounts.get(course.id) ?? { total: 0, upcoming: 0 };
-            return (
-              <Link
-                key={course.id}
-                href={`/courses/${course.id}`}
-                className="group rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:-translate-y-0.5 hover:border-sky-300/35 hover:bg-sky-400/5"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-2xl text-sm font-semibold text-[#05110b]"
-                    style={{ backgroundColor: course.color ?? "#8ab4ff" }}
-                  >
-                    {initialsFor(course.name)}
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
-                    {course.platform === "canvas" ? "Canvas" : course.platform}
-                  </span>
-                </div>
-                <h2 className="mt-5 text-lg font-semibold text-white group-hover:text-sky-100">{course.name}</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
-                </p>
-                <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-lg font-semibold text-white">{counts.total}</p>
-                    <p className="text-xs text-slate-400">assignments</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-lg font-semibold text-white">{counts.upcoming}</p>
-                    <p className="text-xs text-slate-400">upcoming</p>
-                  </div>
-                </div>
-                <p className="mt-4 inline-flex items-center gap-2 text-xs text-slate-400">
-                  <CalendarDays className="h-3.5 w-3.5" /> Updated {new Date(course.updated_at).toLocaleDateString()}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      <section className="mt-8 grid gap-4 md:grid-cols-2">
-        <Link href="/dashboard" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
-          <RefreshCw className="mb-3 h-5 w-5 text-sky-300" />
-          <h2 className="text-lg font-semibold text-white">Sync content</h2>
-          <p className="mt-1 text-sm text-slate-400">Pull updated Canvas courses, assignments, modules, files, and notes.</p>
-        </Link>
-        <Link href="/practice" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
-          <BookOpen className="mb-3 h-5 w-5 text-sky-300" />
-          <h2 className="text-lg font-semibold text-white">Generate practice</h2>
-          <p className="mt-1 text-sm text-slate-400">Use synced course materials to build source-grounded practice tests.</p>
-        </Link>
-      </section>
-    </div>
+    </WorkspacePage>
   );
 }

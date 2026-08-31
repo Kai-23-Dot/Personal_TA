@@ -12,11 +12,13 @@ import { Progress } from "@/frontend/components/ui/progress";
 import { HealthBadge, type HealthLike } from "@/frontend/components/groups/health-badge";
 import { CheckinButton } from "@/frontend/components/groups/checkin-button";
 
+type GroupProfile = { full_name: string | null; avatar_url: string | null };
+
 type Member = {
   user_id: string;
   role: "owner" | "member";
   joined_at: string;
-  profile: { full_name: string | null; avatar_url: string | null } | null;
+  profile: GroupProfile | GroupProfile[] | null;
 };
 
 type Message = {
@@ -25,7 +27,7 @@ type Message = {
   message_type: string;
   created_at: string;
   user_id: string;
-  profile: { full_name: string | null; avatar_url: string | null } | null;
+  profile: GroupProfile | GroupProfile[] | null;
 };
 
 type GroupDetail = {
@@ -73,6 +75,10 @@ function untilLabel(iso: string): string {
 function initials(name: string | null | undefined) {
   if (!name) return "?";
   return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function profileName(profile: GroupProfile | GroupProfile[] | null): string | null {
+  return Array.isArray(profile) ? profile[0]?.full_name ?? null : profile?.full_name ?? null;
 }
 
 function timeAgo(iso: string) {
@@ -227,12 +233,12 @@ export default function GroupDetailPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 pt-6 space-y-4">
-        <div className="skeleton-shimmer h-32 rounded-2xl" />
+        <div className="skeleton-shimmer h-32 rounded-lg" />
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="skeleton-shimmer h-48 rounded-2xl" />
-          <div className="skeleton-shimmer h-48 rounded-2xl" />
+          <div className="skeleton-shimmer h-48 rounded-lg" />
+          <div className="skeleton-shimmer h-48 rounded-lg" />
         </div>
-        <div className="skeleton-shimmer h-64 rounded-2xl" />
+        <div className="skeleton-shimmer h-64 rounded-lg" />
       </div>
     );
   }
@@ -254,7 +260,7 @@ export default function GroupDetailPage() {
     <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 space-y-5">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(9,12,26,0.84)] px-6 py-6 shadow-[0_20px_80px_rgba(0,0,0,0.3)]">
+      <div className="overflow-hidden border-b border-border px-1 pb-5 pt-1 sm:px-0">
         <button
           onClick={() => router.push("/groups")}
           className="mb-4 flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors"
@@ -288,7 +294,7 @@ export default function GroupDetailPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Invite code */}
-            <div className="flex items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-surface-1 px-3 py-2">
               <span className="text-xs text-slate-500">Invite code</span>
               <span className="font-mono text-sm font-semibold tracking-widest text-white">
                 {group.invite_code}
@@ -308,7 +314,7 @@ export default function GroupDetailPage() {
             {/* Leave / Delete */}
             <button
               onClick={handleLeaveOrDelete}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs font-medium text-rose-400 transition hover:bg-rose-500/15"
+                className="flex min-h-11 items-center gap-1.5 rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger/15"
             >
               {myRole === "owner"
                 ? <><Trash2 className="h-3.5 w-3.5" /> Delete group</>
@@ -323,7 +329,7 @@ export default function GroupDetailPage() {
       {group.goal && (
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Goal & Health */}
-          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+          <div className="rounded-lg border border-border bg-surface-1 p-5">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-slate-500" />
@@ -343,7 +349,7 @@ export default function GroupDetailPage() {
             )}
 
             {goalStatus === "completed" ? (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3">
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-success/25 bg-success/10 px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
                 <p className="text-sm text-emerald-200">
                   Goal completed
@@ -371,7 +377,7 @@ export default function GroupDetailPage() {
                         ["Progress", health.components?.progress ?? 0, 30],
                       ] as const
                     ).map(([label, value, max]) => (
-                      <div key={label} className="rounded-xl border border-white/8 bg-white/3 px-3 py-2">
+                      <div key={label} className="rounded-md border border-border bg-surface-2 px-3 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
                         <p className="mt-0.5 text-sm font-semibold text-white">
                           {value}<span className="text-xs font-normal text-slate-500">/{max}</span>
@@ -415,7 +421,7 @@ export default function GroupDetailPage() {
           </div>
 
           {/* Schedule & Check-in */}
-          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+          <div className="rounded-lg border border-border bg-surface-1 p-5">
             <div className="mb-4 flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-slate-500" />
               <h2 className="text-sm font-semibold text-white">Schedule & check-in</h2>
@@ -424,7 +430,7 @@ export default function GroupDetailPage() {
             {meetings.length > 0 ? (
               <ul className="space-y-2">
                 {meetings.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm">
+                  <li key={m.id} className="flex items-center justify-between rounded-md border border-border bg-surface-2 px-3.5 py-2.5 text-sm">
                     <span className="text-slate-200">
                       {DAY_LABELS[m.day_of_week]} · {formatSlotTime(m.start_time)}
                     </span>
@@ -469,16 +475,14 @@ export default function GroupDetailPage() {
       <div className="grid gap-5 lg:grid-cols-3">
 
         {/* Members */}
-        <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+        <div className="rounded-lg border border-border bg-surface-1 p-5">
           <div className="mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-slate-500" />
             <h2 className="text-sm font-semibold text-white">Members</h2>
           </div>
           <ul className="space-y-3">
             {members.map((m) => {
-              const name = Array.isArray(m.profile)
-                ? (m.profile as any)[0]?.full_name
-                : m.profile?.full_name;
+              const name = profileName(m.profile);
               return (
                 <li key={m.user_id} className="flex items-center gap-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-xs font-semibold text-sky-200">
@@ -508,7 +512,7 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Chat */}
-        <div className="flex flex-col rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] lg:col-span-2 overflow-hidden" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
+        <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface-1 lg:col-span-2" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
           <div className="border-b border-white/6 px-5 py-3.5">
             <h2 className="text-sm font-semibold text-white">Group chat</h2>
           </div>
@@ -523,9 +527,7 @@ export default function GroupDetailPage() {
               </p>
             ) : (
               messages.map((msg) => {
-                const name = Array.isArray(msg.profile)
-                  ? (msg.profile as any)[0]?.full_name
-                  : msg.profile?.full_name;
+                const name = profileName(msg.profile);
                 const isMe = msg.user_id === myUserId;
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
@@ -536,7 +538,7 @@ export default function GroupDetailPage() {
                       {!isMe && (
                         <p className="text-xs text-slate-500">{name ?? "Unknown"}</p>
                       )}
-                      <div className={`rounded-2xl px-3 py-2 text-sm ${
+                      <div className={`rounded-lg px-3 py-2 text-sm ${
                         isMe
                           ? "rounded-tr-sm bg-sky-500/20 text-sky-100"
                           : "rounded-tl-sm bg-white/6 text-slate-200"
@@ -558,13 +560,13 @@ export default function GroupDetailPage() {
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
               placeholder="Send a message…"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-sky-400/40"
+              className="min-h-11 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
               maxLength={500}
             />
             <button
               type="submit"
               disabled={!newMsg.trim() || sending}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-400 disabled:opacity-40"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </button>

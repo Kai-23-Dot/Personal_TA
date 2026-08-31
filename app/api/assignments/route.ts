@@ -120,6 +120,7 @@ export async function POST(req: Request) {
     .select("id")
     .eq("id", course_id)
     .eq("user_id", user.id)
+    .eq("is_active", true)
     .single();
 
   if (!course) return NextResponse.json({ error: "Course not found" }, { status: 404 });

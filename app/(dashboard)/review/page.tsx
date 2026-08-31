@@ -7,6 +7,8 @@ import {
   Sparkles, Target, X,
 } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
+import { Button } from "@/frontend/components/ui/button";
+import { WorkspacePage, WorkspaceSectionHeader, WorkspaceSurface } from "@/frontend/components/workspace/workspace-primitives";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,7 +72,7 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
     const correct = results.filter((r) => r.grade >= 3).length;
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-500/15">
           <CheckCircle2 className="h-7 w-7 text-emerald-400" />
         </div>
         <p className="text-lg font-semibold text-white">Session complete!</p>
@@ -99,8 +101,9 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
       </div>
 
       {/* Card */}
-      <div
-        className="cursor-pointer rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.9)] p-8 text-center shadow-[0_8px_40px_rgba(0,0,0,0.3)] transition hover:border-sky-400/20 min-h-[160px] flex flex-col items-center justify-center gap-4"
+      <button
+        type="button"
+        className="flex min-h-[160px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-border bg-card p-8 text-center transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setFlipped(!flipped)}
       >
         {!flipped ? (
@@ -114,7 +117,7 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
             <p className="text-base text-slate-200 leading-relaxed">{card.back}</p>
           </>
         )}
-      </div>
+      </button>
 
       {/* Grade buttons */}
       {flipped && (
@@ -161,22 +164,6 @@ function ReadinessBadge({ score, label }: { score: number; label: string }) {
       <span>{score}%</span>
       <span className="font-normal opacity-80">{label}</span>
     </span>
-  );
-}
-
-// ── Section card ─────────────────────────────────────────────────────────────
-
-function SectionCard({ title, subtitle, children, className = "" }: {
-  title: string; subtitle?: string; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <section className={`rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur ${className}`}>
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-white">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -271,7 +258,7 @@ export default function ReviewPage() {
   // If in flashcard review mode, show the reviewer
   if (reviewCards) {
     return (
-      <div className="mx-auto max-w-2xl px-4 pb-16 pt-6">
+      <WorkspacePage className="max-w-2xl">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-medium text-slate-400">
             Flashcard review — {reviewCards.length} due card{reviewCards.length === 1 ? "" : "s"}
@@ -284,193 +271,41 @@ export default function ReviewPage() {
           </button>
         </div>
         <FlashcardReview cards={reviewCards} onDone={() => { setReviewCards(null); load(); }} />
-      </div>
+      </WorkspacePage>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 space-y-6">
+    <WorkspacePage className="space-y-5">
       <PageHero
         icon={Flame}
-        badgeLabel="Review & Revision"
-        title="Review & Revision"
-        description="Spaced repetition flashcards, exam readiness predictions, weak topics, and quick review sessions."
+        badgeLabel="Study"
+        title="Review"
+        description="One queue for due flashcards, weak topics, and upcoming assessments—with a reason for every recommendation."
       />
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[...Array(4)].map((_, i) => <div key={i} className="skeleton-shimmer h-40 rounded-2xl" />)}
+        <div className="space-y-3">
+          <div className="skeleton-shimmer h-14 rounded-lg" />
+          {[...Array(4)].map((_, i) => <div key={i} className="skeleton-shimmer h-20 rounded-lg" />)}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* SM-2 flashcards due */}
-          <SectionCard
-            title="Flashcards due"
-            subtitle="Spaced repetition — review cards scheduled for today"
-          >
-            {dueCards.length === 0 ? (
-              <p className="text-sm text-slate-500">No flashcards due right now. Check back later!</p>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-3xl font-bold text-white">
-                  {dueCards.length}
-                  <span className="ml-2 text-sm font-normal text-slate-400">card{dueCards.length === 1 ? "" : "s"} due</span>
-                </p>
-                <div className="space-y-1.5">
-                  {dueCards.slice(0, 3).map((c) => (
-                    <div key={c.id} className="rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-xs text-slate-300 truncate">
-                      {c.front}
-                    </div>
-                  ))}
-                  {dueCards.length > 3 && (
-                    <p className="text-xs text-slate-500">+{dueCards.length - 3} more</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setReviewCards(dueCards)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/15 py-2.5 text-sm font-medium text-violet-200 transition hover:bg-violet-500/25"
-                >
-                  <Brain className="h-4 w-4" /> Start flashcard review
-                </button>
-              </div>
-            )}
-          </SectionCard>
+        <div className="space-y-4">
+          <WorkspaceSurface>
+            <WorkspaceSectionHeader title="Review queue" description="Ordered by what is due and what evidence says needs work" />
+            {dueCards.length === 0 && upcomingExams.length === 0 && weakTopics.length === 0 ? <div className="px-5 py-12 text-center"><CheckCircle2 className="mx-auto h-6 w-6 text-success" /><p className="mt-3 text-sm font-medium">Your review queue is clear</p><p className="mt-1 text-xs text-muted-foreground">Complete practice or create flashcards to build the next queue.</p></div> : <div>
+              {dueCards.length > 0 ? <div className="grid gap-3 border-b border-border px-4 py-3 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:items-center"><span className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 text-primary"><Brain className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm font-medium">Review {dueCards.length} due flashcard{dueCards.length === 1 ? "" : "s"}</p><p className="mt-0.5 text-xs text-muted-foreground">Recommended because spaced repetition scheduled these cards for today.</p></div><Button size="sm" onClick={() => setReviewCards(dueCards)}>Start review</Button></div> : null}
+              {upcomingExams.slice(0, 4).map((exam) => { const result = readiness[exam.id]; return <div key={exam.id} className="grid gap-3 border-b border-border px-4 py-3 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:items-center"><span className="grid h-8 w-8 place-items-center rounded-md bg-warning/10 text-warning"><Sparkles className="h-4 w-4" /></span><div className="min-w-0"><p className="truncate text-sm font-medium">{exam.title}</p>{result ? <div className="mt-1 flex flex-wrap items-center gap-2"><ReadinessBadge score={result.score} label={result.label} /><span className="text-xs text-muted-foreground">Recommended because {result.daysLeft > 0 ? `${result.daysLeft} day${result.daysLeft === 1 ? "" : "s"} remain` : "it is due now"}{result.weakTopics.length ? ` and ${result.weakTopics.length} weak topic${result.weakTopics.length === 1 ? " is" : "s are"} detected` : ""}.</span></div> : <p className="mt-1 text-xs text-muted-foreground"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />Calculating readiness…</p>}</div><Button size="sm" variant="secondary" onClick={() => void launchReview(exam.title, exam.course_id, 10)} disabled={generating}>Practice</Button></div>; })}
+              {weakTopics.slice(0, 5).map((topic) => <div key={topic.topic} className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:items-center"><span className="grid h-8 w-8 place-items-center rounded-md bg-danger/10 text-danger"><Target className="h-4 w-4" /></span><div className="min-w-0"><p className="truncate text-sm font-medium">{topic.topic}</p><p className="mt-0.5 text-xs text-muted-foreground">Recommended because recent practice accuracy is {Math.round(topic.accuracy_pct)}%, below the 70% mastery threshold.</p></div><Button size="sm" variant="secondary" onClick={() => void launchReview(topic.topic, courseId, 6)} disabled={generating || !courseId}>Practice</Button></div>)}
+            </div>}
+          </WorkspaceSurface>
 
-          {/* Weak topics */}
-          <SectionCard
-            title="Weak topics"
-            subtitle="Topics where your practice accuracy is below 70%"
-          >
-            {weakTopics.length === 0 ? (
-              <p className="text-sm text-slate-500">No weak topics yet. Complete a practice session to see trends.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {weakTopics.slice(0, 6).map((t) => (
-                  <div key={t.topic} className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm text-white">{t.topic}</p>
-                      <div className="mt-1 h-1.5 rounded-full bg-white/8">
-                        <div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-rose-500 to-orange-400"
-                          style={{ width: `${t.accuracy_pct}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="flex-shrink-0 text-xs font-medium text-slate-400">
-                      {Math.round(t.accuracy_pct)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-
-          {/* Upcoming exams + readiness */}
-          <SectionCard
-            title="Exam readiness"
-            subtitle="AI prediction based on your practice history and time remaining"
-            className="md:col-span-2"
-          >
-            {upcomingExams.length === 0 ? (
-              <p className="text-sm text-slate-500">No exams or tests coming up.</p>
-            ) : (
-              <div className="space-y-3">
-                {upcomingExams.slice(0, 4).map((exam) => {
-                  const r = readiness[exam.id];
-                  return (
-                    <div
-                      key={exam.id}
-                      className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/3 p-4"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-white">{exam.title}</p>
-                        {r ? (
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <ReadinessBadge score={r.score} label={r.label} />
-                            {r.daysLeft > 0 && (
-                              <span className="text-xs text-slate-500">
-                                {r.daysLeft} day{r.daysLeft === 1 ? "" : "s"} left
-                              </span>
-                            )}
-                            {r.weakTopics.length > 0 && (
-                              <span className="text-xs text-slate-500">
-                                {r.weakTopics.length} weak topic{r.weakTopics.length === 1 ? "" : "s"}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="mt-1 text-xs text-slate-600">
-                            <Loader2 className="inline h-3 w-3 animate-spin" /> Calculating readiness…
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => launchReview(exam.title, exam.course_id, 10)}
-                        disabled={generating}
-                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-300 transition hover:bg-violet-500/20 disabled:opacity-50"
-                      >
-                        {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                        Practice
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </SectionCard>
-
-          {/* Quick review */}
-          <SectionCard title="Quick review session">
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs text-slate-500">Course</label>
-                <select
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50"
-                >
-                  <option value="">Select course</option>
-                  {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <button
-                onClick={async () => {
-                  const topic = weakTopics[0]?.topic ?? "Review";
-                  await launchReview(topic, courseId, 6);
-                }}
-                disabled={generating || !courseId || weakTopics.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 py-2.5 text-sm font-medium text-sky-200 transition hover:bg-sky-500/20 disabled:opacity-50"
-              >
-                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Target className="h-4 w-4" />}
-                {generating ? "Generating…" : "Start quick review"}
-              </button>
-              {actionMessage && <p className="text-xs text-slate-500">{actionMessage}</p>}
-            </div>
-          </SectionCard>
-
-          {/* Accuracy trend */}
-          <SectionCard title="Accuracy trend" subtitle="Last 14 days">
-            {trends.length === 0 ? (
-              <p className="text-sm text-slate-500">No quiz data yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {trends.map((t) => (
-                  <div key={t.day} className="flex items-center gap-3">
-                    <span className="w-20 flex-shrink-0 text-xs text-slate-500">{t.day}</span>
-                    <div className="flex-1 rounded-full bg-white/8 h-2">
-                      <div
-                        className="h-2 rounded-full bg-gradient-to-r from-sky-400 to-violet-400"
-                        style={{ width: `${t.accuracy}%` }}
-                      />
-                    </div>
-                    <span className="w-10 flex-shrink-0 text-right text-xs text-slate-400">{t.accuracy}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <WorkspaceSurface><WorkspaceSectionHeader title="Quick review" description="Start with the weakest available topic" /><div className="space-y-3 p-4"><label className="block"><span className="mb-1 block text-xs text-muted-foreground">Course</span><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="">Select course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label><Button className="w-full" onClick={() => void launchReview(weakTopics[0]?.topic ?? "Review", courseId, 6)} disabled={generating || !courseId || weakTopics.length === 0}>{generating ? <Loader2 className="animate-spin" /> : <Target />}{generating ? "Generating…" : "Start quick review"}</Button>{actionMessage ? <p className="text-xs leading-5 text-danger" role="alert">{actionMessage}</p> : null}</div></WorkspaceSurface>
+            <WorkspaceSurface><WorkspaceSectionHeader title="Accuracy trend" description="Real completed-practice accuracy from the last 14 days" />{trends.length === 0 ? <p className="px-4 py-10 text-center text-sm text-muted-foreground">No completed quiz data yet.</p> : <div className="divide-y divide-border px-4">{trends.map((trend) => <div key={trend.day} className="flex items-center gap-3 py-2.5"><span className="w-20 shrink-0 text-xs text-muted-foreground">{trend.day}</span><div className="h-1.5 flex-1 rounded-full bg-surface-2"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${trend.accuracy}%` }} /></div><span className="w-10 text-right text-xs font-medium">{trend.accuracy}%</span></div>)}</div>}</WorkspaceSurface>
+          </div>
         </div>
       )}
-    </div>
+    </WorkspacePage>
   );
 }

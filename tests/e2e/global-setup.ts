@@ -21,27 +21,38 @@ export default async function globalSetup(config: FullConfig) {
     );
   }
 
-  const ctx = await request.newContext({ baseURL });
+  const ctx = await request.newContext({ baseURL, timeout: 90_000 });
 
-  const login = await ctx.post("/api/auth/login", { data: { email, password } });
+  // Supabase authentication can take longer than Playwright's 30 second
+  // request default after a cold local start. Keep setup tolerant without
+  // weakening any individual interaction assertion.
+  const login = await ctx.post("/api/auth/login", {
+    data: { email, password },
+    timeout: 90_000,
+  });
   if (!login.ok()) {
     throw new Error(`E2E login failed (${login.status()}): ${await login.text()}`);
   }
 
-  // Sweep stale e2e groups from crashed runs (owner delete cascades everything).
-  const list = await ctx.get("/api/groups");
-  if (list.ok()) {
-    const { groups } = (await list.json()) as {
-      groups: { id: string; name: string; my_role: string }[];
-    };
-    for (const g of groups ?? []) {
-      if (g.name.startsWith(E2E_PREFIX) && g.my_role === "owner") {
-        await ctx.delete(`/api/groups/${g.id}`);
-      }
-    }
-  }
-
   mkdirSync("playwright/.auth", { recursive: true });
   await ctx.storageState({ path: STORAGE_STATE });
+
+  // Cleanup is best effort: a slow live database must not prevent otherwise
+  // read-only browser coverage from starting with a valid authenticated state.
+  try {
+    const list = await ctx.get("/api/groups", { timeout: 15_000 });
+    if (list.ok()) {
+      const { groups } = (await list.json()) as {
+        groups: { id: string; name: string; my_role: string }[];
+      };
+      for (const g of groups ?? []) {
+        if (g.name.startsWith(E2E_PREFIX) && g.my_role === "owner") {
+          await ctx.delete(`/api/groups/${g.id}`, { timeout: 15_000 });
+        }
+      }
+    }
+  } catch {
+    console.warn("[e2e] Skipped stale group cleanup because the live API was unavailable.");
+  }
   await ctx.dispose();
 }
