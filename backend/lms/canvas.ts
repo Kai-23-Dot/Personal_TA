@@ -589,8 +589,13 @@ function parseLinkHeader(linkHeader: string | null): { next?: string; prev?: str
 async function fetchAllPages<T>(
   domain: string,
   accessToken: string,
-  baseUrl: string
+  baseUrl: string,
+  maxItems = MAX_PAGINATED_ITEMS
 ): Promise<T[]> {
+  const itemLimit = Math.min(
+    MAX_PAGINATED_ITEMS,
+    Math.max(1, Math.floor(maxItems))
+  );
   const allResults: T[] = [];
   let currentPage: string | null = baseUrl;
   const visited = new Set<string>();
@@ -622,9 +627,8 @@ async function fetchAllPages<T>(
       throw new Error("Canvas returned an invalid paginated response.");
     }
     allResults.push(...data);
-    if (allResults.length >= MAX_PAGINATED_ITEMS) {
-      console.warn(`[Canvas] Reached pagination item limit (${MAX_PAGINATED_ITEMS})`);
-      return allResults.slice(0, MAX_PAGINATED_ITEMS);
+    if (allResults.length >= itemLimit) {
+      return allResults.slice(0, itemLimit);
     }
     
     // Check for next page
@@ -715,6 +719,26 @@ export async function fetchCanvasPages(
   const url = `https://${domain}/api/v1/courses/${courseId}/pages?per_page=50&sort=updated_at&order=desc`;
   
   return fetchAllPages<CanvasPage>(domain, accessToken, url);
+}
+
+/**
+ * Fetch the course front page with its raw HTML body. Canvas courses that hide
+ * Modules commonly use this page as the authoritative unit index.
+ */
+export async function fetchCanvasFrontPage(
+  domain: string,
+  accessToken: string,
+  courseId: number
+): Promise<CanvasPageDetail | null> {
+  const url = `https://${domain}/api/v1/courses/${courseId}/front_page`;
+
+  try {
+    const res = await fetchWithRetry(url, {}, domain, accessToken);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -817,7 +841,7 @@ export async function fetchCanvasFilesWide(
   maxFiles = 100
 ): Promise<CanvasFile[]> {
   const url = `https://${domain}/api/v1/courses/${courseId}/files?per_page=${maxFiles}&sort=updated_at&order=desc`;
-  const results = await fetchAllPages<CanvasFile>(domain, accessToken, url);
+  const results = await fetchAllPages<CanvasFile>(domain, accessToken, url, maxFiles);
   return results.slice(0, maxFiles);
 }
 

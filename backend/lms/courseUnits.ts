@@ -16,6 +16,8 @@ export type GeneratedCourseUnit = {
   powerpointCount: number;
   assignmentIds: string[];
   noteIds: string[];
+  moduleItemIds: number[];
+  pageSlugs: string[];
 };
 
 const STRUCTURAL_LABEL = /\b(unit|module|chapter|week|lesson)\s*([0-9]+[a-z]?)\b/i;
@@ -77,6 +79,8 @@ function toUnit(
     powerpointCount: materials.filter(isPowerPoint).length,
     assignmentIds: materials.filter((item) => item.kind === "assignment").map((item) => item.id),
     noteIds: materials.filter((item) => item.kind === "note").map((item) => item.id),
+    moduleItemIds: [],
+    pageSlugs: [],
   };
 }
 

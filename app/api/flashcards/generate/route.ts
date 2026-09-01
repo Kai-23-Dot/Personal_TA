@@ -159,7 +159,7 @@ export async function POST(req: Request) {
     // uses the course name as a broad retrieval query because Topic is optional
     // in the standalone flashcard form.
     if (courseId && (selectedCanvasUnits.length > 0 || contentBlocks.length === 0)) {
-      const retrieval = await canvasDeepFetch({
+      const retrieval = await runWithUsageContext(user.id, () => canvasDeepFetch({
         userId: user.id,
         courseId,
         topic: retrievalTopic,
@@ -168,16 +168,17 @@ export async function POST(req: Request) {
           .filter((id): id is number => id !== null),
         moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
         unitScopes: selectedCanvasUnits.flatMap((unit) =>
-          unit.moduleId !== null && unit.moduleItemIds.length > 0
+          (unit.moduleId !== null && unit.moduleItemIds.length > 0) || unit.pageSlugs.length > 0
             ? [{
                 moduleId: unit.moduleId,
                 unitName: unit.moduleName,
                 moduleItemIds: unit.moduleItemIds,
+                pageSlugs: unit.pageSlugs,
               }]
             : []
         ),
         limit: Math.min(24, Math.max(10, selectedCanvasUnits.length * 4)),
-      });
+      }));
 
       if (retrieval.ranked.length > 0) {
         // Explicit module membership is already a strong relevance signal.

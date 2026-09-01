@@ -62,6 +62,7 @@ type CourseModule = {
   assignmentIds: string[];
   noteIds: string[];
   moduleItemIds: number[];
+  pageSlugs: string[];
 };
 
 type NoteListItem = {
@@ -242,6 +243,7 @@ export default function PracticePage() {
         assignmentIds: selectedModule.assignmentIds,
         noteIds: selectedModule.noteIds,
         moduleItemIds: selectedModule.moduleItemIds ?? [],
+        pageSlugs: selectedModule.pageSlugs ?? [],
       }));
 
       if (mode === "flashcards") {
@@ -435,12 +437,17 @@ export default function PracticePage() {
                                 {item.moduleName}
                               </span>
                               <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {item.itemCount} item{item.itemCount === 1 ? "" : "s"}
+                                {item.pageSlugs?.length
+                                  ? `${item.pageSlugs.length} Canvas entry page${item.pageSlugs.length === 1 ? "" : "s"}`
+                                  : `${item.itemCount} item${item.itemCount === 1 ? "" : "s"}`}
                                 {item.powerpointCount > 0
                                   ? ` · ${item.powerpointCount} PowerPoint${item.powerpointCount === 1 ? "" : "s"}`
                                   : ""}
                                 {item.source === "generated"
                                   ? " · organized by Smartlearn"
+                                  : ""}
+                                {item.pageSlugs?.length
+                                  ? " · linked from Canvas Home"
                                   : ""}
                               </span>
                             </span>
@@ -483,7 +490,9 @@ export default function PracticePage() {
                     </div>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    {modules.some((item) => item.source === "generated")
+                    {modules.some((item) => item.pageSlugs?.length)
+                      ? "Smartlearn found these units on the Canvas course homepage and follows each unit's linked pages, assignments, files, and images."
+                      : modules.some((item) => item.source === "generated")
                       ? "This course does not publish modules, so Smartlearn organized its assignments and notes into selectable units."
                       : "Practice combines pages, assignments, and linked PowerPoints from every selected unit."}
                   </p>

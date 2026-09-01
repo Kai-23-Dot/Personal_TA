@@ -64,4 +64,21 @@ describe("flashcard generation input", () => {
 
     expect(result.units?.[0]?.moduleItemIds).toEqual([201, 202, 203]);
   });
+
+  it("preserves a homepage unit's exact Canvas Page roots", () => {
+    const result = flashcardGenerationSchema.parse({
+      courseId,
+      units: [{
+        moduleId: null,
+        moduleName: "Unit 1A",
+        source: "canvas",
+        assignmentIds: [],
+        noteIds: [],
+        moduleItemIds: [],
+        pageSlugs: ["unit-1a"],
+      }],
+    });
+
+    expect(result.units?.[0]?.pageSlugs).toEqual(["unit-1a"]);
+  });
 });

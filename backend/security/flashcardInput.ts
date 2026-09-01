@@ -23,6 +23,7 @@ const flashcardUnitSchema = z.object({
   assignmentIds: z.array(z.string().uuid()).max(100),
   noteIds: z.array(z.string().uuid()).max(100),
   moduleItemIds: z.array(z.number().int().positive()).max(500).optional().default([]),
+  pageSlugs: z.array(z.string().trim().min(1).max(512)).max(50).optional().default([]),
 }).strict();
 
 /**

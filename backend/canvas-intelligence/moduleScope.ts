@@ -12,14 +12,16 @@ export type CanvasModuleItemsGroup = {
 };
 
 export type CanvasUnitScope = {
-  moduleId: number;
+  moduleId: number | null;
   unitName: string;
   moduleItemIds: number[];
+  /** Canvas wiki-page roots selected from a course homepage tile. */
+  pageSlugs?: string[];
 };
 
 export type CanvasCourseUnit = {
   id: string;
-  moduleId: number;
+  moduleId: number | null;
   moduleName: string;
   source: "canvas";
   itemCount: number;
@@ -28,6 +30,8 @@ export type CanvasCourseUnit = {
   noteIds: string[];
   /** Exact Canvas module items owned by this unit. */
   moduleItemIds: number[];
+  /** Exact Canvas page roots owned by a homepage-defined unit. */
+  pageSlugs: string[];
 };
 
 type StructuralFamily =
@@ -103,6 +107,7 @@ function toCanvasCourseUnit(
     assignmentIds: [],
     noteIds: [],
     moduleItemIds: scopedItems.map((item) => item.id),
+    pageSlugs: [],
   };
 }
 
@@ -189,6 +194,7 @@ export function scopeCanvasModuleGroups(
 ): CanvasModuleItemsGroup[] {
   const byModuleId = new Map(groups.map((group) => [group.module.id, group]));
   return scopes.flatMap((scope) => {
+    if (scope.moduleId === null) return [];
     const group = byModuleId.get(scope.moduleId);
     if (!group) return [];
     const itemIds = new Set(scope.moduleItemIds);

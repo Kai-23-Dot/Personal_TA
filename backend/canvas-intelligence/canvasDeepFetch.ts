@@ -18,8 +18,10 @@ import {
   fetchCanvasModules,
   fetchCanvasModuleItems,
   fetchCanvasPages,
+  fetchCanvasFrontPage,
   fetchCanvasAssignments,
   fetchCanvasPageBody,
+  fetchCanvasPageDetail,
   fetchCanvasFilesWide,
   fetchCanvasFileById,
   downloadCanvasFile,
@@ -27,6 +29,10 @@ import {
 } from "@/backend/lms/canvas";
 import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
+import {
+  extractTextFromImages,
+  type ImageMediaType,
+} from "@/backend/ai/ocrImage";
 import { classifyContent } from "./contentClassifier";
 import { chunkDocument } from "./chunker";
 import { scoreConfidence } from "./confidenceScorer";
@@ -46,6 +52,11 @@ import {
   scopeCanvasModuleGroups,
 } from "./moduleScope";
 import type { CanvasUnitScope } from "./moduleScope";
+import {
+  buildCanvasHomepageUnits,
+  extractCanvasHtmlResourceLinks,
+} from "./homepageUnits";
+import { extractFromGoogleLink } from "./contentExtractor";
 import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
 import type {
   CanvasContentItem,
@@ -66,6 +77,21 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_CANDIDATE_CHUNKS = 80;
 /** Max modules to load items from. */
 const MAX_MODULES_FOR_ITEM_FETCH = 40;
+/** Bounded recursive crawl for courses whose units live on the Home page. */
+const MAX_HOMEPAGE_PAGES_PER_UNIT = 12;
+const MAX_HOMEPAGE_PAGES_TOTAL = 48;
+const MAX_HOMEPAGE_LINK_DEPTH = 2;
+/** One batched vision call keeps image-heavy math units within route latency. */
+const MAX_VISION_IMAGES = 12;
+const MAX_VISION_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const IMAGE_MEDIA_TYPES: Record<string, ImageMediaType> = {
+  "image/jpeg": "image/jpeg",
+  "image/jpg": "image/jpeg",
+  "image/png": "image/png",
+  "image/gif": "image/gif",
+  "image/webp": "image/webp",
+};
 
 const HIGH_VALUE_FILE_TERMS =
   /\b(notes?|slides?|lecture|lesson|unit|chapter|study\s*guide|review|packet|worksheet|reading|handout|presentation|powerpoint|ppt|pdf)\b/i;
@@ -84,6 +110,94 @@ async function canvasCollectionOrFallback<T>(
     console.warn(`[CanvasDeepFetch] ${label} unavailable: ${message}`);
     return fallback;
   }
+}
+
+type HomepagePageDetail = NonNullable<
+  Awaited<ReturnType<typeof fetchCanvasPageDetail>>
+>;
+
+type CrawledHomepagePage = {
+  detail: HomepagePageDetail;
+  unitName: string;
+  depth: number;
+  links: ReturnType<typeof extractCanvasHtmlResourceLinks>;
+};
+
+/**
+ * Follow only same-course Canvas Page links starting at the selected Home
+ * tiles. The crawl is breadth-first, bounded per unit and globally, and never
+ * crosses into another unit's root page.
+ */
+async function crawlCanvasHomepageUnits(params: {
+  domain: string;
+  accessToken: string;
+  canvasCourseId: number;
+  scopes: ReadonlyArray<{ unitName: string; pageSlugs: readonly string[] }>;
+  allUnitRootSlugs?: readonly string[];
+  warnings: string[];
+}): Promise<CrawledHomepagePage[]> {
+  const { domain, accessToken, canvasCourseId, scopes, warnings } = params;
+  const allRootSlugs = new Set([
+    ...(params.allUnitRootSlugs ?? []),
+    ...scopes.flatMap((scope) => scope.pageSlugs),
+  ]);
+  const seenByUnit = new Map<string, Set<string>>();
+  const queue: Array<{ unitName: string; slug: string; depth: number; rootSlug: string }> = [];
+
+  for (const scope of scopes) {
+    const seen = seenByUnit.get(scope.unitName) ?? new Set<string>();
+    seenByUnit.set(scope.unitName, seen);
+    for (const slug of scope.pageSlugs) {
+      if (seen.has(slug) || seen.size >= MAX_HOMEPAGE_PAGES_PER_UNIT) continue;
+      seen.add(slug);
+      queue.push({ unitName: scope.unitName, slug, depth: 0, rootSlug: slug });
+    }
+  }
+
+  const crawled: CrawledHomepagePage[] = [];
+  while (queue.length > 0 && crawled.length < MAX_HOMEPAGE_PAGES_TOTAL) {
+    const remaining = MAX_HOMEPAGE_PAGES_TOTAL - crawled.length;
+    const batch = queue.splice(0, Math.min(12, remaining));
+    const details = await Promise.all(
+      batch.map(({ slug }) =>
+        fetchCanvasPageDetail(domain, accessToken, canvasCourseId, slug)
+      )
+    );
+
+    for (let index = 0; index < batch.length; index++) {
+      const queued = batch[index];
+      const detail = details[index];
+      if (!detail) {
+        if (queued.depth === 0) {
+          warnings.push(`${queued.unitName}: Canvas page "${queued.slug}" could not be opened.`);
+        }
+        continue;
+      }
+      const links = extractCanvasHtmlResourceLinks({
+        html: detail.body ?? "",
+        courseId: canvasCourseId,
+        domain,
+      });
+      crawled.push({ detail, unitName: queued.unitName, depth: queued.depth, links });
+
+      if (queued.depth >= MAX_HOMEPAGE_LINK_DEPTH) continue;
+      const seen = seenByUnit.get(queued.unitName) ?? new Set<string>();
+      seenByUnit.set(queued.unitName, seen);
+      for (const slug of links.pageSlugs) {
+        if (seen.has(slug) || seen.size >= MAX_HOMEPAGE_PAGES_PER_UNIT) continue;
+        if (allRootSlugs.has(slug) && slug !== queued.rootSlug) continue;
+        seen.add(slug);
+        queue.push({
+          unitName: queued.unitName,
+          slug,
+          depth: queued.depth + 1,
+          rootSlug: queued.rootSlug,
+        });
+      }
+    }
+  }
+
+  return crawled;
 }
 
 // ── Local DB row types ────────────────────────────────────────────────────────
@@ -295,10 +409,12 @@ export async function canvasDeepFetch(params: {
     testDate,
   } = params;
   const supabase = createServiceClient();
-  const requestedModuleIdSet = new Set([
+  const requestedModuleIdSet = new Set<number>([
     ...moduleIds,
     ...(moduleId === undefined ? [] : [moduleId]),
-    ...unitScopes.map((scope) => scope.moduleId),
+    ...unitScopes
+      .map((scope) => scope.moduleId)
+      .filter((id): id is number => id !== null),
   ]);
   const requestedModuleNameKeys = new Set(
     [...requestedModuleNames, ...(moduleName ? [moduleName] : [])]
@@ -380,7 +496,7 @@ export async function canvasDeepFetch(params: {
       );
 
       // Parallel Canvas API calls
-      const [modules, pages, liveAssignments, files] = await Promise.all([
+      const [modules, pages, liveAssignments, files, frontPage] = await Promise.all([
         canvasCollectionOrFallback(
           "modules",
           fetchCanvasModules(canvas_domain, access_token, canvasCourseId),
@@ -405,6 +521,7 @@ export async function canvasDeepFetch(params: {
           [],
           warnings
         ),
+        fetchCanvasFrontPage(canvas_domain, access_token, canvasCourseId),
       ]);
 
       moduleNames.push(...modules.map((m) => m.name));
@@ -443,12 +560,61 @@ export async function canvasDeepFetch(params: {
       for (const unit of buildCanvasCourseUnits(moduleItemsResults)) {
         if (!moduleNames.includes(unit.moduleName)) moduleNames.push(unit.moduleName);
       }
+      const homepageUnits = frontPage?.body
+        ? buildCanvasHomepageUnits({
+            html: frontPage.body,
+            courseId: canvasCourseId,
+            domain: canvas_domain,
+            pages,
+            files,
+          })
+        : [];
+      for (const unit of homepageUnits) {
+        if (!moduleNames.includes(unit.moduleName)) moduleNames.push(unit.moduleName);
+      }
+
+      const homepageUnitByName = new Map(
+        homepageUnits.map((unit) => [
+          unit.moduleName.trim().toLowerCase(),
+          unit,
+        ])
+      );
+      const selectedHomepageScopes = unitScopes.flatMap((scope) => {
+        const discovered = homepageUnitByName.get(
+          scope.unitName.trim().toLowerCase()
+        );
+        const pageSlugs = [
+          ...new Set([
+            ...(scope.pageSlugs ?? []),
+            ...(discovered?.pageSlugs ?? []),
+          ]),
+        ];
+        return pageSlugs.length > 0
+          ? [{ unitName: scope.unitName, pageSlugs }]
+          : [];
+      });
+      for (const unit of homepageUnits) {
+        const key = unit.moduleName.trim().toLowerCase();
+        if (
+          requestedModuleNameKeys.has(key) &&
+          !selectedHomepageScopes.some(
+            (scope) => scope.unitName.trim().toLowerCase() === key
+          )
+        ) {
+          selectedHomepageScopes.push({
+            unitName: unit.moduleName,
+            pageSlugs: unit.pageSlugs,
+          });
+        }
+      }
 
       const selectedCanvasModuleIds = new Set(
         requestedModules.map((module) => module.id)
       );
       const exactScopedModuleIds = new Set(
-        unitScopes.map((scope) => scope.moduleId)
+        unitScopes
+          .map((scope) => scope.moduleId)
+          .filter((id): id is number => id !== null)
       );
       const exactScopedResults = scopeCanvasModuleGroups(
         moduleItemsResults,
@@ -464,9 +630,14 @@ export async function canvasDeepFetch(params: {
         : moduleItemsResults.filter(({ module }) =>
             selectedCanvasModuleIds.has(module.id)
           );
-      if (selectedModuleResults.length > 0) {
+      const selectedStructureNames = [
+        ...selectedModuleResults.map(({ module }) => module.name),
+        ...selectedHomepageScopes.map((scope) => scope.unitName),
+      ];
+      const hasExactUnitSelection = selectedStructureNames.length > 0;
+      if (hasExactUnitSelection) {
         resolvedSelectedModuleNames = new Set(
-          selectedModuleResults.map(({ module }) => module.name)
+          selectedStructureNames
         );
       }
       const selectedModuleFileIds = new Set(
@@ -504,6 +675,233 @@ export async function canvasDeepFetch(params: {
         }
       }
 
+      const crawledHomepagePages = await crawlCanvasHomepageUnits({
+        domain: canvas_domain,
+        accessToken: access_token,
+        canvasCourseId,
+        scopes: selectedHomepageScopes,
+        allUnitRootSlugs: homepageUnits.flatMap((unit) => unit.pageSlugs),
+        warnings,
+      });
+      const selectedHomepagePageSlugs = new Set<string>();
+      const homepageImageJobs: Array<{
+        url: string;
+        label: string;
+        moduleName: string;
+        sourceUrl: string;
+      }> = [];
+      const googleMaterialJobs: Array<{
+        url: string;
+        moduleName: string;
+        sourceUrl: string;
+      }> = [];
+
+      for (const pageResult of crawledHomepagePages) {
+        const { detail, links, unitName } = pageResult;
+        selectedHomepagePageSlugs.add(detail.url);
+        if (!moduleNames.includes(unitName)) moduleNames.push(unitName);
+        selectedPageModuleNames.set(String(detail.page_id), unitName);
+        for (const id of links.fileIds) {
+          selectedModuleFileIds.add(String(id));
+          selectedFileModuleNames.set(String(id), unitName);
+        }
+        for (const id of links.assignmentIds) {
+          selectedModuleAssignmentIds.add(String(id));
+          selectedAssignmentModuleNames.set(String(id), unitName);
+        }
+
+        const sourceUrl = `https://${canvas_domain}/courses/${canvasCourseId}/pages/${encodeURIComponent(detail.url)}`;
+        for (const image of links.images) {
+          homepageImageJobs.push({
+            url: image.url,
+            label: `${unitName} — ${detail.title}${image.alt ? ` — ${image.alt}` : ""}`,
+            moduleName: unitName,
+            sourceUrl,
+          });
+        }
+        for (const url of links.externalUrls) {
+          googleMaterialJobs.push({ url, moduleName: unitName, sourceUrl });
+        }
+
+        const plain = htmlToPlainText(detail.body) ?? "";
+        if (
+          plain.trim().length >= 30 &&
+          !syncedPageSourceIds.has(String(detail.page_id))
+        ) {
+          contentItems.push({
+            id: `canvas_home_page_${canvasCourseId}_${detail.page_id}`,
+            courseId,
+            canvasCourseId,
+            sourceType: "canvas_page",
+            type: "canvas_page",
+            title: detail.title,
+            bodyText: plain,
+            textContent: plain,
+            updatedAt: detail.updated_at ?? new Date().toISOString(),
+            linkedFromModule: true,
+            linkedFrom: frontPage?.url ?? null,
+            sourceUrl,
+            moduleName: unitName,
+            metadata: {
+              sourceFileId: `canvas_page_${canvasCourseId}_${detail.page_id}`,
+              homepageUnit: true,
+              depth: pageResult.depth,
+            },
+          });
+        }
+      }
+
+      // Assignment descriptions frequently contain the only worked examples
+      // or homework screenshots for a homepage-defined math unit.
+      for (const assignment of liveAssignments) {
+        const unitName = selectedAssignmentModuleNames.get(String(assignment.id));
+        if (!unitName || !assignment.description) continue;
+        const links = extractCanvasHtmlResourceLinks({
+          html: assignment.description,
+          courseId: canvasCourseId,
+          domain: canvas_domain,
+        });
+        const sourceUrl = assignment.html_url;
+        for (const id of links.fileIds) {
+          selectedModuleFileIds.add(String(id));
+          selectedFileModuleNames.set(String(id), unitName);
+        }
+        for (const image of links.images) {
+          homepageImageJobs.push({
+            url: image.url,
+            label: `${unitName} — ${assignment.name}${image.alt ? ` — ${image.alt}` : ""}`,
+            moduleName: unitName,
+            sourceUrl,
+          });
+        }
+        for (const url of links.externalUrls) {
+          googleMaterialJobs.push({ url, moduleName: unitName, sourceUrl });
+        }
+      }
+
+      const seenGoogleUrls = new Set<string>();
+      const uniqueGoogleJobs = googleMaterialJobs
+        .filter((job) => {
+          const key = `${job.moduleName}\n${job.url}`;
+          if (seenGoogleUrls.has(key)) return false;
+          seenGoogleUrls.add(key);
+          return true;
+        })
+        .slice(0, 8);
+      const googleResults = await Promise.allSettled(
+        uniqueGoogleJobs.map((job) =>
+          extractFromGoogleLink({
+            url: job.url,
+            googleApiKey: process.env.GOOGLE_DRIVE_API_KEY,
+          })
+        )
+      );
+      for (let index = 0; index < googleResults.length; index++) {
+        const result = googleResults[index];
+        const job = uniqueGoogleJobs[index];
+        if (
+          result.status !== "fulfilled" ||
+          !result.value ||
+          result.value.trim().length < 50
+        ) {
+          continue;
+        }
+        contentItems.push({
+          id: `canvas_home_google_${index}_${canvasCourseId}`,
+          courseId,
+          canvasCourseId,
+          sourceType: "google_slide",
+          type: "google_slide",
+          title: `${job.moduleName} linked material`,
+          bodyText: result.value,
+          textContent: result.value,
+          linkedFromModule: true,
+          linkedFrom: job.sourceUrl,
+          sourceUrl: job.url,
+          moduleName: job.moduleName,
+          metadata: { homepageUnit: true },
+        });
+      }
+
+      for (const file of files) {
+        const fileId = String(file.id);
+        if (!selectedModuleFileIds.has(fileId)) continue;
+        const contentType = (file["content-type"] ?? file.content_type ?? "")
+          .split(";")[0]
+          .trim()
+          .toLowerCase();
+        if (!IMAGE_MEDIA_TYPES[contentType] || !file.url) continue;
+        const moduleName = selectedFileModuleNames.get(fileId);
+        if (!moduleName) continue;
+        homepageImageJobs.push({
+          url: file.url,
+          label: `${moduleName} — ${file.display_name || file.filename}`,
+          moduleName,
+          sourceUrl: file.url,
+        });
+      }
+
+      const seenImageUrls = new Set<string>();
+      const uniqueImageJobs = homepageImageJobs
+        .filter((job) => {
+          if (seenImageUrls.has(job.url)) return false;
+          seenImageUrls.add(job.url);
+          return true;
+        })
+        .slice(0, MAX_VISION_IMAGES);
+      const downloadedImages = (
+        await Promise.allSettled(
+          uniqueImageJobs.map(async (job) => {
+            const downloaded = await downloadCanvasFile(
+              canvas_domain,
+              access_token,
+              job.url,
+              MAX_VISION_IMAGE_BYTES
+            );
+            const mediaType = IMAGE_MEDIA_TYPES[downloaded.contentType];
+            return mediaType
+              ? { ...job, buffer: downloaded.buffer, mediaType }
+              : null;
+          })
+        )
+      ).flatMap((result) =>
+        result.status === "fulfilled" && result.value ? [result.value] : []
+      );
+      if (downloadedImages.length > 0) {
+        try {
+          const ocrResults = await extractTextFromImages(
+            downloadedImages.map((image) => ({
+              buffer: image.buffer,
+              mediaType: image.mediaType,
+              label: image.label,
+            })),
+            `${course.name ?? "Canvas course"} selected unit notes and homework`
+          );
+          for (const result of ocrResults) {
+            const image = downloadedImages[result.index];
+            if (!image || result.extractedText.trim().length < 20) continue;
+            contentItems.push({
+              id: `canvas_home_image_${canvasCourseId}_${result.index}`,
+              courseId,
+              canvasCourseId,
+              sourceType: "image",
+              type: "image",
+              title: image.label,
+              bodyText: result.extractedText,
+              textContent: result.extractedText,
+              linkedFromModule: true,
+              linkedFrom: image.sourceUrl,
+              sourceUrl: image.url,
+              moduleName: image.moduleName,
+              metadata: { homepageUnit: true, visionExtracted: true },
+            });
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Vision extraction failed.";
+          warnings.push(`Embedded images: ${message}`);
+        }
+      }
+
       // Reuse already-synced page/file text without losing the synthetic unit
       // label. Current sync IDs include the Canvas course ID before the final
       // resource ID, while older rows may contain only the resource ID.
@@ -528,9 +926,15 @@ export async function canvasDeepFetch(params: {
       // broad parent module only for the items that child owns.
       const { pages: availablePages, pageToModule } =
         buildModuleAwarePageInventory(
-          pages,
+          [
+            ...pages,
+            ...crawledHomepagePages.map(({ detail }) => detail),
+          ],
           [...moduleItemsResults, ...selectedModuleResults]
         );
+      for (const { detail, unitName } of crawledHomepagePages) {
+        pageToModule.set(detail.url, unitName);
+      }
 
       // Synced assignments are loaded before module membership is known. Tag
       // them now so an exact module selection does not discard their content.
@@ -549,8 +953,8 @@ export async function canvasDeepFetch(params: {
       // ── 2b: Score modules against topic ────────────────────────────────
       // Exact unit selection wins over fuzzy topic matching. This is crucial
       // when multiple units share the same broad Canvas parent module.
-      const highMatchModules = selectedModuleResults.length > 0
-        ? new Set(selectedModuleResults.map(({ module }) => module.name))
+      const highMatchModules = hasExactUnitSelection
+        ? new Set(selectedStructureNames)
         : new Set(
             modules
               .filter((module) => moduleTopicScore(module.name, topicWords) >= 0.3)
@@ -563,10 +967,11 @@ export async function canvasDeepFetch(params: {
       // All pages not already fully synced to DB are eligible
 
       const pagesByPriority: Array<{ page: (typeof availablePages)[number]; moduleName: string | null }> = [];
-      const seenPageUrls = new Set<string>();
+      const seenPageUrls = new Set<string>(selectedHomepagePageSlugs);
 
       // Priority 1: module-matched pages (ALL of them, regardless of title)
       for (const page of availablePages) {
+        if (seenPageUrls.has(page.url)) continue;
         const modName = pageToModule.get(page.url) ?? null;
         if (modName && highMatchModules.has(modName)) {
           pagesByPriority.push({ page, moduleName: modName });
@@ -574,7 +979,7 @@ export async function canvasDeepFetch(params: {
         }
       }
 
-      if (selectedModuleResults.length === 0) {
+      if (!hasExactUnitSelection) {
         // Priority 2: remaining pages with title keyword match
         const remaining = availablePages.filter((page) => !seenPageUrls.has(page.url));
         const titleScored = remaining
@@ -607,7 +1012,7 @@ export async function canvasDeepFetch(params: {
           const alreadySynced = syncedPageSourceIds.has(String(page.page_id));
           // A selected unit page is still refreshed so linked files and
           // assignments can be discovered, but its duplicate text is not kept.
-          if (alreadySynced && selectedModuleResults.length === 0) return null;
+          if (alreadySynced && !hasExactUnitSelection) return null;
           try {
             const body = await fetchCanvasPageBody(
               canvas_domain,
@@ -714,7 +1119,7 @@ export async function canvasDeepFetch(params: {
         if (!fileType) return false; // skip unsupported types
         // Match either topic words or high-value study terms
         return selectedModuleFileIds.has(String(f.id)) ||
-          (selectedModuleResults.length === 0 && (
+          (!hasExactUnitSelection && (
             (topicWords.length > 0 && topicFilePattern.test(name)) ||
             HIGH_VALUE_FILE_TERMS.test(name)
           ));

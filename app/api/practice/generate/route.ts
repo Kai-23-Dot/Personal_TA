@@ -22,6 +22,7 @@ const practiceUnitSchema = z.object({
   assignmentIds: z.array(z.string().uuid()).max(100),
   noteIds: z.array(z.string().uuid()).max(100),
   moduleItemIds: z.array(z.number().int().positive()).max(500).optional().default([]),
+  pageSlugs: z.array(z.string().trim().min(1).max(512)).max(50).optional().default([]),
 }).strict();
 const generatePracticeSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -162,6 +163,7 @@ export async function POST(req: Request) {
             assignmentIds: unitAssignmentIds ?? [],
             noteIds: unitNoteIds ?? [],
             moduleItemIds: [],
+            pageSlugs: [],
           }]
         : []
     );
@@ -245,7 +247,7 @@ export async function POST(req: Request) {
     const shouldRetrieveCanvas =
       selectedCanvasUnits.length > 0 || sourceBlocks.length === 0;
     if (shouldRetrieveCanvas) {
-      const retrieval = await canvasDeepFetch({
+      const retrieval = await runWithUsageContext(user.id, () => canvasDeepFetch({
         userId: user.id,
         courseId,
         topic,
@@ -254,18 +256,19 @@ export async function POST(req: Request) {
           .filter((id): id is number => id !== null),
         moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
         unitScopes: selectedCanvasUnits.flatMap((unit) =>
-          unit.moduleId !== null && unit.moduleItemIds.length > 0
+          (unit.moduleId !== null && unit.moduleItemIds.length > 0) || unit.pageSlugs.length > 0
             ? [{
                 moduleId: unit.moduleId,
                 unitName: unit.moduleName,
                 moduleItemIds: unit.moduleItemIds,
+                pageSlugs: unit.pageSlugs,
               }]
             : []
         ),
         limit: lowTokenMode
           ? 8
           : Math.min(24, Math.max(12, selectedCanvasUnits.length * 4)),
-      });
+      }));
 
       const availableModuleNames = new Set(
         retrieval.moduleNames.map((name) => name.trim().toLowerCase())
