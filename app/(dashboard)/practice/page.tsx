@@ -61,6 +61,7 @@ type CourseModule = {
   powerpointCount: number;
   assignmentIds: string[];
   noteIds: string[];
+  moduleItemIds: number[];
 };
 
 type NoteListItem = {
@@ -240,6 +241,7 @@ export default function PracticePage() {
         source: selectedModule.source,
         assignmentIds: selectedModule.assignmentIds,
         noteIds: selectedModule.noteIds,
+        moduleItemIds: selectedModule.moduleItemIds ?? [],
       }));
 
       if (mode === "flashcards") {

@@ -22,6 +22,7 @@ const flashcardUnitSchema = z.object({
   source: z.enum(["canvas", "generated"]),
   assignmentIds: z.array(z.string().uuid()).max(100),
   noteIds: z.array(z.string().uuid()).max(100),
+  moduleItemIds: z.array(z.number().int().positive()).max(500).optional().default([]),
 }).strict();
 
 /**

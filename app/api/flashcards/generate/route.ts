@@ -167,6 +167,15 @@ export async function POST(req: Request) {
           .map((unit) => unit.moduleId)
           .filter((id): id is number => id !== null),
         moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
+        unitScopes: selectedCanvasUnits.flatMap((unit) =>
+          unit.moduleId !== null && unit.moduleItemIds.length > 0
+            ? [{
+                moduleId: unit.moduleId,
+                unitName: unit.moduleName,
+                moduleItemIds: unit.moduleItemIds,
+              }]
+            : []
+        ),
         limit: Math.min(24, Math.max(10, selectedCanvasUnits.length * 4)),
       });
 
