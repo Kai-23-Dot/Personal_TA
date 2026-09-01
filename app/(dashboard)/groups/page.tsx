@@ -11,7 +11,6 @@ import { Progress } from "@/frontend/components/ui/progress";
 import { CreateGroupForm } from "@/frontend/components/groups/create-group-form";
 import { HealthBadge, type HealthLike } from "@/frontend/components/groups/health-badge";
 import { CheckinButton } from "@/frontend/components/groups/checkin-button";
-import { StatusTag, WorkspacePage, WorkspaceSectionHeader, WorkspaceSurface, WorkspaceToolbar } from "@/frontend/components/workspace/workspace-primitives";
 
 type GoalStatus = "no_goal" | "active" | "completed" | "ended_incomplete";
 
@@ -179,14 +178,14 @@ export default function GroupsPage() {
   }
 
   return (
-    <WorkspacePage wide>
+    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6">
 
       <PageHero
         className="mb-6"
         icon={Users}
-        badgeLabel="Community"
+        badgeLabel="Collaboration"
         title="Study groups"
-        description="Coordinate real study goals, check-ins, meetings, and shared progress with classmates."
+        description="Collaborate with classmates. Share an invite code to let them join your group."
         action={
           <>
             <Button
@@ -209,7 +208,7 @@ export default function GroupsPage() {
 
       {/* Join form */}
       {showJoin && (
-        <form onSubmit={handleJoin} className="mt-4 mb-5 space-y-3 rounded-lg border border-border bg-card p-4">
+        <form onSubmit={handleJoin} className="mt-4 mb-6 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-white">Join with invite code</p>
             <button type="button" onClick={() => { setShowJoin(false); setJoinError(null); setJoinSuccess(null); }} className="text-slate-500 hover:text-white">
@@ -240,15 +239,48 @@ export default function GroupsPage() {
 
       {/* Filter row */}
       {!loading && groups.length > 0 && (
-        <WorkspaceToolbar className="mb-4 rounded-lg border border-border bg-card p-3">
-          <select aria-label="Filter by goal status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="h-11 rounded-md border border-input bg-card px-3 text-sm sm:h-10">{STATUS_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label} goals</option>)}</select>
-          <select aria-label="Filter by group health" value={healthFilter} onChange={(event) => setHealthFilter(event.target.value as typeof healthFilter)} className="h-11 rounded-md border border-input bg-card px-3 text-sm sm:h-10">{HEALTH_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}</select>
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setStatusFilter(f.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
+                  statusFilter === f.value
+                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
+                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden h-4 w-px bg-white/10 sm:block" />
+          <div className="flex flex-wrap gap-1.5">
+            {HEALTH_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setHealthFilter(f.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
+                  healthFilter === f.value
+                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
+                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           {courseOptions.length > 0 && (
             <select
               aria-label="Filter by course"
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
-              className="h-11 rounded-md border border-input bg-card px-3 text-sm sm:ml-auto sm:h-10"
+              className="ml-auto h-8 rounded-full border border-white/10 bg-white/5 px-3 text-xs text-slate-300 outline-none transition-colors duration-150 hover:bg-white/10"
             >
               <option value="all">All courses</option>
               {courseOptions.map((c) => (
@@ -256,14 +288,14 @@ export default function GroupsPage() {
               ))}
             </select>
           )}
-        </WorkspaceToolbar>
+        </div>
       )}
 
       {/* Group list */}
       {loading ? (
-        <div className="space-y-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="skeleton-shimmer h-20 rounded-lg" />
+            <div key={i} className="skeleton-shimmer h-64 rounded-2xl" />
           ))}
         </div>
       ) : groups.length > 0 && filteredGroups.length === 0 ? (
@@ -280,7 +312,7 @@ export default function GroupsPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-24 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-surface-2">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
             <Users className="h-6 w-6 text-slate-500" />
           </div>
           <p className="text-base font-medium text-white">No study groups yet</p>
@@ -303,21 +335,88 @@ export default function GroupsPage() {
           </div>
         </div>
       ) : (
-        <WorkspaceSurface>
-          <WorkspaceSectionHeader title="My groups" description={`${filteredGroups.length} group${filteredGroups.length === 1 ? "" : "s"} in this view`} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredGroups.map((group) => (
-            <article key={group.id} className="group grid gap-3 border-b border-border px-4 py-3 last:border-b-0 lg:grid-cols-[2.75rem_minmax(14rem,1fr)_10rem_9rem_auto] lg:items-center">
-              <button type="button" onClick={() => router.push(`/groups/${group.id}`)} aria-label={`Open ${group.name}`} className="hidden h-10 w-10 place-items-center rounded-md border border-primary/20 bg-primary/10 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:grid">{group.name.slice(0, 2).toUpperCase()}</button>
-              <button type="button" onClick={() => router.push(`/groups/${group.id}`)} className="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="flex flex-wrap items-center gap-2"><span className="truncate text-sm font-semibold">{group.name}</span>{group.my_role === "owner" ? <StatusTag tone="warning"><Crown className="h-3 w-3" />Owner</StatusTag> : null}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{courseName(group.course) ?? "No course linked"}{group.goal ? ` · ${group.goal}` : group.description ? ` · ${group.description}` : ""}</span>{group.goal && group.goal_status !== "completed" ? <Progress value={group.progress_pct} className="mt-2 h-1.5 max-w-sm" /> : null}</button>
-              <div className="flex items-center gap-2 lg:block"><HealthBadge health={group.health} />{(() => { const countdown = goalCountdown(group); return countdown ? <p className={cn("mt-1 text-xs", countdown.ended ? "text-danger" : "text-muted-foreground")}>{countdown.label}</p> : null; })()}</div>
-              <div className="text-xs text-muted-foreground"><span className="block">{group.member_count}/{group.max_members} members</span><span className="mt-1 block font-mono tracking-wider">{group.invite_code}</span></div>
-              <div className="flex flex-wrap items-center gap-1 lg:justify-end">
-                {group.goal_status === "active" ? <CheckinButton groupId={group.id} checkedIn={group.checked_in_today} size="sm" onCheckedIn={({ health }) => applyCheckinResult(group.id, health)} /> : null}
+            <div
+              key={group.id}
+              onClick={() => router.push(`/groups/${group.id}`)}
+              className="group relative cursor-pointer rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:border-sky-400/25 hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]"
+            >
+              {/* Avatar + health + member count */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-300/25 bg-sky-400/10 text-sm font-semibold text-sky-100 select-none">
+                  {group.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <HealthBadge health={group.health} />
+                  {group.my_role === "owner" && (
+                    <span className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 text-xs text-amber-300">
+                      <Crown className="h-2.5 w-2.5" /> Owner
+                    </span>
+                  )}
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
+                    {group.member_count}/{group.max_members}
+                  </span>
+                </div>
+              </div>
+
+              <h2 className="mt-4 text-lg font-semibold text-white">{group.name}</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {courseName(group.course) ?? "No course linked"}
+              </p>
+
+              {/* Goal + countdown + progress */}
+              {group.goal ? (
+                <div className="mt-2 space-y-2">
+                  <p className="flex items-center gap-1.5 text-sm text-slate-400 line-clamp-1">
+                    <Target className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
+                    <span className="truncate">{group.goal}</span>
+                  </p>
+                  {(() => {
+                    const countdown = goalCountdown(group);
+                    return countdown ? (
+                      <p className={cn("text-xs font-medium", countdown.ended ? "text-rose-400" : "text-slate-500")}>
+                        {countdown.label}
+                      </p>
+                    ) : null;
+                  })()}
+                  {group.goal_status !== "completed" && (
+                    <Progress value={group.progress_pct} className="h-1.5" />
+                  )}
+                </div>
+              ) : (
+                group.description && (
+                  <p className="mt-2 text-sm text-slate-400 line-clamp-2">{group.description}</p>
+                )
+              )}
+
+              {/* Check-in — one tap, feeds the health signal */}
+              {group.goal_status === "active" && (
+                <div className="mt-3">
+                  <CheckinButton
+                    groupId={group.id}
+                    checkedIn={group.checked_in_today}
+                    size="sm"
+                    onCheckedIn={({ health }) => applyCheckinResult(group.id, health)}
+                  />
+                </div>
+              )}
+
+              {/* Invite code row */}
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5">
+                  <span className="text-[10px] text-slate-600 uppercase tracking-wider">Code</span>
+                  <span className="font-mono text-xs font-semibold tracking-widest text-slate-200">
+                    {group.invite_code}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
                   {/* Copy invite code */}
                   <button
                     onClick={(e) => copyCode(group, e)}
                     title="Copy invite code"
-                    className="flex min-h-10 items-center gap-1 rounded-md px-2.5 text-xs text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition hover:bg-white/8"
                   >
                     {copiedId === group.id
                       ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Copied</span></>
@@ -328,15 +427,16 @@ export default function GroupsPage() {
                   {/* Leave / Delete */}
                   <button
                     onClick={(e) => handleLeaveOrDelete(group, e)}
-                    className="min-h-10 rounded-md px-2.5 text-xs text-muted-foreground opacity-0 transition hover:bg-danger/10 hover:text-danger focus:opacity-100 group-hover:opacity-100"
+                    className="rounded-lg px-2.5 py-1.5 text-xs text-slate-600 opacity-0 transition hover:bg-rose-500/15 hover:text-rose-400 group-hover:opacity-100"
                   >
                     {group.my_role === "owner" ? "Delete" : "Leave"}
                   </button>
+                </div>
               </div>
-            </article>
+            </div>
           ))}
-        </WorkspaceSurface>
+        </div>
       )}
-    </WorkspacePage>
+    </div>
   );
 }

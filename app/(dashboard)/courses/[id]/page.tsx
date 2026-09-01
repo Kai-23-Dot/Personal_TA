@@ -1,21 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { format, parseISO } from "date-fns";
-import { ArrowRight, BookOpen, CalendarDays, FileText, GraduationCap, Layers3, TrendingUp } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, FileText, GraduationCap } from "lucide-react";
 import { createClient } from "@/backend/supabase/server";
-import { Button } from "@/frontend/components/ui/button";
-import {
-  StatusTag,
-  WorkspacePage,
-  WorkspacePageHeader,
-  WorkspaceSectionHeader,
-  WorkspaceSurface,
-} from "@/frontend/components/workspace/workspace-primitives";
+import { format, parseISO } from "date-fns";
 
 type Params = { id: string };
-type AssignmentRow = { id: string; title: string; due_date: string | null; assignment_type: string | null; is_completed: boolean };
-type NoteRow = { id: string; title: string | null; file_name: string | null; unit_name: string | null; updated_at: string };
-type GradeRow = { points_earned: number | null; points_possible: number | null };
+
+function initialsFor(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 3).map((p) => p[0]).join("").toUpperCase();
+}
 
 export default async function CourseDetailPage({ params }: { params: Promise<Params> }) {
   const { id } = await params;
@@ -23,79 +16,146 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const [{ data: course }, { data: assignments }, { data: notes }, { data: grades }] = await Promise.all([
-    supabase.from("courses").select("id, name, platform, teacher_name, section, color, updated_at, academic_year, semester, is_active").eq("id", id).eq("user_id", user.id).maybeSingle(),
-    supabase.from("assignments").select("id, title, due_date, assignment_type, is_completed").eq("course_id", id).eq("user_id", user.id).order("due_date", { ascending: true, nullsFirst: false }),
-    supabase.from("notes").select("id, title, file_name, unit_name, updated_at").eq("course_id", id).eq("user_id", user.id).order("updated_at", { ascending: false }),
-    supabase.from("grade_events").select("points_earned, points_possible").eq("course_id", id).eq("user_id", user.id),
+  const [{ data: course }, { data: assignments }] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("id, name, platform, teacher_name, section, color, updated_at, platform_id")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("assignments")
+      .select("id, title, due_date, assignment_type, is_completed, description")
+      .eq("course_id", id)
+      .eq("user_id", user.id)
+      .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
+
   if (!course) notFound();
 
   const now = new Date();
-  const upcoming = ((assignments ?? []) as AssignmentRow[]).filter((assignment) => !assignment.is_completed && assignment.due_date && new Date(assignment.due_date) >= now);
-  const completedCount = ((assignments ?? []) as AssignmentRow[]).filter((assignment) => assignment.is_completed).length;
-  const gradeTotal = ((grades ?? []) as GradeRow[]).reduce((total, grade) => {
-    if (grade.points_earned !== null && grade.points_possible !== null && grade.points_possible > 0) {
-      total.earned += Number(grade.points_earned);
-      total.possible += Number(grade.points_possible);
-    }
-    return total;
-  }, { earned: 0, possible: 0 });
-  const gradePercent = gradeTotal.possible > 0 ? Math.round((gradeTotal.earned / gradeTotal.possible) * 1000) / 10 : null;
-  const term = [course.semester, course.academic_year].filter(Boolean).join(" · ") || "Current term";
-
-  const courseLinks = [
-    { label: "Overview", href: `/courses/${course.id}`, icon: BookOpen },
-    { label: "Assignments", href: `/assignments?course_id=${course.id}`, icon: CalendarDays },
-    { label: "Materials & notes", href: `/notes?course_id=${course.id}`, icon: FileText },
-    { label: "Practice", href: `/practice?course_id=${course.id}`, icon: Layers3 },
-    { label: "Grades", href: "/grades", icon: TrendingUp },
-  ];
+  const upcoming = (assignments ?? []).filter((a) => !a.is_completed && a.due_date && new Date(a.due_date) >= now);
+  const completed = (assignments ?? []).filter((a) => a.is_completed);
+  const noDueDate = (assignments ?? []).filter((a) => !a.due_date && !a.is_completed);
 
   return (
-    <WorkspacePage>
-      <WorkspacePageHeader
-        icon={GraduationCap}
-        breadcrumbs={[{ label: "Courses", href: "/courses" }, { label: course.name }]}
-        eyebrow={term}
-        title={course.name}
-        description={[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course workspace"}
-        meta={<><StatusTag tone={course.is_active ? "success" : "neutral"}>{course.is_active ? "Active" : "Archived"}</StatusTag><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ backgroundColor: course.color ?? "#83b9ff" }} />Updated {new Date(course.updated_at).toLocaleDateString()}</span></>}
-        action={<Button asChild className="h-11 sm:h-10"><Link href={`/practice?course_id=${course.id}`}>Start practice</Link></Button>}
-      />
+    <div className="mx-auto max-w-4xl px-4 pb-20 pt-6">
 
-      <nav aria-label={`${course.name} views`} className="mt-4 flex gap-1 overflow-x-auto border-b border-border pb-2">
-        {courseLinks.map(({ label, href, icon: Icon }, index) => <Link key={label} href={href} aria-current={index === 0 ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9 ${index === 0 ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}><Icon className="h-4 w-4" />{label}</Link>)}
-      </nav>
+      {/* Back */}
+      <Link href="/courses" className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-white">
+        <ArrowLeft className="h-4 w-4" /> All courses
+      </Link>
 
-      <div className="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <WorkspaceSurface>
-          <WorkspaceSectionHeader title="Next assignments" description="The next actions in this course" action={<Link href={`/assignments?course_id=${course.id}`} className="text-xs font-medium text-primary hover:underline">View all</Link>} />
-          {upcoming.length === 0 ? (
-            <div className="px-5 py-10 text-center"><CalendarDays className="mx-auto h-5 w-5 text-muted-foreground" /><p className="mt-2 text-sm font-medium">No upcoming assignments</p><p className="mt-1 text-xs text-muted-foreground">This course has no future deadlines in Smartlearn.</p></div>
-          ) : upcoming.slice(0, 6).map((assignment) => {
-            const due = parseISO(assignment.due_date as string);
-            const urgent = due.getTime() - now.getTime() < 48 * 3_600_000;
-            return <Link key={assignment.id} href={`/assignments?assignmentId=${encodeURIComponent(assignment.id)}`} className="group grid min-h-16 grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><span className={`grid h-10 w-10 place-items-center rounded-md text-center ${urgent ? "bg-warning/10 text-warning" : "bg-surface-2 text-muted-foreground"}`}><span><span className="block text-[8px] font-semibold uppercase">{format(due, "MMM")}</span><span className="block text-sm font-semibold leading-none">{format(due, "d")}</span></span></span><span className="min-w-0"><span className="block truncate text-sm font-medium text-foreground">{assignment.title}</span><span className="mt-0.5 block text-xs capitalize text-muted-foreground">{assignment.assignment_type ?? "Assignment"} · {format(due, "p")}</span></span><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></Link>;
-          })}
-        </WorkspaceSurface>
+      {/* Hero */}
+      <div className="mb-8 rounded-3xl border border-white/10 bg-[rgba(9,12,24,0.82)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur">
+        <div className="flex items-start gap-5">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-base font-bold text-[#05110b]"
+            style={{ backgroundColor: course.color ?? "#8ab4ff" }}
+          >
+            {initialsFor(course.name)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">{course.name}</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Updated {new Date(course.updated_at).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
 
-        <WorkspaceSurface>
-          <WorkspaceSectionHeader title="Course overview" />
-          <dl className="divide-y divide-border px-4">
-            <div className="flex items-center justify-between gap-4 py-3"><dt className="text-xs text-muted-foreground">Upcoming</dt><dd className="text-sm font-semibold tabular-nums">{upcoming.length}</dd></div>
-            <div className="flex items-center justify-between gap-4 py-3"><dt className="text-xs text-muted-foreground">Completed</dt><dd className="text-sm font-semibold tabular-nums">{completedCount}</dd></div>
-            <div className="flex items-center justify-between gap-4 py-3"><dt className="text-xs text-muted-foreground">Indexed materials</dt><dd className="text-sm font-semibold tabular-nums">{(notes ?? []).length}</dd></div>
-            <div className="flex items-center justify-between gap-4 py-3"><dt className="text-xs text-muted-foreground">Current grade</dt><dd className="text-sm font-semibold tabular-nums">{gradePercent === null ? "Unavailable" : `${gradePercent}%`}</dd></div>
-          </dl>
-          {gradePercent === null ? <p className="border-t border-border px-4 py-3 text-xs leading-5 text-muted-foreground">Canvas has not provided enough graded points for a reliable current grade.</p> : null}
-        </WorkspaceSurface>
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          {[
+            { label: "Upcoming", value: upcoming.length, icon: CalendarDays },
+            { label: "Completed", value: completed.length, icon: GraduationCap },
+            { label: "Total", value: (assignments ?? []).length, icon: FileText },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="rounded-xl border border-white/8 bg-white/3 p-3 text-center">
+              <Icon className="mx-auto mb-1 h-4 w-4 text-slate-500" />
+              <p className="text-xl font-bold text-white">{value}</p>
+              <p className="text-xs text-slate-500">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link href={`/assignments?course_id=${course.id}`} className="btn btn-primary">
+            View assignments
+          </Link>
+          <Link href={`/practice?course_id=${course.id}`} className="btn btn-secondary">
+            Practice test
+          </Link>
+          <Link href={`/notes?course_id=${course.id}`} className="btn btn-secondary">
+            Study guide
+          </Link>
+        </div>
       </div>
 
-      <WorkspaceSurface className="mt-4">
-        <WorkspaceSectionHeader title="Recent materials" description="Recently updated notes and imported content" action={<Link href={`/notes?course_id=${course.id}`} className="text-xs font-medium text-primary hover:underline">Open library</Link>} />
-        {(notes ?? []).length === 0 ? <div className="px-5 py-8 text-center text-sm text-muted-foreground">No indexed materials for this course yet.</div> : ((notes ?? []) as NoteRow[]).slice(0, 5).map((note) => <Link key={note.id} href={`/notes?noteId=${encodeURIComponent(note.id)}`} className="group flex min-h-14 items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{note.title || note.file_name || "Untitled material"}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{note.unit_name || "Course material"} · Updated {new Date(note.updated_at).toLocaleDateString()}</span></span><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></Link>)}
-      </WorkspaceSurface>
-    </WorkspacePage>
+      {/* Upcoming assignments */}
+      {upcoming.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-sky-300">
+            Upcoming · {upcoming.length}
+          </h2>
+          <div className="space-y-2">
+            {upcoming.map((a) => {
+              const due = a.due_date ? parseISO(a.due_date) : null;
+              const urgent = due && due.getTime() - Date.now() < 48 * 3_600_000;
+              return (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${
+                    urgent ? "border-orange-400/25 bg-orange-500/8" : "border-white/8 bg-white/3"
+                  }`}
+                >
+                  {due && (
+                    <div className={`flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 text-center w-12 shrink-0 ${urgent ? "bg-orange-500/15 text-orange-300" : "bg-sky-500/10 text-sky-300"}`}>
+                      <span className="text-[9px] font-bold uppercase leading-none tracking-wider">{format(due, "MMM")}</span>
+                      <span className="text-base font-bold leading-snug">{format(due, "d")}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{a.title}</p>
+                    {a.assignment_type && (
+                      <p className="text-xs text-slate-500 capitalize">{a.assignment_type}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* No due date */}
+      {noDueDate.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+            No due date · {noDueDate.length}
+          </h2>
+          <div className="space-y-2">
+            {noDueDate.map((a) => (
+              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/3 px-4 py-3">
+                <BookOpen className="h-4 w-4 shrink-0 text-slate-600" />
+                <p className="text-sm text-slate-300 truncate">{a.title}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Empty state */}
+      {(assignments ?? []).length === 0 && (
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/2 p-10 text-center">
+          <BookOpen className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <p className="text-sm text-slate-400">No assignments synced for this course yet.</p>
+          <Link href="/dashboard" className="btn btn-secondary mt-4">Sync from dashboard</Link>
+        </div>
+      )}
+    </div>
   );
 }

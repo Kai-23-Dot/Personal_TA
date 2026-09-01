@@ -48,20 +48,4 @@ describe("flashcard generation input", () => {
       "Select a course or note to generate flashcards."
     );
   });
-
-  it("preserves exact Canvas item scope for a synthetic unit", () => {
-    const result = flashcardGenerationSchema.parse({
-      courseId,
-      units: [{
-        moduleId: 91,
-        moduleName: "Unit 2- Population and Migration",
-        source: "canvas",
-        assignmentIds: [],
-        noteIds: [],
-        moduleItemIds: [201, 202, 203],
-      }],
-    });
-
-    expect(result.units?.[0]?.moduleItemIds).toEqual([201, 202, 203]);
-  });
 });

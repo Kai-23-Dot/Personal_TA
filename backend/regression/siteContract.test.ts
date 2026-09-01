@@ -67,6 +67,7 @@ describe("website product-surface contract", () => {
   test("workspace navigation has no study-planner destination", () => {
     const nav = source("frontend/lib/nav-items.ts");
     expect(nav).not.toMatch(/href:\s*["']\/study["']/);
+    expect(nav).not.toMatch(/label:\s*["']Study["']/);
   });
 
   test("old study-planner URLs safely return users to the dashboard", () => {
@@ -87,30 +88,27 @@ describe("website product-surface contract", () => {
 
   test("dashboard uses a responsive Notion-style workspace with live account signals", () => {
     const dashboard = source("app/(dashboard)/dashboard/page.tsx");
-    const assignmentList = source("frontend/components/dashboard/today-assignment-list.tsx");
-    const panels = source("frontend/components/dashboard/today-panels.tsx");
-    expect(dashboard).toContain("<RecommendedNext");
-    expect(dashboard).toContain("<TodayAssignmentList");
-    expect(dashboard).toContain("<StudyOverview");
-    expect(dashboard).toContain("lg:grid-cols-[minmax(0,1fr)_19rem]");
-    expect(dashboard).toContain("dueThisWeek.length");
+    expect(dashboard).toContain("data-dashboard-command-center");
+    expect(dashboard).toContain("data-dashboard-notion-workspace");
+    expect(dashboard).toContain("data-dashboard-primary-action");
+    expect(dashboard).toContain("data-dashboard-deadline-database");
+    expect(dashboard).toContain("data-dashboard-course-database");
+    expect(dashboard).toContain("sm:grid-cols-2 xl:grid-cols-4");
+    expect(dashboard).toContain("xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]");
+    expect(dashboard).toContain("upcomingAssignments.length");
     expect(dashboard).toContain("hoursThisWeek");
-    expect(dashboard).toContain("notes.length");
-    expect(assignmentList).toContain("My assignments");
-    expect(assignmentList).toContain("This week");
-    expect(assignmentList).toContain("<SidePeek");
-    expect(panels).toContain("Recommended next");
+    expect(dashboard).toContain("notesCount");
+    expect(dashboard).toContain("courseDeadlines.length");
     expect(dashboard).not.toContain("blur-[90px]");
-    expect(dashboard).not.toContain("rounded-3xl");
+    expect(dashboard).not.toContain('aria-label="Breadcrumb"');
   });
 
   test("workspace shell uses flat document-style navigation", () => {
-    const shell = source("frontend/components/layout/WorkspaceShell.tsx");
+    const layout = source("app/(dashboard)/layout.tsx");
     const sidebar = source("frontend/components/layout/Sidebar.tsx");
     const header = source("frontend/components/layout/Header.tsx");
-    expect(shell).toContain("data-notion-workspace-shell");
-    expect(shell).toContain("md:pl-60");
-    expect(shell).toContain("md:pl-16");
+    expect(layout).toContain("data-notion-workspace-shell");
+    expect(layout).toContain("md:pl-60");
     expect(sidebar).toContain("fixed inset-y-0 left-0");
     expect(header).toContain("sticky top-0");
     expect(sidebar).not.toContain("rounded-3xl");

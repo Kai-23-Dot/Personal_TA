@@ -16,7 +16,7 @@ export default function SetupPlatformPage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl pb-16 pt-2 sm:pt-6">
-      <div className="overflow-hidden rounded-lg border border-border bg-card p-4 sm:p-6 lg:p-8">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-card/85 p-4 shadow-lg sm:p-6 lg:p-8">
           <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Connect {platformLabel}</h1>
           <p className="mb-5 mt-1 text-sm text-muted-foreground sm:mb-6">Bring your classes into Smartlearn.</p>
 

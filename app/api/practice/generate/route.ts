@@ -21,7 +21,6 @@ const practiceUnitSchema = z.object({
   source: z.enum(["canvas", "generated"]),
   assignmentIds: z.array(z.string().uuid()).max(100),
   noteIds: z.array(z.string().uuid()).max(100),
-  moduleItemIds: z.array(z.number().int().positive()).max(500).optional().default([]),
 }).strict();
 const generatePracticeSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -161,7 +160,6 @@ export async function POST(req: Request) {
             source: moduleSource,
             assignmentIds: unitAssignmentIds ?? [],
             noteIds: unitNoteIds ?? [],
-            moduleItemIds: [],
           }]
         : []
     );
@@ -253,15 +251,6 @@ export async function POST(req: Request) {
           .map((unit) => unit.moduleId)
           .filter((id): id is number => id !== null),
         moduleNames: selectedCanvasUnits.map((unit) => unit.moduleName),
-        unitScopes: selectedCanvasUnits.flatMap((unit) =>
-          unit.moduleId !== null && unit.moduleItemIds.length > 0
-            ? [{
-                moduleId: unit.moduleId,
-                unitName: unit.moduleName,
-                moduleItemIds: unit.moduleItemIds,
-              }]
-            : []
-        ),
         limit: lowTokenMode
           ? 8
           : Math.min(24, Math.max(12, selectedCanvasUnits.length * 4)),

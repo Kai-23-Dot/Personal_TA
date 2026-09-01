@@ -167,7 +167,7 @@ function PlanCard({
     <Card
       className={cn(
         "flex flex-col gap-4 p-7",
-        highlighted && "border-primary/45 bg-primary/5"
+        highlighted && "border-sky-400/40 shadow-[0_0_0_1px_rgba(56,189,248,0.15),0_20px_60px_rgba(56,189,248,0.08)]"
       )}
     >
       <div>

@@ -258,8 +258,6 @@ export interface CanvasModuleItem {
   module_id: number;
   title: string;
   position: number;
-  /** Canvas uses indentation to represent nested items inside a module. */
-  indent?: number;
   type: string;
   page_url?: string;
   external_url?: string;

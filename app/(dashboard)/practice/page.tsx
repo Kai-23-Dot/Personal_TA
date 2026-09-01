@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronRight, Dumbbell } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/frontend/components/ui/select";
-import { WorkspacePage, WorkspaceSectionHeader, WorkspaceSurface } from "@/frontend/components/workspace/workspace-primitives";
 
 /** Show an upgrade toast for a 402 LIMIT_REACHED response. Returns true if handled. */
 function handleLimitResponse(res: Response, data: { code?: string; error?: string }): boolean {
@@ -62,7 +61,6 @@ type CourseModule = {
   powerpointCount: number;
   assignmentIds: string[];
   noteIds: string[];
-  moduleItemIds: number[];
 };
 
 type NoteListItem = {
@@ -79,20 +77,8 @@ type ResumeEntry = {
   savedAt: string;
 };
 
-type PracticeHistoryEntry = {
-  id: string;
-  created_at: string;
-  topic: string;
-  difficulty: string;
-  question_count: number;
-  correct_count: number;
-  course?: { name: string; color: string | null } | null;
-};
-
 export default function PracticePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedCourseId = searchParams.get("course_id") ?? searchParams.get("courseId") ?? "";
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState<string>("");
   const [modules, setModules] = useState<CourseModule[]>([]);
@@ -110,7 +96,6 @@ export default function PracticePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resumable, setResumable] = useState<ResumeEntry[]>([]);
-  const [history, setHistory] = useState<PracticeHistoryEntry[]>([]);
 
   // Scan localStorage for saved practice sessions
   useEffect(() => {
@@ -137,15 +122,10 @@ export default function PracticePage() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      fetch("/api/courses").then((res) => res.ok ? res.json() : []),
-      fetch("/api/practice/history").then((res) => res.ok ? res.json() : []),
-    ])
-      .then(([courseData, historyData]) => {
-        if (mounted) {
-          setCourses(Array.isArray(courseData) ? courseData : []);
-          setHistory(Array.isArray(historyData) ? historyData : []);
-        }
+    fetch("/api/courses")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) setCourses(data ?? []);
       })
       .catch(() => {
         if (mounted) setCourses([]);
@@ -154,10 +134,6 @@ export default function PracticePage() {
       mounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (requestedCourseId) setCourseId(requestedCourseId);
-  }, [requestedCourseId]);
 
   useEffect(() => {
     let mounted = true;
@@ -264,7 +240,6 @@ export default function PracticePage() {
         source: selectedModule.source,
         assignmentIds: selectedModule.assignmentIds,
         noteIds: selectedModule.noteIds,
-        moduleItemIds: selectedModule.moduleItemIds ?? [],
       }));
 
       if (mode === "flashcards") {
@@ -325,12 +300,12 @@ export default function PracticePage() {
   }
 
   return (
-    <WorkspacePage className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
       <PageHero
         icon={Dumbbell}
-        badgeLabel="Study"
+        badgeLabel="Adaptive Testing"
         title="Practice"
-        description="Create source-grounded practice from a course unit, linked presentation, assignment, or note."
+        description="Generate an AI practice test scoped to a course, topic, assignment, or your own notes."
       />
 
       {resumable.length > 0 && (
@@ -340,7 +315,7 @@ export default function PracticePage() {
             {resumable.map((entry) => (
               <div
                 key={entry.sessionId}
-                className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface-1 px-5 py-3.5"
+                className="flex items-center justify-between gap-4 rounded-xl border border-sky-400/20 bg-[rgba(9,12,26,0.72)] px-5 py-3.5"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">{entry.topic}</p>
@@ -364,7 +339,7 @@ export default function PracticePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Create practice</CardTitle>
+          <CardTitle>Generate a practice test</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleGenerate}>
@@ -571,7 +546,6 @@ export default function PracticePage() {
                 </div>
               ) : null}
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="questions">Number of questions</Label>
               <Input
@@ -609,7 +583,6 @@ export default function PracticePage() {
                 </SelectContent>
               </Select>
             </div>
-            </div>
             <Button
               type="submit"
               disabled={
@@ -622,14 +595,6 @@ export default function PracticePage() {
           </form>
         </CardContent>
       </Card>
-
-      <WorkspaceSurface>
-        <WorkspaceSectionHeader title="Recent practice" description="Completed sessions from your active courses" />
-        {history.length === 0 ? <div className="px-5 py-10 text-center text-sm text-muted-foreground">Complete a practice session and it will appear here.</div> : history.slice(0, 8).map((entry) => {
-          const score = entry.question_count > 0 ? Math.round((entry.correct_count / entry.question_count) * 100) : null;
-          return <button key={entry.id} type="button" onClick={() => router.push(`/practice/session?sessionId=${encodeURIComponent(entry.id)}`)} className="group grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-border px-4 py-2.5 text-left last:border-b-0 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><span className="min-w-0"><span className="block truncate text-sm font-medium">{entry.topic}</span><span className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground"><span className="h-2 w-2 rounded-sm" style={{ backgroundColor: entry.course?.color ?? "#83b9ff" }} />{entry.course?.name ?? "Practice"} · {new Date(entry.created_at).toLocaleDateString()}</span></span><span className="text-xs font-medium text-muted-foreground">{score === null ? `${entry.question_count} questions` : `${score}%`}</span><ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></button>;
-        })}
-      </WorkspaceSurface>
-    </WorkspacePage>
+    </div>
   );
 }

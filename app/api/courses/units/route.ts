@@ -4,11 +4,19 @@ import { createClient } from "@/backend/supabase/server";
 import { fetchCanvasModuleItems, fetchCanvasModules } from "@/backend/lms/canvas";
 import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { buildGeneratedCourseUnits, type CourseUnitMaterial } from "@/backend/lms/courseUnits";
-import { buildCanvasCourseUnits } from "@/backend/canvas-intelligence/moduleScope";
 
 export const dynamic = "force-dynamic";
 
 const courseIdSchema = z.string().uuid();
+
+function isPowerPointItem(item: {
+  type?: string;
+  title?: string;
+  content_details?: { "content-type"?: string };
+}): boolean {
+  const description = `${item.title ?? ""} ${item.content_details?.["content-type"] ?? ""}`;
+  return item.type === "File" && /(?:\.pptx?|powerpoint|presentation)/i.test(description);
+}
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -66,10 +74,21 @@ export async function GET(req: Request) {
             })
           );
           const itemsByModule = new Map(itemResults.map((result) => [result.moduleId, result]));
-          const units = buildCanvasCourseUnits(modules.map((module) => ({
-            module,
-            items: itemsByModule.get(module.id)?.items ?? [],
-          })));
+          const units = [...modules]
+            .sort((left, right) => left.position - right.position)
+            .map((module) => {
+              const result = itemsByModule.get(module.id);
+              return {
+                id: `canvas:${module.id}`,
+                moduleId: module.id,
+                moduleName: module.name,
+                source: "canvas" as const,
+                itemCount: result && !result.failed ? result.items.length : module.items_count,
+                powerpointCount: result?.items.filter(isPowerPointItem).length ?? 0,
+                assignmentIds: [] as string[],
+                noteIds: [] as string[],
+              };
+            });
 
           return NextResponse.json(
             { units, generated: false, warnings },

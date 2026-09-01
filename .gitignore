@@ -30,7 +30,6 @@ supabase/.temp
 
 # Misc
 .DS_Store
-.codex/
 .freebuff/
 *.pem
 npm-debug.log*
