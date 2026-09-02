@@ -172,6 +172,69 @@ export async function extractTextFromImages(
   return parseBatchOCRResponse(text, boundedImages.length);
 }
 
+/**
+ * Read a scanned/image-based Canvas PDF with the vision model. This is used
+ * only when deterministic PDF text extraction yields no instructional text.
+ */
+export async function extractTextFromPdf(
+  pdfBuffer: Buffer,
+  filename: string,
+  context?: string
+): Promise<OCRResult> {
+  const { text } = await generateText({
+    model: visionModel,
+    system:
+      "You are a precise OCR system for school documents. Transcribe only what is visibly present in the supplied PDF. Preserve equations, worked steps, tables, diagrams, questions, and answer choices. Never solve, supplement, or summarize the material.",
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: `Read this Canvas course document${context ? ` for ${context}` : ""}. Return only JSON shaped as {"extracted_text":"faithful Markdown transcription","structured_content":"same transcription organized by page","confidence":"high|medium|low","warnings":[]}.`,
+        },
+        {
+          type: "file",
+          data: pdfBuffer,
+          mimeType: "application/pdf",
+          filename: filename.slice(0, 180) || "canvas-material.pdf",
+        },
+      ],
+    }],
+    maxTokens: 6000,
+  });
+
+  try {
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?\n?/i, "")
+      .replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleaned) as {
+      extracted_text?: unknown;
+      structured_content?: unknown;
+      confidence?: unknown;
+      warnings?: unknown;
+    };
+    const confidence = ["high", "medium", "low"].includes(String(parsed.confidence))
+      ? String(parsed.confidence) as OCRResult["confidence"]
+      : "medium";
+    return {
+      extractedText: String(parsed.extracted_text ?? "").trim(),
+      structuredContent: String(parsed.structured_content ?? parsed.extracted_text ?? "").trim(),
+      confidence,
+      warnings: Array.isArray(parsed.warnings)
+        ? parsed.warnings.map(String).slice(0, 20)
+        : [],
+    };
+  } catch {
+    return {
+      extractedText: text.trim(),
+      structuredContent: text.trim(),
+      confidence: "low",
+      warnings: ["Vision PDF response was not structured JSON."],
+    };
+  }
+}
+
 /** Identify unit/module labels embedded in graphical Canvas homepage tiles. */
 export async function extractUnitLabelsFromImages(
   images: readonly BatchOCRImage[]

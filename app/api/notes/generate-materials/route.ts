@@ -124,7 +124,7 @@ export async function POST(req: Request) {
           questionCount: 8,
           courseName,
           courseNotes: `[Source 0: ${note.title}]\n${note.content.slice(0, 14_000)}`,
-          sources: [{ idx: 0, title: note.title }],
+          sources: [{ idx: 0, title: note.title, content: note.content }],
         })
       );
         const { data: session, error: sessionError } = await supabase

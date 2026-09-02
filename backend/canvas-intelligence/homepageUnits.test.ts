@@ -93,6 +93,7 @@ describe("Canvas homepage unit discovery", () => {
         <a href="/courses/42/files/401/download">Worksheet</a>
         <a href="https://docs.google.com/presentation/d/abcdefghijk/view">Slides</a>
         <iframe src="https://drive.google.com/file/d/lmnopqrstuv/preview"></iframe>
+        <object data="https://school.instructure.com/api/v1/courses/42/files/402"></object>
         <a href="/courses/99/pages/wrong-course">Ignore</a>
         <img src="/courses/42/files/501/preview" alt="Worked example" width="900" height="600">
         <img src="/images/icon.png" alt="icon" width="24" height="24">
@@ -101,7 +102,7 @@ describe("Canvas homepage unit discovery", () => {
 
     expect(links.pageSlugs).toEqual(["unit-1a-notes"]);
     expect(links.assignmentIds).toEqual([301]);
-    expect(links.fileIds).toEqual([401]);
+    expect(links.fileIds).toEqual([401, 402, 501]);
     expect(links.externalUrls).toEqual([
       "https://docs.google.com/presentation/d/abcdefghijk/view",
       "https://drive.google.com/file/d/lmnopqrstuv/preview",
@@ -109,6 +110,7 @@ describe("Canvas homepage unit discovery", () => {
     expect(links.images).toEqual([{
       url: "https://school.instructure.com/courses/42/files/501/preview",
       alt: "Worked example",
+      fileId: 501,
     }]);
   });
 
@@ -120,6 +122,23 @@ describe("Canvas homepage unit discovery", () => {
     `, "school.instructure.com")).toEqual([{
       url: "https://school.instructure.com/courses/5/files/11/preview",
       alt: "Page one",
+      fileId: 11,
+    }]);
+  });
+
+  it("retains the Canvas file ID when an image src is an opaque preview URL", () => {
+    expect(extractCanvasImageSources(`
+      <img
+        src="/images/thumbnails/show/abc123"
+        data-api-endpoint="https://school.instructure.com/api/v1/courses/5/files/99"
+        alt="Polynomial notes"
+        width="900"
+        height="600"
+      >
+    `, "school.instructure.com")).toEqual([{
+      url: "https://school.instructure.com/images/thumbnails/show/abc123",
+      alt: "Polynomial notes",
+      fileId: 99,
     }]);
   });
 });

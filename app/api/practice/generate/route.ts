@@ -1,6 +1,6 @@
 import { createClient } from "@/backend/supabase/server";
 import { NextResponse } from "next/server";
-import { generateQuiz } from "@/backend/ai/generateQuiz";
+import { generateQuiz, QuizGroundingError } from "@/backend/ai/generateQuiz";
 import type { QuizSource } from "@/backend/ai/generateQuiz";
 import { canvasDeepFetch } from "@/backend/canvas-intelligence/canvasDeepFetch";
 import { v4 as uuidv4 } from "uuid";
@@ -11,6 +11,10 @@ import {
 } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
+import {
+  assessInstructionalContent,
+  hasEnoughInstructionalCoverage,
+} from "@/backend/practice/sourceGrounding";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -115,17 +119,20 @@ export async function POST(req: Request) {
 
     // Fetch course name (needed for AP detection and language detection)
     const quizSources: QuizSource[] = [];
-    const sourceBlocks: string[] = [];
+    let canvasVisionCandidates = 0;
+    let canvasVisionExtractions = 0;
     const addSource = (
       title: string,
       content: string,
-      metadata: Pick<QuizSource, "moduleName" | "sourceUrl"> = {}
+      metadata: Pick<
+        QuizSource,
+        "moduleName" | "sourceUrl" | "sourceType" | "visionExtracted"
+      > = {}
     ) => {
+      const normalizedContent = content.trim();
+      if (!normalizedContent) return;
       const idx = quizSources.length;
-      quizSources.push({ idx, title, ...metadata });
-      sourceBlocks.push(
-        `### [${idx}] ${title}${metadata.moduleName ? ` (${metadata.moduleName})` : ""}\n${content}`
-      );
+      quizSources.push({ idx, title, content: normalizedContent, ...metadata });
     };
 
     const { data: course, error: courseError } = await supabase
@@ -196,7 +203,7 @@ export async function POST(req: Request) {
       // Use client-selected specific notes (overrides auto-fetch)
       const { data: selectedNotes, error: notesError } = await supabase
         .from("notes")
-        .select("id, title, content")
+        .select("id, title, content, source_file_id")
         .eq("user_id", user.id)
         .eq("course_id", courseId)
         .in("id", requestedNoteIds)
@@ -206,10 +213,15 @@ export async function POST(req: Request) {
       }
       for (const note of selectedNotes ?? []) {
         const noteUnit = selectedUnits.find((unit) => unit.noteIds.includes(note.id));
+        const sourceType = note.source_file_id?.startsWith("canvas_page_")
+          ? "canvas_page"
+          : note.source_file_id?.startsWith("canvas_file_")
+            ? "canvas_file"
+            : "file";
         addSource(
           note.title,
           (note.content as string).slice(0, noteUnit ? selectedUnitChars : charsPerNote),
-          { moduleName: noteUnit?.moduleName }
+          { moduleName: noteUnit?.moduleName, sourceType }
         );
       }
     }
@@ -239,13 +251,16 @@ export async function POST(req: Request) {
             0,
             Math.min(selectedUnitChars, lowTokenMode ? 500 : 1600)
           ),
-          { moduleName: assignmentUnitName.get(assignment.id) ?? moduleName }
+          {
+            moduleName: assignmentUnitName.get(assignment.id) ?? moduleName,
+            sourceType: "assignment",
+          }
         );
       }
     }
 
     const shouldRetrieveCanvas =
-      selectedCanvasUnits.length > 0 || sourceBlocks.length === 0;
+      selectedCanvasUnits.length > 0 || quizSources.length === 0;
     if (shouldRetrieveCanvas) {
       const retrieval = await runWithUsageContext(user.id, () => canvasDeepFetch({
         userId: user.id,
@@ -269,6 +284,8 @@ export async function POST(req: Request) {
           ? 8
           : Math.min(24, Math.max(12, selectedCanvasUnits.length * 4)),
       }));
+      canvasVisionCandidates += retrieval.diagnostics.visionCandidates;
+      canvasVisionExtractions += retrieval.diagnostics.visionExtractions;
 
       const availableModuleNames = new Set(
         retrieval.moduleNames.map((name) => name.trim().toLowerCase())
@@ -318,6 +335,8 @@ export async function POST(req: Request) {
             {
               moduleName: result.chunk.moduleName,
               sourceUrl: result.chunk.sourceUrl,
+              sourceType: result.chunk.sourceType,
+              visionExtracted: result.chunk.metadata?.visionExtracted === true,
             }
           );
         }
@@ -341,7 +360,8 @@ export async function POST(req: Request) {
       if (assignment?.description) {
         addSource(
           `Selected Assignment: ${assignment.title}`,
-          assignment.description.slice(0, lowTokenMode ? 500 : 1200)
+          assignment.description.slice(0, lowTokenMode ? 500 : 1200),
+          { sourceType: "assignment" }
         );
       }
     }
@@ -350,18 +370,55 @@ export async function POST(req: Request) {
     if (pdfContext) {
       addSource(
         "Uploaded Material",
-        pdfContext.slice(0, lowTokenMode ? 1800 : 6000)
+        pdfContext.slice(0, lowTokenMode ? 1800 : 6000),
+        { sourceType: "pdf" }
       );
     }
-    const orderedSources = selectBalancedModuleSources(
-      quizSources.map((source, index) => ({
+    const assessedSources = quizSources.map((source) => ({
+      source,
+      assessment: assessInstructionalContent(source.content, {
+        title: source.title,
+        moduleName: source.moduleName,
+        sourceType: source.sourceType,
+        visionExtracted: source.visionExtracted,
+      }),
+    }));
+    const instructionalSources = assessedSources.filter(
+      ({ assessment }) => assessment.usable
+    );
+    const balancedSources = selectBalancedModuleSources(
+      instructionalSources.map(({ source, assessment }) => ({
         chunk: { moduleName: source.moduleName },
         source,
-        block: sourceBlocks[index],
+        assessment,
       })),
       selectedUnitNames,
-      quizSources.length
+      Math.min(
+        instructionalSources.length,
+        Math.max(selectedUnitNames.length, lowTokenMode ? 6 : 12)
+      )
     );
+    const materialBudget = lowTokenMode ? 4_000 : 11_500;
+    const perSourceBudget = Math.max(
+      350,
+      Math.floor(materialBudget / Math.max(1, balancedSources.length))
+    );
+    const orderedSources = balancedSources.map(({ chunk, source }) => {
+      const boundedSource = {
+        ...source,
+        content: (source.content ?? "").slice(0, perSourceBudget).trim(),
+      };
+      return {
+        chunk,
+        source: boundedSource,
+        assessment: assessInstructionalContent(boundedSource.content, {
+          title: boundedSource.title,
+          moduleName: boundedSource.moduleName,
+          sourceType: boundedSource.sourceType,
+          visionExtracted: boundedSource.visionExtracted,
+        }),
+      };
+    }).filter(({ assessment }) => assessment.usable);
     quizSources.splice(
       0,
       quizSources.length,
@@ -369,11 +426,15 @@ export async function POST(req: Request) {
     );
     const courseNotes = orderedSources.length > 0
       ? orderedSources
-          .map(({ block }, index) =>
-            block.replace(/^### \[\d+\]/, `### [${index}]`)
+          .map(({ source }, index) =>
+            `### [${index}] ${source.title}${source.moduleName ? ` (${source.moduleName})` : ""}\n${source.content}`
           )
           .join("\n\n---\n\n")
       : undefined;
+    const hasEnoughCoverage = hasEnoughInstructionalCoverage(
+      orderedSources.map(({ assessment }) => assessment),
+      Math.min(questionCount, lowTokenMode ? 12 : 20)
+    );
 
     // Fetch recent weak topics for adaptive targeting
     const { data: metrics } = await supabase
@@ -408,12 +469,17 @@ export async function POST(req: Request) {
     }
 
     // If we still have no course context, block generation to avoid off-topic content
-    if (!courseNotes) {
+    if (!courseNotes || !hasEnoughCoverage) {
+      const selectedUnitError = canvasVisionCandidates > 0 && canvasVisionExtractions === 0
+        ? "Smartlearn found images or scanned files in the selected Canvas unit, but Canvas did not return readable image bytes or vision OCR could not extract them. Confirm the files are published and visible to students, then try again."
+        : canvasVisionExtractions > 0
+          ? "Smartlearn read some Canvas images, but the selected unit still does not contain enough instructional detail for the requested number of grounded questions. Select fewer questions or add/publish more unit material."
+          : "Smartlearn found the selected unit, but only found titles, links, or navigation—not enough instructional content for a grounded test. Add or publish Canvas notes, homework, images, or files, then try again.";
       return NextResponse.json(
         {
           success: false,
           error: selectedUnitNames.length > 0
-            ? "The selected units do not contain readable pages, assignments, or supported files yet. Choose other units or add course notes."
+            ? selectedUnitError
             : "No Canvas course content found yet. Sync Canvas or upload notes for this course, then try again.",
         },
         { status: 400 }
@@ -481,6 +547,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, error: err.message, code: err.code },
         { status: 402 }
+      );
+    }
+    if (err instanceof QuizGroundingError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Smartlearn could verify only ${err.acceptedQuestions} of ${err.requestedQuestions} generated questions against the selected Canvas material. No unverified questions were saved. Try fewer questions or add more readable unit content.`,
+          code: "INSUFFICIENT_GROUNDED_QUESTIONS",
+        },
+        { status: 422 }
       );
     }
     return NextResponse.json(

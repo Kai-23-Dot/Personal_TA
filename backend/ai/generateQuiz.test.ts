@@ -15,6 +15,7 @@ const baseQuestion = {
   topic: "Recursion",
   difficulty: "medium" as const,
   source_idx: 0,
+  source_excerpt: "A base case stops the recursive chain",
 };
 
 describe("generated quiz validation", () => {
@@ -93,5 +94,88 @@ describe("generated quiz validation", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].question).toBe(validQuestion.question);
+  });
+
+  it("requires a verbatim supporting excerpt when source text is available", () => {
+    const sourceText =
+      "A base case stops the recursive chain. It prevents a recursive method from calling itself forever.";
+    const grounded = normalizeGeneratedQuizQuestions(
+      { questions: [baseQuestion] },
+      {
+        questionCount: 1,
+        sourceCount: 1,
+        sourceTexts: [sourceText],
+        topic: "Recursion",
+      }
+    );
+    const fabricated = normalizeGeneratedQuizQuestions(
+      {
+        questions: [{
+          ...baseQuestion,
+          source_excerpt: "Recursion is always faster than iteration",
+        }],
+      },
+      {
+        questionCount: 1,
+        sourceCount: 1,
+        sourceTexts: [sourceText],
+        topic: "Recursion",
+      }
+    );
+
+    expect(grounded).toHaveLength(1);
+    expect(fabricated).toEqual([]);
+  });
+
+  it("rejects evidence copied from a different source than source_idx", () => {
+    const result = normalizeGeneratedQuizQuestions(
+      { questions: [baseQuestion] },
+      {
+        questionCount: 1,
+        sourceCount: 2,
+        sourceTexts: [
+          "A base case stops the recursive chain and prevents infinite calls.",
+          "A stack stores each active function call and its local variables.",
+        ],
+        topic: "Recursion",
+      }
+    );
+
+    expect(result).toHaveLength(1);
+    const wrongSource = normalizeGeneratedQuizQuestions(
+      { questions: [{ ...baseQuestion, source_idx: 1 }] },
+      {
+        questionCount: 1,
+        sourceCount: 2,
+        sourceTexts: [
+          "A base case stops the recursive chain and prevents infinite calls.",
+          "A stack stores each active function call and its local variables.",
+        ],
+        topic: "Recursion",
+      }
+    );
+    expect(wrongSource).toEqual([]);
+  });
+
+  it("normalizes model LaTeX wrappers in questions and answer choices", () => {
+    const result = normalizeGeneratedQuizQuestions(
+      {
+        questions: [{
+          ...baseQuestion,
+          question: "At \\( x = 3 \\), which statement is supported by the notes?",
+          options: [
+            "The graph crosses at \\( x = 3 \\)",
+            "The graph turns at \\( x = 3 \\)",
+            "There is a hole at \\( x = 3 \\)",
+            "There is an asymptote at \\( x = 3 \\)",
+          ],
+          correct_answer: "B",
+        }],
+      },
+      { questionCount: 1, sourceCount: 1, topic: "Recursion" }
+    );
+
+    expect(result[0].question).toContain("At x = 3,");
+    expect(result[0].options?.[1]).toBe("The graph turns at x = 3");
   });
 });

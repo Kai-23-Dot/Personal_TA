@@ -15,6 +15,8 @@ type HtmlAttributes = Record<string, string>;
 export type CanvasImageSource = {
   url: string;
   alt: string;
+  /** Canvas file ID when the image is a preview/API URL rather than raw bytes. */
+  fileId?: number;
 };
 
 export type CanvasHomepageImageTile = CanvasImageSource & {
@@ -161,11 +163,21 @@ function resolvedCanvasImage(
   if (/favicon|avatar|emoji|spacer|tracking[-_]?pixel|logo\.(?:png|jpe?g|gif|webp)/i.test(description)) {
     return null;
   }
+  const fileId = [
+    rawAttributes["data-api-endpoint"],
+    rawAttributes["data-src"],
+    rawAttributes.src,
+    rawUrl,
+  ]
+    .filter(Boolean)
+    .map(canvasFileIdFromImage)
+    .find((id): id is number => id !== null);
   return {
     url: url.toString(),
     alt: plainText(
       rawAttributes.alt || rawAttributes.title || rawAttributes["aria-label"] || ""
     ),
+    ...(fileId ? { fileId } : {}),
   };
 }
 
@@ -225,9 +237,13 @@ export function extractCanvasHtmlResourceLinks(params: {
 
   // Google Slides/Drive are often embedded in iframes instead of anchors.
   for (const match of source.matchAll(
-    /(?:href|src)\s*=\s*(?:"([^"]+)"|'([^']+)')/gi
+    /\b(?:href|src|data-src|data-api-endpoint|data)\s*=\s*(?:"([^"]+)"|'([^']+)')/gi
   )) {
     const target = match[1] ?? match[2] ?? "";
+    const assignmentId = canvasNumericId(target, courseId, "assignments", domain);
+    if (assignmentId) assignmentIds.add(assignmentId);
+    const fileId = canvasNumericId(target, courseId, "files", domain);
+    if (fileId) fileIds.add(fileId);
     const url = safeUrl(target, domain);
     if (
       url?.protocol === "https:" &&

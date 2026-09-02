@@ -20,17 +20,18 @@ import {
   fetchCanvasPages,
   fetchCanvasFrontPage,
   fetchCanvasAssignments,
-  fetchCanvasPageBody,
   fetchCanvasPageDetail,
   fetchCanvasFilesWide,
   fetchCanvasFileById,
   downloadCanvasFile,
   htmlToPlainText,
+  type CanvasFile,
 } from "@/backend/lms/canvas";
 import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { detectFileType, extractFileText } from "@/backend/utils/extractFileText";
 import {
   extractTextFromImages,
+  extractTextFromPdf,
   type ImageMediaType,
 } from "@/backend/ai/ocrImage";
 import { classifyContent } from "./contentClassifier";
@@ -48,7 +49,6 @@ import {
   buildCanvasCourseUnits,
   buildModuleAwarePageInventory,
   buildSelectedModuleFileInventory,
-  extractCanvasLinkedResourceIds,
   scopeCanvasModuleGroups,
 } from "./moduleScope";
 import type { CanvasUnitScope } from "./moduleScope";
@@ -58,6 +58,7 @@ import {
 } from "./homepageUnits";
 import { extractFromGoogleLink } from "./contentExtractor";
 import { selectBalancedModuleSources } from "@/backend/practice/moduleSources";
+import { assessInstructionalContent } from "@/backend/practice/sourceGrounding";
 import type {
   CanvasContentItem,
   DocumentChunk,
@@ -122,6 +123,117 @@ type CrawledHomepagePage = {
   depth: number;
   links: ReturnType<typeof extractCanvasHtmlResourceLinks>;
 };
+
+type CanvasVisionJob = {
+  url: string;
+  fileId?: number;
+  label: string;
+  moduleName: string;
+  sourceUrl: string;
+};
+
+type CanvasVisionExtraction = CanvasVisionJob & {
+  extractedText: string;
+};
+
+async function ocrCanvasImageJobs(params: {
+  domain: string;
+  accessToken: string;
+  files: readonly CanvasFile[];
+  jobs: readonly CanvasVisionJob[];
+  selectedModuleNames: readonly string[];
+  context: string;
+  limit?: number;
+}): Promise<{
+  candidates: number;
+  downloads: number;
+  extracted: CanvasVisionExtraction[];
+  warning?: string;
+}> {
+  const seen = new Set<string>();
+  const uniqueJobs = params.jobs.filter((job) => {
+    const key = `${job.moduleName}\n${job.fileId ?? job.url}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const selectedJobs = selectBalancedModuleSources(
+    uniqueJobs.map((job) => ({ chunk: { moduleName: job.moduleName }, job })),
+    params.selectedModuleNames,
+    Math.max(0, Math.min(MAX_VISION_IMAGES, params.limit ?? MAX_VISION_IMAGES))
+  ).map(({ job }) => job);
+  const fileById = new Map(params.files.map((file) => [String(file.id), file]));
+  const downloaded = (
+    await Promise.allSettled(
+      selectedJobs.map(async (job) => {
+        const resolvedFile = job.fileId
+          ? fileById.get(String(job.fileId))
+          : undefined;
+        const declaredMediaType = (
+          resolvedFile?.["content-type"] ?? resolvedFile?.content_type ?? ""
+        ).split(";")[0].trim().toLowerCase();
+        const candidateUrls = [resolvedFile?.url, job.url]
+          .filter((url): url is string => Boolean(url))
+          .filter((url, index, urls) => urls.indexOf(url) === index);
+        for (const url of candidateUrls) {
+          try {
+            const result = await downloadCanvasFile(
+              params.domain,
+              params.accessToken,
+              url,
+              MAX_VISION_IMAGE_BYTES
+            );
+            const mediaType =
+              IMAGE_MEDIA_TYPES[result.contentType] ??
+              IMAGE_MEDIA_TYPES[declaredMediaType];
+            if (mediaType) {
+              return { ...job, url, buffer: result.buffer, mediaType };
+            }
+          } catch {
+            // A preview endpoint may return HTML/JSON. The resolved file URL is
+            // tried first, followed by the original image URL.
+          }
+        }
+        return null;
+      })
+    )
+  ).flatMap((result) =>
+    result.status === "fulfilled" && result.value ? [result.value] : []
+  );
+
+  if (downloaded.length === 0) {
+    return { candidates: uniqueJobs.length, downloads: 0, extracted: [] };
+  }
+
+  try {
+    const results = await extractTextFromImages(
+      downloaded.map((image) => ({
+        buffer: image.buffer,
+        mediaType: image.mediaType,
+        label: image.label,
+      })),
+      params.context
+    );
+    return {
+      candidates: uniqueJobs.length,
+      downloads: downloaded.length,
+      extracted: results.flatMap((result) => {
+        const image = downloaded[result.index];
+        const extractedText = result.extractedText.trim();
+        return image && extractedText.length >= 20
+          ? [{ ...image, extractedText }]
+          : [];
+      }),
+    };
+  } catch (error) {
+    return {
+      candidates: uniqueJobs.length,
+      downloads: downloaded.length,
+      extracted: [],
+      warning: error instanceof Error ? error.message : "Vision extraction failed.",
+    };
+  }
+}
 
 /**
  * Follow only same-course Canvas Page links starting at the selected Home
@@ -228,12 +340,17 @@ type AssignmentRow = {
 // ── Helper converters ─────────────────────────────────────────────────────────
 
 function noteToContentItem(note: NoteRow): CanvasContentItem {
+  const syncedSourceType = note.source_file_id?.startsWith("canvas_page_")
+    ? "canvas_page"
+    : note.source_file_id?.startsWith("canvas_file_")
+      ? "canvas_file"
+      : "file";
   return {
     id: note.id,
     courseId: note.course_id ?? "",
     canvasCourseId: 0,
-    sourceType: "file",
-    type: "file",
+    sourceType: syncedSourceType,
+    type: syncedSourceType,
     title: note.title,
     bodyText: note.content,
     sourceUrl: note.source_url,
@@ -337,33 +454,6 @@ function moduleTopicScore(moduleName: string, topicWords: string[]): number {
   return Math.min(1, hits / Math.max(1, topicWords.length) * 1.5);
 }
 
-// ── File download helper ──────────────────────────────────────────────────────
-
-async function downloadFileText(
-  domain: string,
-  url: string,
-  accessToken: string,
-  mimeType: string,
-  fileName: string,
-  size: number | null
-): Promise<string | null> {
-  const fileType = detectFileType(mimeType, fileName);
-  if (!fileType) return null;
-  if (size && size > MAX_FILE_BYTES) return null;
-  try {
-    const { buffer } = await downloadCanvasFile(
-      domain,
-      accessToken,
-      url,
-      MAX_FILE_BYTES
-    );
-    const text = await extractFileText(buffer, fileType);
-    return text ?? null;
-  } catch {
-    return null;
-  }
-}
-
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export interface CanvasDeepFetchResult {
@@ -380,6 +470,13 @@ export interface CanvasDeepFetchResult {
   moduleNames: string[];
   /** Live Canvas resources that could not be refreshed; stored content may still be used. */
   warnings: string[];
+  diagnostics: {
+    collectedItems: number;
+    instructionalChunks: number;
+    visionCandidates: number;
+    visionDownloads: number;
+    visionExtractions: number;
+  };
 }
 
 // ── Core algorithm ────────────────────────────────────────────────────────────
@@ -464,6 +561,11 @@ export async function canvasDeepFetch(params: {
 
   const moduleNames: string[] = [];
   const warnings: string[] = [];
+  const visionDiagnostics = {
+    candidates: 0,
+    downloads: 0,
+    extractions: 0,
+  };
   let resolvedSelectedModuleNames = new Set(
     [
       ...unitScopes.map((scope) => scope.unitName),
@@ -684,12 +786,7 @@ export async function canvasDeepFetch(params: {
         warnings,
       });
       const selectedHomepagePageSlugs = new Set<string>();
-      const homepageImageJobs: Array<{
-        url: string;
-        label: string;
-        moduleName: string;
-        sourceUrl: string;
-      }> = [];
+      const homepageImageJobs: CanvasVisionJob[] = [];
       const googleMaterialJobs: Array<{
         url: string;
         moduleName: string;
@@ -712,8 +809,13 @@ export async function canvasDeepFetch(params: {
 
         const sourceUrl = `https://${canvas_domain}/courses/${canvasCourseId}/pages/${encodeURIComponent(detail.url)}`;
         for (const image of links.images) {
+          if (image.fileId) {
+            selectedModuleFileIds.add(String(image.fileId));
+            selectedFileModuleNames.set(String(image.fileId), unitName);
+          }
           homepageImageJobs.push({
             url: image.url,
+            ...(image.fileId ? { fileId: image.fileId } : {}),
             label: `${unitName} — ${detail.title}${image.alt ? ` — ${image.alt}` : ""}`,
             moduleName: unitName,
             sourceUrl,
@@ -767,8 +869,13 @@ export async function canvasDeepFetch(params: {
           selectedFileModuleNames.set(String(id), unitName);
         }
         for (const image of links.images) {
+          if (image.fileId) {
+            selectedModuleFileIds.add(String(image.fileId));
+            selectedFileModuleNames.set(String(image.fileId), unitName);
+          }
           homepageImageJobs.push({
             url: image.url,
+            ...(image.fileId ? { fileId: image.fileId } : {}),
             label: `${unitName} — ${assignment.name}${image.alt ? ` — ${image.alt}` : ""}`,
             moduleName: unitName,
             sourceUrl,
@@ -777,6 +884,32 @@ export async function canvasDeepFetch(params: {
         for (const url of links.externalUrls) {
           googleMaterialJobs.push({ url, moduleName: unitName, sourceUrl });
         }
+      }
+
+      // Resolve every selected file ID before OCR. Course-wide file listings are
+      // often hidden or paginated, while an embedded image's API endpoint still
+      // resolves by ID. Previously those late-resolved files never reached vision.
+      const availableFiles = buildSelectedModuleFileInventory(files, selectedModuleResults);
+      const availableFileIds = new Set(availableFiles.map((file) => String(file.id)));
+      const missingSelectedFileIds = [...selectedModuleFileIds]
+        .filter((id) => !availableFileIds.has(id))
+        .map(Number)
+        .filter((id) => Number.isSafeInteger(id) && id > 0)
+        .slice(0, 24);
+      if (missingSelectedFileIds.length > 0) {
+        const linkedFiles = await Promise.all(
+          missingSelectedFileIds.map((fileId) =>
+            fetchCanvasFileById(
+              canvas_domain,
+              access_token,
+              canvasCourseId,
+              fileId
+            )
+          )
+        );
+        availableFiles.push(
+          ...linkedFiles.filter((file): file is NonNullable<typeof file> => Boolean(file))
+        );
       }
 
       const seenGoogleUrls = new Set<string>();
@@ -821,85 +954,6 @@ export async function canvasDeepFetch(params: {
           moduleName: job.moduleName,
           metadata: { homepageUnit: true },
         });
-      }
-
-      for (const file of files) {
-        const fileId = String(file.id);
-        if (!selectedModuleFileIds.has(fileId)) continue;
-        const contentType = (file["content-type"] ?? file.content_type ?? "")
-          .split(";")[0]
-          .trim()
-          .toLowerCase();
-        if (!IMAGE_MEDIA_TYPES[contentType] || !file.url) continue;
-        const moduleName = selectedFileModuleNames.get(fileId);
-        if (!moduleName) continue;
-        homepageImageJobs.push({
-          url: file.url,
-          label: `${moduleName} — ${file.display_name || file.filename}`,
-          moduleName,
-          sourceUrl: file.url,
-        });
-      }
-
-      const seenImageUrls = new Set<string>();
-      const uniqueImageJobs = homepageImageJobs
-        .filter((job) => {
-          if (seenImageUrls.has(job.url)) return false;
-          seenImageUrls.add(job.url);
-          return true;
-        })
-        .slice(0, MAX_VISION_IMAGES);
-      const downloadedImages = (
-        await Promise.allSettled(
-          uniqueImageJobs.map(async (job) => {
-            const downloaded = await downloadCanvasFile(
-              canvas_domain,
-              access_token,
-              job.url,
-              MAX_VISION_IMAGE_BYTES
-            );
-            const mediaType = IMAGE_MEDIA_TYPES[downloaded.contentType];
-            return mediaType
-              ? { ...job, buffer: downloaded.buffer, mediaType }
-              : null;
-          })
-        )
-      ).flatMap((result) =>
-        result.status === "fulfilled" && result.value ? [result.value] : []
-      );
-      if (downloadedImages.length > 0) {
-        try {
-          const ocrResults = await extractTextFromImages(
-            downloadedImages.map((image) => ({
-              buffer: image.buffer,
-              mediaType: image.mediaType,
-              label: image.label,
-            })),
-            `${course.name ?? "Canvas course"} selected unit notes and homework`
-          );
-          for (const result of ocrResults) {
-            const image = downloadedImages[result.index];
-            if (!image || result.extractedText.trim().length < 20) continue;
-            contentItems.push({
-              id: `canvas_home_image_${canvasCourseId}_${result.index}`,
-              courseId,
-              canvasCourseId,
-              sourceType: "image",
-              type: "image",
-              title: image.label,
-              bodyText: result.extractedText,
-              textContent: result.extractedText,
-              linkedFromModule: true,
-              linkedFrom: image.sourceUrl,
-              sourceUrl: image.url,
-              moduleName: image.moduleName,
-              metadata: { homepageUnit: true, visionExtracted: true },
-            });
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Vision extraction failed.";
-          warnings.push(`Embedded images: ${message}`);
-        }
       }
 
       // Reuse already-synced page/file text without losing the synthetic unit
@@ -1014,18 +1068,20 @@ export async function canvasDeepFetch(params: {
           // assignments can be discovered, but its duplicate text is not kept.
           if (alreadySynced && !hasExactUnitSelection) return null;
           try {
-            const body = await fetchCanvasPageBody(
+            const detail = await fetchCanvasPageDetail(
               canvas_domain,
               access_token,
               canvasCourseId,
               page.url
             );
-            if (!body || body.trim().length < 30) return null;
+            if (!detail?.body) return null;
+            const body = htmlToPlainText(detail?.body) ?? "";
             return {
               pageId: String(page.page_id),
               slug: page.url,
               title: page.title,
               body,
+              bodyHtml: detail?.body ?? "",
               moduleName,
               alreadySynced,
               updatedAt: page.updated_at ?? new Date().toISOString(),
@@ -1039,7 +1095,11 @@ export async function canvasDeepFetch(params: {
       for (const result of pageBodyResults) {
         if (!result) continue;
         if (result.moduleName && highMatchModules.has(result.moduleName)) {
-          const linked = extractCanvasLinkedResourceIds(result.body);
+          const linked = extractCanvasHtmlResourceLinks({
+            html: result.bodyHtml,
+            courseId: canvasCourseId,
+            domain: canvas_domain,
+          });
           for (const id of linked.fileIds) {
             selectedModuleFileIds.add(String(id));
             selectedFileModuleNames.set(String(id), result.moduleName);
@@ -1048,8 +1108,22 @@ export async function canvasDeepFetch(params: {
             selectedModuleAssignmentIds.add(String(id));
             selectedAssignmentModuleNames.set(String(id), result.moduleName);
           }
+          const sourceUrl = `https://${canvas_domain}/courses/${canvasCourseId}/pages/${encodeURIComponent(result.slug)}`;
+          for (const image of linked.images) {
+            if (image.fileId) {
+              selectedModuleFileIds.add(String(image.fileId));
+              selectedFileModuleNames.set(String(image.fileId), result.moduleName);
+            }
+            homepageImageJobs.push({
+              url: image.url,
+              ...(image.fileId ? { fileId: image.fileId } : {}),
+              label: `${result.moduleName} — ${result.title}${image.alt ? ` — ${image.alt}` : ""}`,
+              moduleName: result.moduleName,
+              sourceUrl,
+            });
+          }
         }
-        if (result.alreadySynced) continue;
+        if (result.alreadySynced || result.body.trim().length < 30) continue;
         contentItems.push({
           id: `canvas_page_${result.pageId}`,
           courseId,
@@ -1065,6 +1139,81 @@ export async function canvasDeepFetch(params: {
           sourceUrl: `https://${canvas_domain}/courses/${canvasCourseId}/pages/${result.slug}`,
           moduleName: result.moduleName,
           metadata: { sourceFileId: `canvas_page_${result.pageId}` },
+        });
+      }
+
+      const resolvedFileIds = new Set(availableFiles.map((file) => String(file.id)));
+      const lateSelectedFileIds = [...selectedModuleFileIds]
+        .filter((id) => !resolvedFileIds.has(id))
+        .map(Number)
+        .filter((id) => Number.isSafeInteger(id) && id > 0)
+        .slice(0, 24);
+      if (lateSelectedFileIds.length > 0) {
+        const lateFiles = await Promise.all(
+          lateSelectedFileIds.map((fileId) =>
+            fetchCanvasFileById(
+              canvas_domain,
+              access_token,
+              canvasCourseId,
+              fileId
+            )
+          )
+        );
+        availableFiles.push(
+          ...lateFiles.filter((file): file is NonNullable<typeof file> => Boolean(file))
+        );
+      }
+
+      // Include image files even when Canvas rendered only an API/preview URL.
+      for (const file of availableFiles) {
+        const fileId = String(file.id);
+        if (!selectedModuleFileIds.has(fileId) || !file.url) continue;
+        const contentType = (file["content-type"] ?? file.content_type ?? "")
+          .split(";")[0]
+          .trim()
+          .toLowerCase();
+        if (!IMAGE_MEDIA_TYPES[contentType]) continue;
+        const scopedModuleName = selectedFileModuleNames.get(fileId);
+        if (!scopedModuleName) continue;
+        homepageImageJobs.push({
+          url: file.url,
+          fileId: file.id,
+          label: `${scopedModuleName} — ${file.display_name || file.filename}`,
+          moduleName: scopedModuleName,
+          sourceUrl: file.url,
+        });
+      }
+
+      const imageVision = await ocrCanvasImageJobs({
+        domain: canvas_domain,
+        accessToken: access_token,
+        files: availableFiles,
+        jobs: homepageImageJobs,
+        selectedModuleNames: selectedStructureNames,
+        context: `${course.name ?? "Canvas course"} selected unit notes and homework`,
+      });
+      visionDiagnostics.candidates += imageVision.candidates;
+      visionDiagnostics.downloads += imageVision.downloads;
+      visionDiagnostics.extractions += imageVision.extracted.length;
+      if (imageVision.warning) {
+        warnings.push(`Embedded images: ${imageVision.warning}`);
+      }
+      for (let index = 0; index < imageVision.extracted.length; index++) {
+        const image = imageVision.extracted[index];
+        contentItems.push({
+          id: `canvas_image_vision_${canvasCourseId}_${index}`,
+          courseId,
+          canvasCourseId,
+          sourceType: "image",
+          type: "image",
+          title: image.label,
+          bodyText: image.extractedText,
+          textContent: image.extractedText,
+          linkedFromModule: true,
+          linkedFrom: image.sourceUrl,
+          sourceUrl: image.url,
+          moduleName: image.moduleName,
+          metadata: { visionExtracted: true },
         });
       }
 
@@ -1086,30 +1235,6 @@ export async function canvasDeepFetch(params: {
         topicWords.filter((w) => w.length > 3).join("|"),
         "i"
       );
-      // Module file items often remain downloadable even when the course-wide
-      // Files listing is forbidden. Merge their signed URLs into the inventory.
-      const availableFiles = buildSelectedModuleFileInventory(files, selectedModuleResults);
-      const availableFileIds = new Set(availableFiles.map((file) => String(file.id)));
-      const missingSelectedFileIds = [...selectedModuleFileIds]
-        .filter((id) => !availableFileIds.has(id))
-        .map(Number)
-        .filter((id) => Number.isSafeInteger(id) && id > 0)
-        .slice(0, 24);
-      if (missingSelectedFileIds.length > 0) {
-        const linkedFiles = await Promise.all(
-          missingSelectedFileIds.map((fileId) =>
-            fetchCanvasFileById(
-              canvas_domain,
-              access_token,
-              canvasCourseId,
-              fileId
-            )
-          )
-        );
-        availableFiles.push(
-          ...linkedFiles.filter((file): file is NonNullable<typeof file> => Boolean(file))
-        );
-      }
       const relevantFiles = availableFiles.filter((f) => {
         const name = `${f.display_name ?? ""} ${(f as unknown as { filename?: string }).filename ?? ""}`;
         const mimeType = (f as unknown as { "content-type"?: string; content_type?: string })["content-type"]
@@ -1144,37 +1269,69 @@ export async function canvasDeepFetch(params: {
           const fileName = (f as unknown as { filename?: string }).filename ?? f.display_name ?? "";
           const downloadUrl = (f as unknown as { url?: string }).url;
           const size = (f as unknown as { size?: number }).size ?? null;
-          if (!downloadUrl) return null;
-          const text = await downloadFileText(
+          const fileType = detectFileType(mimeType, fileName);
+          if (!downloadUrl || !fileType || (size && size > MAX_FILE_BYTES)) return null;
+          const downloaded = await downloadCanvasFile(
             canvas_domain,
-            downloadUrl,
             access_token,
-            mimeType,
-            fileName,
-            size
+            downloadUrl,
+            MAX_FILE_BYTES
           );
-          if (!text || text.trim().length < 50) return null;
+          const text = await extractFileText(downloaded.buffer, fileType);
           return {
             id: `canvas_file_${f.id}`,
             title: f.display_name ?? fileName,
             text,
+            buffer: downloaded.buffer,
             mimeType,
             fileName,
+            fileType,
           };
         })
       );
 
+      const pdfVisionCandidates: Array<{
+        buffer: Buffer;
+        fileName: string;
+        title: string;
+        resourceId: string;
+        moduleName: string;
+        sourceUrl: string | null;
+      }> = [];
       for (const r of fileResults) {
         if (r.status !== "fulfilled" || !r.value) continue;
         const v = r.value;
         const resourceId = v.id.replace("canvas_file_", "");
         const scopedModuleName = selectedFileModuleNames.get(resourceId) ?? null;
+        const canvasSourceType = v.fileType === "txt" ? "file" : v.fileType;
+        const textAssessment = assessInstructionalContent(v.text, {
+          title: v.title,
+          moduleName: scopedModuleName,
+          sourceType: canvasSourceType,
+        });
+        if (
+          !textAssessment.usable &&
+          v.fileType === "pdf" &&
+          scopedModuleName &&
+          selectedModuleFileIds.has(resourceId) &&
+          v.buffer.length <= MAX_VISION_IMAGE_BYTES
+        ) {
+          pdfVisionCandidates.push({
+            buffer: v.buffer,
+            fileName: v.fileName,
+            title: v.title,
+            resourceId,
+            moduleName: scopedModuleName,
+            sourceUrl: availableFiles.find((file) => String(file.id) === resourceId)?.url ?? null,
+          });
+        }
+        if (!v.text || !textAssessment.usable) continue;
         contentItems.push({
           id: v.id,
           courseId,
           canvasCourseId,
-          sourceType: "pdf",
-          type: "pdf",
+          sourceType: canvasSourceType,
+          type: canvasSourceType,
           title: v.title,
           bodyText: v.text,
           textContent: v.text,
@@ -1184,6 +1341,61 @@ export async function canvasDeepFetch(params: {
             ? scopedModuleName
             : null,
           metadata: { fileName: v.fileName, mimeType: v.mimeType },
+        });
+      }
+
+      // Canvas PDFs can be scans with no text layer. Send only those failed
+      // deterministic extractions to vision, capped and balanced across units.
+      const selectedPdfVisionCandidates = selectBalancedModuleSources(
+        pdfVisionCandidates.map((job) => ({
+          chunk: { moduleName: job.moduleName },
+          job,
+        })),
+        selectedStructureNames,
+        2
+      ).map(({ job }) => job);
+      visionDiagnostics.candidates += pdfVisionCandidates.length;
+      visionDiagnostics.downloads += selectedPdfVisionCandidates.length;
+      const pdfVisionResults = await Promise.allSettled(
+        selectedPdfVisionCandidates.map((job) =>
+          extractTextFromPdf(
+            job.buffer,
+            job.fileName,
+            `${course.name ?? "Canvas course"} — ${job.moduleName}`
+          )
+        )
+      );
+      for (let index = 0; index < pdfVisionResults.length; index++) {
+        const result = pdfVisionResults[index];
+        const job = selectedPdfVisionCandidates[index];
+        if (result.status !== "fulfilled") {
+          const message = result.reason instanceof Error
+            ? result.reason.message
+            : "Vision PDF extraction failed.";
+          warnings.push(`${job.title}: ${message}`);
+          continue;
+        }
+        const extractedText = result.value.extractedText.trim();
+        if (!extractedText) continue;
+        visionDiagnostics.extractions += 1;
+        contentItems.push({
+          id: `canvas_pdf_vision_${canvasCourseId}_${job.resourceId}`,
+          courseId,
+          canvasCourseId,
+          sourceType: "pdf",
+          type: "pdf",
+          title: job.title,
+          bodyText: extractedText,
+          textContent: extractedText,
+          linkedFromModule: true,
+          linkedFrom: job.sourceUrl,
+          sourceUrl: job.sourceUrl,
+          moduleName: job.moduleName,
+          metadata: {
+            fileName: job.fileName,
+            visionExtracted: true,
+            scannedPdf: true,
+          },
         });
       }
 
@@ -1222,7 +1434,13 @@ export async function canvasDeepFetch(params: {
 
   const chunks: DocumentChunk[] = docs
     .flatMap((d) => chunkDocument(d))
-    .filter((c) => !isLogisticsChunk(c.text));
+    .filter((c) => !isLogisticsChunk(c.text))
+    .filter((chunk) => assessInstructionalContent(chunk.text, {
+      title: chunk.title,
+      moduleName: chunk.moduleName,
+      sourceType: chunk.sourceType,
+      visionExtracted: chunk.metadata?.visionExtracted === true,
+    }).usable);
 
   if (chunks.length === 0) {
     return {
@@ -1231,6 +1449,13 @@ export async function canvasDeepFetch(params: {
       hasDirectContent: false,
       moduleNames,
       warnings,
+      diagnostics: {
+        collectedItems: contentItems.length,
+        instructionalChunks: 0,
+        visionCandidates: visionDiagnostics.candidates,
+        visionDownloads: visionDiagnostics.downloads,
+        visionExtractions: visionDiagnostics.extractions,
+      },
     };
   }
 
@@ -1376,6 +1601,13 @@ export async function canvasDeepFetch(params: {
     styleHint,
     moduleNames,
     warnings,
+    diagnostics: {
+      collectedItems: contentItems.length,
+      instructionalChunks: chunks.length,
+      visionCandidates: visionDiagnostics.candidates,
+      visionDownloads: visionDiagnostics.downloads,
+      visionExtractions: visionDiagnostics.extractions,
+    },
   };
 }
 
