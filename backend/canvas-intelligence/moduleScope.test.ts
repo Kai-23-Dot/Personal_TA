@@ -4,10 +4,22 @@ import {
   buildModuleAwarePageInventory,
   buildSelectedModuleFileInventory,
   extractCanvasLinkedResourceIds,
+  isCanvasAdministrativeSectionName,
   scopeCanvasModuleGroups,
 } from "./moduleScope";
 
 describe("Canvas module-scoped inventory", () => {
+  it("recognizes administrative sections that must not become practice units", () => {
+    expect([
+      "Syllabus",
+      "Emergency Procedures",
+      "Citation Resources",
+      "AP Classroom",
+    ].every(isCanvasAdministrativeSectionName)).toBe(true);
+    expect(isCanvasAdministrativeSectionName("Unit 1: Geography")).toBe(false);
+    expect(isCanvasAdministrativeSectionName("Population and Migration")).toBe(false);
+  });
+
   it("discovers unit pages inside one broad curriculum module", () => {
     const items = [
       "AP Human Geography Homepage",

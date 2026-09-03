@@ -7,8 +7,12 @@ const MAX_IMAGES = 80;
 
 const STRUCTURAL_SECTION =
   /\b(unit|module|chapter|week|lesson|section|topic)\s*(?:#|no\.?\s*)?(\d+(?:\.\d+)*[a-z]?|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/i;
+const STRUCTURAL_SECTION_AT_START =
+  /^[\s\p{P}\p{S}]*(?:\d+[.)]\s*)?(unit|module|chapter|week|lesson|section|topic)\s*(?:#|no\.?\s*)?(\d+(?:\.\d+)*[a-z]?|[ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/iu;
 const REVIEW_SECTION =
   /\b(?:(?:ap|final|midterm|semester)\s+(?:exam\s+)?review|exam\s+review|review\s+materials?)\b/i;
+const RESOURCE_PAGE =
+  /\b(?:answer\s*key|assignment|checklist|homework|notes?|practice|quiz|slides?|test|vocabulary|worksheet)\b/i;
 
 type HtmlAttributes = Record<string, string>;
 
@@ -58,6 +62,14 @@ function plainText(value: string): string {
   )
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function decodeUriComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function attributes(value: string): HtmlAttributes {
@@ -240,6 +252,8 @@ export function extractCanvasHtmlResourceLinks(params: {
     /\b(?:href|src|data-src|data-api-endpoint|data)\s*=\s*(?:"([^"]+)"|'([^']+)')/gi
   )) {
     const target = match[1] ?? match[2] ?? "";
+    const pageSlug = canvasPageSlug(target, courseId, domain);
+    if (pageSlug) pageSlugs.add(pageSlug);
     const assignmentId = canvasNumericId(target, courseId, "assignments", domain);
     if (assignmentId) assignmentIds.add(assignmentId);
     const fileId = canvasNumericId(target, courseId, "files", domain);
@@ -276,6 +290,139 @@ function sectionLabel(candidates: string[]): string | null {
     }
   }
   return null;
+}
+
+function structuralIdentity(value: string): string | null {
+  const cleaned = plainText(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const structural = cleaned.match(STRUCTURAL_SECTION_AT_START);
+  if (structural?.[1] && structural[2]) {
+    return `${structural[1].toLowerCase()}:${structural[2].toLowerCase()}`;
+  }
+  if (REVIEW_SECTION.test(cleaned)) {
+    return `review:${cleaned.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}`;
+  }
+  return null;
+}
+
+/** Whether a label is an explicit student-facing unit/module boundary. */
+export function isExplicitCanvasUnitName(value: string): boolean {
+  return structuralIdentity(value) !== null;
+}
+
+function uniqueValues<T>(values: readonly T[]): T[] {
+  return [...new Set(values)];
+}
+
+/**
+ * Merge discoveries without losing the exact Canvas pages or module items
+ * owned by either source. Home-page labels win because they match what the
+ * student sees, while Pages/module inventory expands retrieval coverage.
+ */
+export function mergeCanvasCourseUnits(
+  ...groups: ReadonlyArray<readonly CanvasCourseUnit[]>
+): CanvasCourseUnit[] {
+  const merged: CanvasCourseUnit[] = [];
+  const indexByIdentity = new Map<string, number>();
+
+  for (const unit of groups.flat()) {
+    const identity = structuralIdentity(unit.moduleName) ?? `id:${unit.id}`;
+    const existingIndex = indexByIdentity.get(identity);
+    if (existingIndex === undefined) {
+      indexByIdentity.set(identity, merged.length);
+      merged.push({
+        ...unit,
+        assignmentIds: uniqueValues(unit.assignmentIds),
+        noteIds: uniqueValues(unit.noteIds),
+        moduleItemIds: uniqueValues(unit.moduleItemIds),
+        pageSlugs: uniqueValues(unit.pageSlugs),
+      });
+      continue;
+    }
+
+    const existing = merged[existingIndex];
+    const pageSlugs = uniqueValues([...existing.pageSlugs, ...unit.pageSlugs]);
+    const moduleItemIds = uniqueValues([
+      ...existing.moduleItemIds,
+      ...unit.moduleItemIds,
+    ]);
+    merged[existingIndex] = {
+      ...existing,
+      moduleId: existing.moduleId ?? unit.moduleId,
+      itemCount: Math.max(existing.itemCount, unit.itemCount, pageSlugs.length),
+      powerpointCount: Math.max(existing.powerpointCount, unit.powerpointCount),
+      assignmentIds: uniqueValues([
+        ...existing.assignmentIds,
+        ...unit.assignmentIds,
+      ]),
+      noteIds: uniqueValues([...existing.noteIds, ...unit.noteIds]),
+      moduleItemIds,
+      pageSlugs,
+    };
+  }
+
+  return merged;
+}
+
+/**
+ * Reconstruct units from the published Canvas Pages inventory. This is the
+ * deterministic fallback when Canvas temporarily withholds `front_page`, and
+ * groups pages such as "Unit 1 Notes" and "Unit 1 Homework" into one unit.
+ */
+export function buildCanvasPageUnits(
+  pages: readonly CanvasPage[]
+): CanvasCourseUnit[] {
+  const groups = new Map<
+    string,
+    { label: string; labelScore: number; pageSlugs: string[] }
+  >();
+
+  for (const page of pages) {
+    if (page.published === false) continue;
+    const label = sectionLabel([page.title, decodeUriComponent(page.url)]);
+    if (!label) continue;
+    const identity = structuralIdentity(label);
+    if (!identity) continue;
+
+    const labelScore =
+      (RESOURCE_PAGE.test(label) ? 0 : 1_000) + Math.min(label.length, 180);
+    const existing = groups.get(identity);
+    if (!existing) {
+      groups.set(identity, {
+        label,
+        labelScore,
+        pageSlugs: [page.url],
+      });
+      continue;
+    }
+    if (!existing.pageSlugs.includes(page.url)) existing.pageSlugs.push(page.url);
+    if (labelScore > existing.labelScore) {
+      existing.label = label;
+      existing.labelScore = labelScore;
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([identity, group]) => ({
+      id: `canvas-pages:${encodeURIComponent(identity)}`,
+      moduleId: null,
+      moduleName: group.label,
+      source: "canvas" as const,
+      itemCount: group.pageSlugs.length,
+      powerpointCount: 0,
+      assignmentIds: [],
+      noteIds: [],
+      moduleItemIds: [],
+      pageSlugs: group.pageSlugs,
+    }))
+    .sort((left, right) =>
+      left.moduleName.localeCompare(right.moduleName, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
 }
 
 /**
@@ -339,10 +486,42 @@ export function buildCanvasHomepageUnits(params: {
       attrs.title ?? "",
       ...imageCandidates,
       params.visionLabelsByPageSlug?.get(pageSlug) ?? "",
-      decodeURIComponent(pageSlug),
+      decodeUriComponent(pageSlug),
     ]);
     if (!label) continue;
 
+    seenPageSlugs.add(pageSlug);
+    results.push({
+      id: `canvas-page:${encodeURIComponent(pageSlug)}`,
+      moduleId: null,
+      moduleName: label,
+      source: "canvas",
+      itemCount: 1,
+      powerpointCount: 0,
+      assignmentIds: [],
+      noteIds: [],
+      moduleItemIds: [],
+      pageSlugs: [pageSlug],
+    });
+  }
+
+  // Canvas Rich Content Editor output can contain malformed anchors, linked
+  // iframes, or URL-bearing attributes that do not survive the paired-anchor
+  // expression above. Recover every direct same-course Page link and use the
+  // published page title/slug as deterministic unit evidence.
+  for (const pageSlug of extractCanvasHtmlResourceLinks({
+    html: source,
+    courseId: params.courseId,
+    domain: params.domain,
+  }).pageSlugs) {
+    if (seenPageSlugs.has(pageSlug)) continue;
+    const page = pageBySlug.get(pageSlug);
+    const label = sectionLabel([
+      page?.title ?? "",
+      params.visionLabelsByPageSlug?.get(pageSlug) ?? "",
+      decodeUriComponent(pageSlug),
+    ]);
+    if (!label) continue;
     seenPageSlugs.add(pageSlug);
     results.push({
       id: `canvas-page:${encodeURIComponent(pageSlug)}`,

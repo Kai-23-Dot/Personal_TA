@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCanvasHomepageUnits,
+  buildCanvasPageUnits,
   countCanvasHomepageImagePageLinks,
   extractCanvasHtmlResourceLinks,
   extractCanvasImageSources,
+  mergeCanvasCourseUnits,
 } from "./homepageUnits";
 
 describe("Canvas homepage unit discovery", () => {
@@ -42,6 +44,88 @@ describe("Canvas homepage unit discovery", () => {
       pageSlugs: ["unit-1a"],
       moduleItemIds: [],
     });
+  });
+
+  it("finds the AP Human Geography units in Canvas Rich Content Editor markup", () => {
+    const unitPages = [
+      ["Unit 1- Geography: Its Nature and Perspectives", "unit-1-geography-its-nature-and-perspectives"],
+      ["Unit 2- Population and Migration", "unit-2-population-and-migration"],
+      ["Unit 3- Cultural Patterns and Processes", "unit-3-cultural-patterns-and-processes"],
+      ["Unit 4- Political Organization of Space", "unit-4-political-organization-of-space"],
+      ["Unit 5- Agriculture and Rural Land Use", "unit-5-agriculture-and-rural-land-use"],
+      ["Unit 6- Industrialization and Economic Development", "unit-6-industrialization-and-economic-development"],
+      ["Unit 7- Cities and Urban Land Use", "unit-7-cities-and-urban-land-use"],
+    ] as const;
+    const pages = [
+      { page_id: 1, title: "AP Human Geography Homepage", url: "ap-human-geography-homepage" },
+      ...unitPages.map(([title, url], index) => ({ page_id: index + 2, title, url })),
+      { page_id: 10, title: "AP Exam Review", url: "ap-exam-review" },
+    ];
+    const tile = (slug: string, fileId: number, alt: string) => `
+      <a
+        href="/courses/388438/pages/${slug}"
+        data-api-endpoint="https://school.instructure.com/api/v1/courses/388438/pages/${slug}"
+        data-api-returntype="Page"
+      >
+        <img
+          src="/courses/388438/files/${fileId}/preview"
+          data-api-endpoint="https://school.instructure.com/api/v1/courses/388438/files/${fileId}"
+          alt="${alt}"
+        >
+      </a>`;
+    const html = [
+      tile("ap-human-geography-homepage", 100, "AP HUMAN GEOGRAPHY.png"),
+      ...unitPages.map(([, slug], index) => tile(slug, 101 + index, `UNIT ${index + 1}.png`)),
+      tile("ap-exam-review", 120, "Exam Review.png"),
+      `<a href="/courses/388438/modules/1446777"><img src="/courses/388438/files/130/preview" alt="Class Videos.png"></a>`,
+    ].join("\n");
+
+    const units = buildCanvasHomepageUnits({
+      html,
+      courseId: 388438,
+      domain: "school.instructure.com",
+      pages,
+    });
+
+    expect(units.map((unit) => unit.moduleName)).toEqual([
+      ...unitPages.map(([title]) => title.replace("- ", " ")),
+      "AP Exam Review",
+    ]);
+    expect(units).toHaveLength(8);
+  });
+
+  it("reconstructs and groups units from Pages when front_page is unavailable", () => {
+    const pageUnits = buildCanvasPageUnits([
+      { page_id: 1, url: "unit-1-overview", title: "Unit 1: Geography", published: true },
+      { page_id: 2, url: "unit-1-notes", title: "Unit 1 Notes", published: true },
+      { page_id: 3, url: "unit-2-population", title: "Unit 2: Population", published: true },
+      { page_id: 4, url: "unit-3-old", title: "Unit 3: Old", published: false },
+      { page_id: 5, url: "syllabus", title: "Syllabus", published: true },
+    ]);
+
+    expect(pageUnits.map((unit) => unit.moduleName)).toEqual([
+      "Unit 1: Geography",
+      "Unit 2: Population",
+    ]);
+    expect(pageUnits[0].pageSlugs).toEqual(["unit-1-overview", "unit-1-notes"]);
+  });
+
+  it("merges Home and Pages inventory without duplicating a unit", () => {
+    const homepage = buildCanvasHomepageUnits({
+      html: `<a href="/courses/9/pages/unit-1-overview">Unit 1: Geography</a>`,
+      courseId: 9,
+    });
+    const pages = buildCanvasPageUnits([
+      { page_id: 1, url: "unit-1-overview", title: "Unit 1: Geography" },
+      { page_id: 2, url: "unit-1-homework", title: "Unit 1 Homework" },
+    ]);
+
+    expect(mergeCanvasCourseUnits(homepage, pages)).toEqual([
+      expect.objectContaining({
+        moduleName: "Unit 1: Geography",
+        pageSlugs: ["unit-1-overview", "unit-1-homework"],
+      }),
+    ]);
   });
 
   it("uses image alt text and Canvas file names when the Pages list is hidden", () => {

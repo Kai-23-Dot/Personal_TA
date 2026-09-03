@@ -61,6 +61,13 @@ const STRUCTURAL_HEADING = new RegExp(
 );
 const GENERIC_CONTAINER =
   /\b(curriculum|course\s*(?:content|materials?|resources?)|all\s+(?:units?|modules?)|assignments?|resources?|homepage|overview|syllabus)\b/i;
+const ADMINISTRATIVE_SECTION =
+  /^(?:ap\s+classroom|announcements?|citation\s+resources?|class\s+(?:information|policies)|course\s+(?:home|homepage|information|policies)|emergency\s+procedures?|getting\s+started|help|orientation|student\s+resources?|syllabus|technical\s+support|welcome)\b/i;
+
+/** Exclude non-instructional Canvas containers from study-unit selection. */
+export function isCanvasAdministrativeSectionName(value: string): boolean {
+  return ADMINISTRATIVE_SECTION.test(value.trim());
+}
 
 function structuralFamily(title: string): StructuralFamily | null {
   const family = title.trim().match(STRUCTURAL_HEADING)?.[1]?.toLowerCase();

@@ -4,6 +4,7 @@ import { createClient } from "@/backend/supabase/server";
 import {
   fetchCanvasFilesWide,
   fetchCanvasFrontPage,
+  fetchCanvasPageDetail,
   fetchCanvasModuleItems,
   fetchCanvasModules,
   fetchCanvasPages,
@@ -11,11 +12,18 @@ import {
 } from "@/backend/lms/canvas";
 import { getCanvasCourseContext } from "@/backend/lms/canvasConnection";
 import { buildGeneratedCourseUnits, type CourseUnitMaterial } from "@/backend/lms/courseUnits";
-import { buildCanvasCourseUnits } from "@/backend/canvas-intelligence/moduleScope";
 import {
+  buildCanvasCourseUnits,
+  isCanvasAdministrativeSectionName,
+} from "@/backend/canvas-intelligence/moduleScope";
+import {
+  buildCanvasPageUnits,
   buildCanvasHomepageUnits,
   countCanvasHomepageImagePageLinks,
+  extractCanvasHtmlResourceLinks,
   extractCanvasHomepageImageTiles,
+  isExplicitCanvasUnitName,
+  mergeCanvasCourseUnits,
 } from "@/backend/canvas-intelligence/homepageUnits";
 import {
   extractUnitLabelsFromImages,
@@ -28,7 +36,10 @@ export const maxDuration = 60;
 
 const courseIdSchema = z.string().uuid();
 const MAX_VISION_UNIT_TILES = 12;
+const MAX_LINKED_HOMEPAGE_PAGES = 6;
 const VISION_CACHE_TTL_MS = 30 * 60 * 1000;
+const HOMEPAGE_INDEX_LABEL =
+  /\b(?:course\s*(?:home|overview)|curriculum|home(?:page)?|landing|start\s+here|unit\s+index)\b/i;
 const UNIT_IMAGE_TYPES: Record<string, ImageMediaType> = {
   "image/jpeg": "image/jpeg",
   "image/jpg": "image/jpeg",
@@ -97,6 +108,96 @@ async function discoverVisionTileLabels(params: {
     labels: new Map(labels),
   });
   return labels;
+}
+
+/**
+ * Some Canvas courses set a lightweight wrapper as `front_page` and link the
+ * real graphical unit index from it. Follow only a small number of likely
+ * index Pages and stop as soon as a repeated unit structure is found.
+ */
+async function discoverLinkedHomepageUnits(params: {
+  rootHtml: string;
+  courseId: number;
+  domain: string;
+  accessToken: string;
+  pages: Awaited<ReturnType<typeof fetchCanvasPages>>;
+  files: Awaited<ReturnType<typeof fetchCanvasFilesWide>>;
+  warnings: string[];
+}) {
+  const pageBySlug = new Map(params.pages.map((page) => [page.url, page]));
+  const visited = new Set<string>();
+  let frontier = extractCanvasHtmlResourceLinks({
+    html: params.rootHtml,
+    courseId: params.courseId,
+    domain: params.domain,
+  }).pageSlugs
+    .filter((slug) => {
+      const label = `${pageBySlug.get(slug)?.title ?? ""} ${slug.replace(/[-_]+/g, " ")}`;
+      return HOMEPAGE_INDEX_LABEL.test(label) && !isExplicitCanvasUnitName(label);
+    })
+    .slice(0, MAX_LINKED_HOMEPAGE_PAGES);
+  let discovered = [] as ReturnType<typeof buildCanvasHomepageUnits>;
+
+  for (let depth = 0; depth < 2 && frontier.length > 0; depth++) {
+    const batch = frontier
+      .filter((slug) => !visited.has(slug))
+      .slice(0, MAX_LINKED_HOMEPAGE_PAGES - visited.size);
+    batch.forEach((slug) => visited.add(slug));
+    if (batch.length === 0) break;
+
+    const results = await Promise.allSettled(
+      batch.map((slug) =>
+        fetchCanvasPageDetail(
+          params.domain,
+          params.accessToken,
+          params.courseId,
+          slug
+        )
+      )
+    );
+    const next = new Set<string>();
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
+      if (result.status !== "fulfilled" || !result.value?.body) {
+        if (result.status === "rejected") {
+          const message = result.reason instanceof Error
+            ? result.reason.message
+            : "Canvas page request failed.";
+          params.warnings.push(`Homepage ${batch[index]}: ${message}`);
+        }
+        continue;
+      }
+      discovered = mergeCanvasCourseUnits(
+        discovered,
+        buildCanvasHomepageUnits({
+          html: result.value.body,
+          courseId: params.courseId,
+          domain: params.domain,
+          pages: params.pages,
+          files: params.files,
+        })
+      );
+      if (discovered.length >= 2) return discovered;
+
+      for (const slug of extractCanvasHtmlResourceLinks({
+        html: result.value.body,
+        courseId: params.courseId,
+        domain: params.domain,
+      }).pageSlugs) {
+        const label = `${pageBySlug.get(slug)?.title ?? ""} ${slug.replace(/[-_]+/g, " ")}`;
+        if (
+          !visited.has(slug) &&
+          HOMEPAGE_INDEX_LABEL.test(label) &&
+          !isExplicitCanvasUnitName(label)
+        ) {
+          next.add(slug);
+        }
+      }
+    }
+    frontier = [...next];
+  }
+
+  return discovered;
 }
 
 export async function GET(req: Request) {
@@ -221,12 +322,46 @@ export async function GET(req: Request) {
         }
       }
 
+      if (frontPage?.body && homepageUnits.length < 2) {
+        homepageUnits = mergeCanvasCourseUnits(
+          homepageUnits,
+          await discoverLinkedHomepageUnits({
+            rootHtml: frontPage.body,
+            courseId: canvasCourseId,
+            domain,
+            accessToken,
+            pages,
+            files: homepageFiles,
+            warnings,
+          })
+        );
+      }
+
+      // `front_page` can fail independently even while the Pages endpoint is
+      // healthy. Reconstruct and group Unit/Module/Chapter pages so a transient
+      // Home-page failure never exposes administrative module subheaders.
+      const pageUnits = buildCanvasPageUnits(pages);
+      const discoveredUnits = mergeCanvasCourseUnits(homepageUnits, pageUnits);
+
       // A repeated unit index on Home is the course's student-facing
       // structure, even when Canvas Modules is hidden or contains generic data.
-      if (homepageUnits.length >= 2 || (modules.length === 0 && homepageUnits.length > 0)) {
+      if (
+        discoveredUnits.length >= 2 ||
+        (modules.length === 0 && discoveredUnits.length > 0)
+      ) {
         return NextResponse.json(
-          { units: homepageUnits, generated: false, structure: "homepage", warnings },
-          { headers: { "Cache-Control": "private, no-store" } }
+          {
+            units: discoveredUnits,
+            generated: false,
+            structure: homepageUnits.length > 0 ? "homepage" : "pages",
+            warnings,
+          },
+          {
+            headers: {
+              "Cache-Control": "private, no-store",
+              "X-Smartlearn-Unit-Discovery": "canvas-v2",
+            },
+          }
         );
       }
 
@@ -252,19 +387,38 @@ export async function GET(req: Request) {
         const units = buildCanvasCourseUnits(modules.map((module) => ({
           module,
           items: itemsByModule.get(module.id) ?? [],
-        })));
+        }))).filter(
+          (unit) => !isCanvasAdministrativeSectionName(unit.moduleName)
+        );
 
-        if (units.length > 0) {
+        const mergedUnits = discoveredUnits.length > 0
+          ? mergeCanvasCourseUnits(
+              discoveredUnits,
+              units.filter((unit) => isExplicitCanvasUnitName(unit.moduleName))
+            )
+          : units;
+
+        if (mergedUnits.length > 0) {
           return NextResponse.json(
-            { units, generated: false, structure: "modules", warnings },
+            {
+              units: mergedUnits,
+              generated: false,
+              structure: discoveredUnits.length > 0 ? "hybrid" : "modules",
+              warnings,
+            },
             { headers: { "Cache-Control": "private, no-store" } }
           );
         }
       }
 
-      if (homepageUnits.length > 0) {
+      if (discoveredUnits.length > 0) {
         return NextResponse.json(
-          { units: homepageUnits, generated: false, structure: "homepage", warnings },
+          {
+            units: discoveredUnits,
+            generated: false,
+            structure: homepageUnits.length > 0 ? "homepage" : "pages",
+            warnings,
+          },
           { headers: { "Cache-Control": "private, no-store" } }
         );
       }
