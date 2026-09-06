@@ -96,25 +96,46 @@
    Header
    ========================================================================== */
 
+/* A floating capsule rather than a full-width bar: it sits above the page and
+   the canvas runs underneath it, so the top of the page reads as one open field
+   instead of being cut by a rule. Translucent with a blur, because it overlaps
+   content as you scroll and needs to stay legible over whatever passes beneath. */
 [data-public-shell] .site-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: var(--paper);
-  border-bottom: 1px solid var(--rule);
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  box-shadow:
+    0 1px 2px rgba(15, 15, 15, 0.04),
+    0 8px 24px rgba(15, 15, 15, 0.07);
 }
 
 [data-public-shell] .site-header-inner {
   display: flex;
   align-items: center;
-  gap: 24px;
-  min-height: 56px;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0;
+  max-width: none;
 }
+
+/* The capsule floats over the page, so every page opens with room for it. */
+[data-public-shell] main { padding-top: 72px; }
 
 [data-public-shell] .wordmark {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding-inline: 10px 4px;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -149,13 +170,25 @@
   color: var(--ink);
 }
 
-[data-public-shell] .site-nav a.active { color: var(--ink); }
+[data-public-shell] .site-nav a {
+  border-radius: 999px;
+  height: 32px;
+  padding: 0 14px;
+}
+
+/* The current page is outlined rather than merely darker — inside a capsule of
+   evenly spaced items, weight alone does not read as "you are here". */
+[data-public-shell] .site-nav a.active {
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+}
 
 [data-public-shell] .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
+  margin-left: 4px;
 }
 
 /* ============================================================================
@@ -208,7 +241,8 @@
 [data-public-shell] .site-header .cta,
 [data-public-shell] .site-header .cta-quiet {
   height: 32px;
-  padding: 0 12px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-size: 14px;
 }
 
@@ -541,9 +575,10 @@
 }
 
 [data-public-shell] .site-header {
-  position: sticky;
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
+  position: fixed;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 [data-public-shell] .site-footer {
@@ -762,3 +797,282 @@
 }
 
 [data-public-shell] .auth-footnote a:hover { text-decoration: underline; }
+
+/* ============================================================================
+   Masthead: two columns
+   ----------------------------------------------------------------------------
+   The claim on the left, the product's actual output on the right. The right
+   column is the argument — it shows Smartlearn having already decided what to
+   study next, which is the thing the page is selling.
+   ========================================================================== */
+
+[data-public-shell] .masthead-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  [data-public-shell] .masthead-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The accented clause. One phrase in the accent is normally a tell, but it is
+   the line this page has always been built around, so it stays — in the one
+   blue the rest of the product uses, not a gradient. */
+[data-public-shell] .masthead h1 .accent { color: var(--blue); }
+
+/* --- Proof row ----------------------------------------------------------
+   Three figures under a rule. Not cards: a rule and generous spacing separate
+   them, so they read as one statement rather than three tiles. */
+
+[data-public-shell] .proof {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--rule);
+}
+
+[data-public-shell] .proof-figure {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-public-shell] .proof-label {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+
+/* ============================================================================
+   Live signal card
+   ========================================================================== */
+
+[data-public-shell] .signal {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--paper);
+  padding: 20px;
+  box-shadow:
+    0 1px 2px rgba(15, 15, 15, 0.03),
+    0 12px 32px rgba(15, 15, 15, 0.06);
+}
+
+[data-public-shell] .signal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-public-shell] .signal-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .signal-synced {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success-ink);
+}
+
+[data-public-shell] .signal-synced::before {
+  content: "";
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: var(--success-ink);
+}
+
+[data-public-shell] .signal-title {
+  margin-top: 6px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+/* Three steps of one decision, so they are joined by chevrons rather than laid
+   out as separate cards. */
+[data-public-shell] .signal-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+[data-public-shell] .signal-step {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--paper);
+}
+
+[data-public-shell] .signal-step + .signal-step::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: var(--rule-strong);
+}
+
+[data-public-shell] .signal-step svg {
+  height: 15px;
+  width: 15px;
+  color: var(--ink-faint);
+  stroke-width: 1.9;
+}
+
+[data-public-shell] .signal-step-label {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .signal-step-value {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+[data-public-shell] .signal-focus {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--blue-wash);
+}
+
+[data-public-shell] .signal-focus-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--blue);
+}
+
+[data-public-shell] .signal-focus-title {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+[data-public-shell] .signal-focus p {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .signal-mastery {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .signal-mastery strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-public-shell] .signal-track {
+  margin-top: 6px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(55, 53, 47, 0.1);
+  overflow: hidden;
+}
+
+[data-public-shell] .signal-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue);
+}
+
+[data-public-shell] .signal-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  transition: background-color 20ms ease-in, border-color 120ms ease;
+}
+
+[data-public-shell] .signal-cta:hover {
+  background: var(--wash-hover);
+  border-color: var(--rule-strong);
+}
+
+[data-public-shell] .signal-cta svg {
+  height: 16px;
+  width: 16px;
+  color: var(--ink-faint);
+  stroke-width: 1.9;
+}
+
+[data-public-shell] .signal-cta-title { display: block; font-size: 14px; font-weight: 600; }
+[data-public-shell] .signal-cta-sub { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-muted); }
+[data-public-shell] .signal-cta > span { flex: 1; min-width: 0; }
+[data-public-shell] .signal-cta-arrow { flex-shrink: 0; }
+
+/* ============================================================================
+   Capsule, opened
+   ----------------------------------------------------------------------------
+   The pill radius and max-content width are right for the collapsed bar and
+   wrong for a menu: they clipped the links into a lozenge. Opening turns the
+   capsule into a panel that fits the sheet, then it returns to a pill.
+   ========================================================================== */
+
+[data-public-shell] .site-header[data-open="true"] {
+  width: calc(100% - 24px);
+  max-width: 420px;
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+[data-public-shell] .site-header[data-open="true"] .site-header-inner {
+  padding-inline: 4px;
+}
+
+[data-public-shell] .mobile-sheet {
+  margin-top: 6px;
+  padding: 4px 12px 8px;
+  border-top: 1px solid var(--rule);
+  background: transparent;
+}
+
+[data-public-shell] .mobile-sheet .wrap {
+  padding-inline: 0;
+  max-width: none;
+}
+
+/* Collapsed, the items sit shoulder to shoulder inside the pill; expanded, the
+   panel is full width and the close control belongs at its right edge. */
+[data-public-shell] .site-header[data-open="true"] .header-actions {
+  margin-left: auto;
+}

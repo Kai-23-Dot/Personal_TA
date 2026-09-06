@@ -39,7 +39,7 @@ export function SmartlearnHeader({
         : null;
 
   return (
-    <header className="site-header">
+    <header className="site-header" data-open={mobileOpen ? "true" : "false"}>
       <div className="wrap site-header-inner">
         <Link href="/" className="wordmark" onClick={() => setMobileOpen(false)}>
           <Image

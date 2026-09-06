@@ -1,15 +1,13 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
+  ArrowRight,
   BookOpenCheck,
   Brain,
   CalendarCheck2,
-  ClipboardList,
+  Clock3,
   FileText,
-  Layers,
   PlugZap,
   Target,
-  Timer,
 } from "lucide-react";
 import { SmartlearnFooter } from "@/frontend/components/layout/SmartlearnFooter";
 import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
@@ -77,77 +75,65 @@ const steps = [
   },
 ];
 
-/* The hero's proof is the product. This is the workspace's own shell — same
-   rail, same rows, same type — drawn at rest so the page shows what signing in
-   actually gets you rather than describing it. */
-function WorkspacePreview() {
+/* The card the hero is built around: Smartlearn having already decided what to
+   study next. It is the product's whole claim in one object, which is why it
+   sits beside the headline rather than under it. */
+function LiveSignal() {
   return (
-    <div className="preview" aria-label="A preview of the Smartlearn workspace">
-      <div className="preview-bar">
-        <span className="preview-dot" />
-        <span className="preview-dot" />
-        <span className="preview-dot" />
-        <span className="preview-address">smartlearn.app/dashboard</span>
+    <div className="signal" aria-label="A preview of Smartlearn's next study move">
+      <div className="signal-head">
+        <span className="signal-eyebrow">Live priority signal</span>
+        <span className="signal-synced">Canvas synced</span>
       </div>
+      <p className="signal-title">Your next study move</p>
 
-      <div className="preview-body">
-        <aside className="preview-rail">
-          <div className="preview-brand">
-            <Image src="/smartlearn-logo.png" alt="" width={18} height={18} />
-            Smartlearn
-          </div>
-          <div className="preview-nav active">
-            <ClipboardList aria-hidden="true" />
-            Assignments
-          </div>
-          <div className="preview-nav">
-            <FileText aria-hidden="true" />
-            Notes
-          </div>
-          <div className="preview-nav">
-            <Target aria-hidden="true" />
-            Practice
-          </div>
-          <div className="preview-nav">
-            <Layers aria-hidden="true" />
-            Flashcards
-          </div>
-          <div className="preview-nav">
-            <Timer aria-hidden="true" />
-            Focus
-          </div>
-        </aside>
-
-        <div className="preview-main">
-          <p className="preview-title">Due this week</p>
-
-          <div style={{ marginTop: "14px" }}>
-            <div className="preview-row">
-              <span className="course-dot" data-course-tone="1" />
-              Integration by parts — problem set
-              <span className="preview-meta">Calculus II · Tomorrow</span>
-            </div>
-            <div className="preview-row">
-              <span className="course-dot" data-course-tone="2" />
-              Chapter 6 quiz
-              <span className="preview-meta">Principles of Management · Fri</span>
-            </div>
-            <div className="preview-row">
-              <span className="course-dot" data-course-tone="3" />
-              Analytical reading — Federalist No. 10
-              <span className="preview-meta">U.S. Government · Mon</span>
-            </div>
-          </div>
-
-          <div className="preview-callout">
-            <strong style={{ fontSize: "14px" }}>Review integration techniques</strong>
-            <p>
-              Recent practice accuracy is lower here, and the topic appears on
-              tomorrow&apos;s quiz.
-            </p>
-          </div>
+      <div className="signal-steps">
+        <div className="signal-step">
+          <BookOpenCheck aria-hidden="true" />
+          <p className="signal-step-label">Course</p>
+          <p className="signal-step-value">Calculus II</p>
+        </div>
+        <div className="signal-step">
+          <Clock3 aria-hidden="true" />
+          <p className="signal-step-label">Next deadline</p>
+          <p className="signal-step-value">Tomorrow</p>
+        </div>
+        <div className="signal-step">
+          <Target aria-hidden="true" />
+          <p className="signal-step-label">Next action</p>
+          <p className="signal-step-value">42 min review</p>
         </div>
       </div>
+
+      <div className="signal-focus">
+        <p className="signal-focus-eyebrow">Recommended focus</p>
+        <p className="signal-focus-title">Review integration techniques</p>
+        <p>
+          Recent practice accuracy is lower here, and the topic appears on
+          tomorrow&apos;s quiz.
+        </p>
+
+        <div className="signal-mastery">
+          <span>Current mastery</span>
+          <strong>68%</strong>
+        </div>
+        <div
+          className="signal-track"
+          role="img"
+          aria-label="Current mastery: 68 percent"
+        >
+          <div className="signal-fill" style={{ width: "68%" }} />
+        </div>
+      </div>
+
+      <Link className="signal-cta" href="/practice">
+        <Target aria-hidden="true" />
+        <span>
+          <span className="signal-cta-title">Start targeted practice</span>
+          <span className="signal-cta-sub">8 questions, adapting as you answer</span>
+        </span>
+        <ArrowRight className="signal-cta-arrow" aria-hidden="true" />
+      </Link>
     </div>
   );
 }
@@ -167,23 +153,45 @@ export default async function HomePage() {
 
       <main>
         <section className="wrap masthead">
-          <h1>From course material to focused practice.</h1>
-          <p className="lede">
-            Smartlearn connects Canvas, coursework, deadlines, and performance
-            into one workspace — so every study session starts with what
-            actually matters next.
-          </p>
+          <div className="masthead-grid">
+            <div>
+              <h1>
+                Move through your semester{" "}
+                <span className="accent">with clarity.</span>
+              </h1>
+              <p className="lede">
+                Smartlearn connects Canvas, coursework, deadlines, and
+                performance into one clear workspace — so every study session
+                starts with purpose.
+              </p>
 
-          <div className="cta-row">
-            <Link className="cta" href={primaryHref}>
-              {primaryLabel}
-            </Link>
-            <Link className="cta-quiet" href="#how-it-works">
-              See how it works
-            </Link>
+              <div className="cta-row">
+                <Link className="cta" href={primaryHref}>
+                  {primaryLabel}
+                </Link>
+                <Link className="cta-quiet" href="#how-it-works">
+                  Explore the system
+                </Link>
+              </div>
+
+              <div className="proof">
+                <div>
+                  <p className="proof-figure">01</p>
+                  <p className="proof-label">One connected workspace</p>
+                </div>
+                <div>
+                  <p className="proof-figure">24/7</p>
+                  <p className="proof-label">Study signals online</p>
+                </div>
+                <div>
+                  <p className="proof-figure">Zero</p>
+                  <p className="proof-label">Generic practice</p>
+                </div>
+              </div>
+            </div>
+
+            <LiveSignal />
           </div>
-
-          <WorkspacePreview />
         </section>
 
         <section className="wrap band">
