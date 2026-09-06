@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,15 @@ type SmartlearnHeaderProps = {
   signOutHref?: string;
   actionLabel?: string;
   actionHref?: string;
+  /**
+   * Whether the visitor is signed in, when the page already knows.
+   *
+   * Pages that are server-rendered anyway (the landing page fetches the user to
+   * pick its hero CTA) pass this so the button is right in the first paint.
+   * Static pages — about, contact, privacy, terms — leave it undefined and the
+   * header resolves it on the client instead, which keeps those pages static.
+   */
+  isSignedIn?: boolean;
 };
 
 const publicNavLinks = [
@@ -27,16 +36,53 @@ export function SmartlearnHeader({
   signOutHref = "/logout",
   actionLabel,
   actionHref,
+  isSignedIn,
 }: SmartlearnHeaderProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sessionSignedIn, setSessionSignedIn] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    // The server already answered this; no need to ask again.
+    if (isSignedIn !== undefined) return;
+
+    // Supabase's SSR client stores the session in a non-httpOnly cookie named
+    // sb-<project-ref>-auth-token, so its presence answers "is someone signed
+    // in" without importing the Supabase client — which would otherwise add
+    // ~55kB to every public page for the sake of one button label.
+    //
+    // Cookie presence is a heuristic: a stale session still leaves one behind.
+    // That is the right trade here, because the only consequence is the button
+    // reading "Open workspace" and middleware bouncing a dead session to the
+    // login screen — exactly where that visitor needed to go anyway.
+    const read = () =>
+      setSessionSignedIn(
+        document.cookie.split(";").some((c) => /^\s*sb-.+-auth-token/.test(c))
+      );
+
+    read();
+
+    // Re-check when the tab regains focus, so signing out elsewhere corrects it.
+    window.addEventListener("focus", read);
+    document.addEventListener("visibilitychange", read);
+    return () => {
+      window.removeEventListener("focus", read);
+      document.removeEventListener("visibilitychange", read);
+    };
+  }, [isSignedIn]);
+
+  const signedIn = isSignedIn ?? sessionSignedIn;
+
+  // An explicit action wins: the sign-in screen offers "Create account" and the
+  // sign-up screen offers "Sign in", and neither should be overridden.
   const primaryAction =
     actionLabel && actionHref
       ? { label: actionLabel, href: actionHref }
-      : showSignIn
-        ? { label: "Sign in", href: signInHref }
-        : null;
+      : signedIn
+        ? { label: "Open workspace", href: "/dashboard" }
+        : showSignIn
+          ? { label: "Sign in", href: signInHref }
+          : null;
 
   return (
     <header className="site-header" data-open={mobileOpen ? "true" : "false"}>

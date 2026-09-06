@@ -149,7 +149,7 @@ export default async function HomePage() {
 
   return (
     <div className="page-shell" data-public-shell>
-      <SmartlearnHeader />
+      <SmartlearnHeader isSignedIn={Boolean(user)} />
 
       <main>
         <section className="wrap masthead">
