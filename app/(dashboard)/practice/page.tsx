@@ -319,7 +319,7 @@ export default function PracticePage() {
             {resumable.map((entry) => (
               <div
                 key={entry.sessionId}
-                className="flex items-center justify-between gap-4 rounded-xl border border-sky-400/20 bg-[rgba(9,12,26,0.72)] px-5 py-3.5"
+                className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-5 py-3.5"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">{entry.topic}</p>
@@ -371,7 +371,7 @@ export default function PracticePage() {
               <div className="flex items-center justify-between gap-3">
                 <Label id="module-selection-label">Course units / modules</Label>
                 {selectedModuleIds.length > 0 ? (
-                  <span className="text-xs font-medium text-sky-300">
+                  <span className="text-xs font-medium text-[var(--blue)]">
                     {selectedModuleIds.length} selected
                   </span>
                 ) : null}
@@ -382,7 +382,7 @@ export default function PracticePage() {
                   Loading units directly from your course…
                 </div>
               ) : moduleError ? (
-                <div className="flex flex-wrap items-center gap-2 text-sm text-rose-400" role="alert">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--danger-ink)]" role="alert">
                   <span>{moduleError}</span>
                   <Button type="button" size="sm" variant="secondary" onClick={() => setModuleReload((value) => value + 1)}>
                     Try again
@@ -394,7 +394,7 @@ export default function PracticePage() {
                 <>
                   {modules.length > 0 ? (
                     <div
-                      className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2"
+                      className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-2"
                       role="group"
                       aria-labelledby="module-selection-label"
                     >
@@ -405,8 +405,8 @@ export default function PracticePage() {
                             key={item.id}
                             className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                               selected
-                                ? "border-sky-400/35 bg-sky-400/10"
-                                : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
+                                ? "border-[var(--rule)] bg-[var(--blue-wash)]"
+                                : "border-transparent hover:border-[var(--rule)] hover:bg-[var(--wash-hover)]"
                             }`}
                           >
                             <input
@@ -520,7 +520,7 @@ export default function PracticePage() {
                 <p className="text-sm text-muted-foreground">No notes found for this course yet. Upload or import notes first.</p>
               ) : null}
               {notes.length > 0 ? (
-                <div className="max-h-[240px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5">
+                <div className="max-h-[240px] overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3.5 py-2.5">
                   {notes.map((note) => (
                     <label key={note.id} className="flex items-center gap-2.5 py-1.5 text-sm text-foreground">
                       <input
@@ -602,7 +602,7 @@ export default function PracticePage() {
             >
               {loading ? "Generating..." : "Generate test"}
             </Button>
-            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+            {error ? <p className="text-sm text-[var(--danger-ink)]">{error}</p> : null}
           </form>
         </CardContent>
       </Card>

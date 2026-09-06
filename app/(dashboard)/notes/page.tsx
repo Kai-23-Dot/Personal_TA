@@ -269,16 +269,16 @@ export default function NotesPage() {
       {/* ── Viewing a saved guide ── */}
       {viewingGuide ? (
         <Card variant="panel" className="overflow-hidden">
-          <div className="flex items-center justify-between gap-4 border-b border-white/8 px-6 py-4">
+          <div className="flex items-center justify-between gap-4 border-b border-[var(--rule)] px-6 py-4">
             <div>
-              <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Saved study guide</p>
+              <p className="mb-0.5 text-xs font-medium text-muted-foreground">Saved study guide</p>
               <h3 className="text-base font-semibold text-foreground">{viewingGuide.title}</h3>
               <p className="text-xs text-muted-foreground">{viewingGuide.courseName} · {new Date(viewingGuide.savedAt).toLocaleDateString()}</p>
             </div>
             <button
               type="button"
               onClick={() => setViewingGuide(null)}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-white/10 hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -293,7 +293,7 @@ export default function NotesPage() {
       {savedGuides.length > 0 && !viewingGuide ? (
         <div>
           <div className="mb-3 flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-sky-300" />
+            <BookOpen className="h-4 w-4 text-[var(--blue)]" />
             <h3 className="text-sm font-semibold text-foreground">My Study Guides</h3>
             <span className="text-xs text-muted-foreground">({savedGuides.length})</span>
           </div>
@@ -301,7 +301,7 @@ export default function NotesPage() {
             {savedGuides.map((guide) => (
               <div
                 key={guide.id}
-                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition-colors duration-150 hover:border-sky-400/30 hover:bg-sky-400/5"
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 transition-colors duration-150 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
                 onClick={() => setViewingGuide(guide)}
               >
                 <div className="min-w-0 flex-1">
@@ -317,7 +317,7 @@ export default function NotesPage() {
                       deleteGuide(guide.id);
                       setSavedGuides(loadSavedGuides());
                     }}
-                    className="rounded p-0.5 text-muted-foreground transition-colors duration-150 hover:text-rose-400"
+                    className="rounded p-0.5 text-muted-foreground transition-colors duration-150 hover:text-[var(--danger-ink)]"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -360,8 +360,8 @@ export default function NotesPage() {
                       className={cn(
                         "rounded-lg border px-3.5 py-1.5 text-xs font-medium transition-colors duration-150",
                         inputMode === mode
-                          ? "border-sky-400/30 bg-sky-500/15 text-sky-200"
-                          : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                          ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
+                          : "border-[var(--rule)] bg-[var(--paper)] text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {mode === "items" ? "Select lessons" : "Type unit name"}
@@ -393,7 +393,7 @@ export default function NotesPage() {
                   <Label>
                     Lesson content to include
                     {totalSelected > 0 && (
-                      <span className="ml-2 font-medium text-sky-300">({totalSelected} selected)</span>
+                      <span className="ml-2 font-medium text-[var(--blue)]">({totalSelected} selected)</span>
                     )}
                   </Label>
 
@@ -406,14 +406,14 @@ export default function NotesPage() {
                   />
 
                   {/* Grouped unit list */}
-                  <div className="max-h-[340px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  <div className="max-h-[340px] overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5">
                     {Object.entries(groupedByUnit).map(([groupName, items]) => {
                       const allChecked = items.every((i) => selectedModuleItems[i.itemKey]);
                       const someChecked = items.some((i) => selectedModuleItems[i.itemKey]);
                       return (
                         <div key={groupName} className="mb-3">
-                          <div className="mb-1 flex items-center gap-2 border-b border-white/8 py-1.5">
-                            <span className="flex-grow text-xs font-bold uppercase tracking-wider text-sky-300">
+                          <div className="mb-1 flex items-center gap-2 border-b border-[var(--rule)] py-1.5">
+                            <span className="flex-grow text-xs font-bold text-[var(--blue)]">
                               {groupName}
                             </span>
                             <button
@@ -438,9 +438,9 @@ export default function NotesPage() {
                               className={cn(
                                 "flex-shrink-0 rounded px-1.5 py-0.5 text-[11px]",
                                 allChecked
-                                  ? "border border-sky-400/30 bg-sky-500/10 text-sky-300"
+                                  ? "border border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
                                   : someChecked
-                                    ? "text-sky-300/80"
+                                    ? "text-[var(--blue)]"
                                     : "text-muted-foreground"
                               )}
                             >
@@ -520,16 +520,16 @@ export default function NotesPage() {
               </Button>
             </div>
 
-            {studyGuideError ? <p className="text-sm text-rose-400">{studyGuideError}</p> : null}
-            {studyGuideWarning ? <p className="text-sm text-amber-400">{studyGuideWarning}</p> : null}
+            {studyGuideError ? <p className="text-sm text-[var(--danger-ink)]">{studyGuideError}</p> : null}
+            {studyGuideWarning ? <p className="text-sm text-[var(--warning-ink)]">{studyGuideWarning}</p> : null}
           </form>
         </CardContent>
       </Card>
 
       {studyGuideSummary ? (
         <Card variant="panel" className="p-8">
-          <div className="mb-6 flex items-center gap-3 border-b border-white/8 pb-4">
-            <div className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
+          <div className="mb-6 flex items-center gap-3 border-b border-[var(--rule)] pb-4">
+            <div className="h-2 w-2 rounded-full bg-[var(--blue)]" />
             <h3 className="text-base font-semibold text-foreground">Study Guide</h3>
           </div>
           <ReactMarkdown remarkPlugins={[remarkGfm]} className="md-content">

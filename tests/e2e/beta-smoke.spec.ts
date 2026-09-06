@@ -116,7 +116,7 @@ test.describe("beta smoke coverage", () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     await page.goto(`${baseURL}/`);
-    await page.getByRole("button", { name: "Toggle navigation" }).click();
+    await page.getByRole("button", { name: "Open navigation" }).click();
     await expect(page.getByRole("link", { name: "About" }).last()).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,

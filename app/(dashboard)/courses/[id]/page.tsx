@@ -43,12 +43,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
     <div className="mx-auto max-w-4xl px-4 pb-20 pt-6">
 
       {/* Back */}
-      <Link href="/courses" className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-white">
+      <Link href="/courses" className="mb-6 inline-flex items-center gap-1.5 text-sm text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
         <ArrowLeft className="h-4 w-4" /> All courses
       </Link>
 
       {/* Hero */}
-      <div className="mb-8 rounded-3xl border border-white/10 bg-[rgba(9,12,24,0.82)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur">
+      <div className="mb-8 rounded-3xl border border-[var(--rule)] bg-[var(--paper)] p-6 shadow-none backdrop-blur">
         <div className="flex items-start gap-5">
           <div
             className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-base font-bold text-[#05110b]"
@@ -57,11 +57,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
             {initialsFor(course.name)}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">{course.name}</h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--ink)]">{course.name}</h1>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">
               {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
             </p>
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
               <CalendarDays className="h-3.5 w-3.5" />
               Updated {new Date(course.updated_at).toLocaleDateString()}
             </p>
@@ -74,10 +74,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
             { label: "Completed", value: completed.length, icon: GraduationCap },
             { label: "Total", value: (assignments ?? []).length, icon: FileText },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-xl border border-white/8 bg-white/3 p-3 text-center">
-              <Icon className="mx-auto mb-1 h-4 w-4 text-slate-500" />
-              <p className="text-xl font-bold text-white">{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+            <div key={label} className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 text-center">
+              <Icon className="mx-auto mb-1 h-4 w-4 text-[var(--ink-muted)]" />
+              <p className="text-xl font-bold text-[var(--ink)]">{value}</p>
+              <p className="text-xs text-[var(--ink-muted)]">{label}</p>
             </div>
           ))}
         </div>
@@ -98,7 +98,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
       {/* Upcoming assignments */}
       {upcoming.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-sky-300">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--blue)]">
             Upcoming · {upcoming.length}
           </h2>
           <div className="space-y-2">
@@ -109,19 +109,19 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
                 <div
                   key={a.id}
                   className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${
-                    urgent ? "border-orange-400/25 bg-orange-500/8" : "border-white/8 bg-white/3"
+                    urgent ? "border-[var(--warning-ink)] bg-[var(--warning-bg)]" : "border-[var(--rule)] bg-[var(--paper)]"
                   }`}
                 >
                   {due && (
-                    <div className={`flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 text-center w-12 shrink-0 ${urgent ? "bg-orange-500/15 text-orange-300" : "bg-sky-500/10 text-sky-300"}`}>
-                      <span className="text-[9px] font-bold uppercase leading-none tracking-wider">{format(due, "MMM")}</span>
+                    <div className={`flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 text-center w-12 shrink-0 ${urgent ? "bg-[var(--warning-bg)] text-[#533b1b]" : "bg-[var(--blue-wash)] text-[var(--blue)]"}`}>
+                      <span className="text-[9px] font-bold leading-none">{format(due, "MMM")}</span>
                       <span className="text-base font-bold leading-snug">{format(due, "d")}</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{a.title}</p>
+                    <p className="text-sm font-medium text-[var(--ink)] truncate">{a.title}</p>
                     {a.assignment_type && (
-                      <p className="text-xs text-slate-500 capitalize">{a.assignment_type}</p>
+                      <p className="text-xs text-[var(--ink-muted)] capitalize">{a.assignment_type}</p>
                     )}
                   </div>
                 </div>
@@ -134,14 +134,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
       {/* No due date */}
       {noDueDate.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--ink-muted)]">
             No due date · {noDueDate.length}
           </h2>
           <div className="space-y-2">
             {noDueDate.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/3 px-4 py-3">
-                <BookOpen className="h-4 w-4 shrink-0 text-slate-600" />
-                <p className="text-sm text-slate-300 truncate">{a.title}</p>
+              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
+                <BookOpen className="h-4 w-4 shrink-0 text-[var(--ink-muted)]" />
+                <p className="text-sm text-[var(--ink-muted)] truncate">{a.title}</p>
               </div>
             ))}
           </div>
@@ -150,9 +150,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
 
       {/* Empty state */}
       {(assignments ?? []).length === 0 && (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-white/2 p-10 text-center">
-          <BookOpen className="mx-auto mb-3 h-8 w-8 text-slate-600" />
-          <p className="text-sm text-slate-400">No assignments synced for this course yet.</p>
+        <div className="rounded-2xl border border-dashed border-[var(--rule)] bg-[var(--paper)] p-10 text-center">
+          <BookOpen className="mx-auto mb-3 h-8 w-8 text-[var(--ink-muted)]" />
+          <p className="text-sm text-[var(--ink-muted)]">No assignments synced for this course yet.</p>
           <Link href="/dashboard" className="btn btn-secondary mt-4">Sync from dashboard</Link>
         </div>
       )}

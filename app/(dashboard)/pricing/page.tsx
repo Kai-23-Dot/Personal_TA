@@ -100,7 +100,7 @@ export default function PricingPage() {
       </p>
 
       {error ? (
-        <p className="mx-auto mt-4 max-w-md text-sm text-rose-400">{error}</p>
+        <p className="mx-auto mt-4 max-w-md text-sm text-[var(--danger-ink)]">{error}</p>
       ) : null}
 
       <div className="mt-8 grid gap-5 text-left sm:grid-cols-2 xl:grid-cols-4">
@@ -167,7 +167,7 @@ function PlanCard({
     <Card
       className={cn(
         "flex flex-col gap-4 p-7",
-        highlighted && "border-sky-400/40 shadow-[0_0_0_1px_rgba(56,189,248,0.15),0_20px_60px_rgba(56,189,248,0.08)]"
+        highlighted && "border-[var(--rule)]"
       )}
     >
       <div>
@@ -186,7 +186,7 @@ function PlanCard({
       <ul className="grid flex-1 gap-2.5">
         {features.map((f) => (
           <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Check className="h-4 w-4 flex-shrink-0 text-sky-400" /> {f}
+            <Check className="h-4 w-4 flex-shrink-0 text-[var(--blue)]" /> {f}
           </li>
         ))}
       </ul>

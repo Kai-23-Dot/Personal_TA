@@ -16,15 +16,15 @@ function escapeHtml(code: string) {
 function highlightJava(code: string) {
   let html = escapeHtml(code);
   // Strings
-  html = html.replace(/("(?:\\.|[^"\\])*")/g, '<span class="code-string">$1</span>');
+  html = html.replace(/("(?:\\.|[^"\\])*")/g, '<span className="code-string">$1</span>');
   // Comments
-  html = html.replace(/(\/\/.*?$)/gm, '<span class="code-comment">$1</span>');
-  html = html.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="code-comment">$1</span>');
+  html = html.replace(/(\/\/.*?$)/gm, '<span className="code-comment">$1</span>');
+  html = html.replace(/(\/\*[\s\S]*?\*\/)/g, '<span className="code-comment">$1</span>');
   // Numbers
-  html = html.replace(/\b(\d+)\b/g, '<span class="code-number">$1</span>');
+  html = html.replace(/\b(\d+)\b/g, '<span className="code-number">$1</span>');
   // Keywords
   const keywordPattern = new RegExp(`\\b(${JAVA_KEYWORDS.join("|")})\\b`, "g");
-  html = html.replace(keywordPattern, '<span class="code-keyword">$1</span>');
+  html = html.replace(keywordPattern, '<span className="code-keyword">$1</span>');
   return html;
 }
 
@@ -33,7 +33,7 @@ export function CodeBlock({ code, language = "java" }: { code: string; language?
 
   return (
     <pre
-      className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 font-mono text-sm leading-relaxed"
+      className="mt-3 overflow-x-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4 font-mono text-sm leading-relaxed"
       aria-label={`${language} code block`}
     >
       <code dangerouslySetInnerHTML={{ __html: highlighted }} />

@@ -172,13 +172,13 @@ export default function FlashcardsPage() {
           <button
             type="button"
             onClick={handleNewDeck}
-            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue-edge)]"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             New deck
           </button>
           <p
-            className="max-w-full truncate text-sm font-medium text-slate-500 sm:max-w-[65%] sm:text-right"
+            className="max-w-full truncate text-sm font-medium text-[var(--ink-muted)] sm:max-w-[65%] sm:text-right"
             title={current.topic}
           >
             {current.topic}
@@ -186,11 +186,11 @@ export default function FlashcardsPage() {
         </div>
 
         <div className="mb-3 flex items-end justify-between gap-4">
-          <p aria-live="polite" className="text-sm text-slate-400 sm:text-base">
-            Card <span className="font-semibold text-slate-100">{currentIndex + 1}</span> of{" "}
-            <span className="font-semibold text-slate-100">{cards.length}</span>
+          <p aria-live="polite" className="text-sm text-[var(--ink-muted)] sm:text-base">
+            Card <span className="font-semibold text-[var(--ink)]">{currentIndex + 1}</span> of{" "}
+            <span className="font-semibold text-[var(--ink)]">{cards.length}</span>
           </p>
-          <p className="text-xs font-medium text-slate-600">
+          <p className="text-xs font-medium text-[var(--ink-muted)]">
             {Math.round(((currentIndex + 1) / cards.length) * 100)}% complete
           </p>
         </div>
@@ -201,10 +201,10 @@ export default function FlashcardsPage() {
           aria-valuemin={1}
           aria-valuemax={cards.length}
           aria-valuenow={currentIndex + 1}
-          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
+          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-[var(--paper)]"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 shadow-[0_0_14px_rgba(56,189,248,0.35)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
+            className="h-full rounded-full bg-[var(--blue)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
@@ -225,7 +225,7 @@ export default function FlashcardsPage() {
               }
             }}
             aria-pressed={isFlipped}
-            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full cursor-pointer rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
+            className="group relative block h-[clamp(22rem,52vh,31rem)] w-full cursor-pointer rounded-[1.75rem] text-left outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--blue-edge)] focus-visible:ring-offset-4 focus-visible:ring-offset-[#050814] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:h-[clamp(24rem,54vh,32rem)]"
           >
             <span className="sr-only">
               {isFlipped
@@ -244,19 +244,18 @@ export default function FlashcardsPage() {
             >
               <div
                 aria-hidden={isFlipped}
-                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.98),rgba(7,12,26,0.97))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:p-8 md:p-10"
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none backdrop-blur-xl sm:p-8 md:p-10"
                 style={{
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
                 }}
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(139,92,246,0.14),transparent_42%),radial-gradient(circle_at_90%_90%,rgba(56,189,248,0.08),transparent_38%)]" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-300 sm:text-sm">
-                    <span className="size-2 rounded-full bg-violet-300 shadow-[0_0_12px_rgba(196,181,253,0.7)]" />
+                  <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[#412454] sm:text-sm">
+                    <span className="size-2 rounded-full bg-[var(--paper-sunken)]" />
                     Question
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)]">
                     <RotateCcw aria-hidden="true" className="size-3.5" />
                     Tap to flip
                   </span>
@@ -285,14 +284,14 @@ export default function FlashcardsPage() {
                   </div>
                 </div>
 
-                <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
+                <p className="relative text-center text-xs font-medium text-[var(--ink-muted)] sm:text-sm">
                   Tap the card or press Space to reveal the answer
                 </p>
               </div>
 
               <div
                 aria-hidden={!isFlipped}
-                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-sky-300/25 bg-[linear-gradient(145deg,rgba(8,22,42,0.99),rgba(6,13,29,0.98))] p-5 shadow-[0_24px_90px_rgba(14,116,144,0.16),0_24px_70px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-8 md:p-10"
+                className="absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none backdrop-blur-xl sm:p-8 md:p-10"
                 style={{
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
@@ -301,11 +300,11 @@ export default function FlashcardsPage() {
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_8%,rgba(34,211,238,0.13),transparent_40%),radial-gradient(circle_at_10%_90%,rgba(59,130,246,0.08),transparent_38%)]" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-300 sm:text-sm">
-                    <span className="size-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.75)]" />
+                  <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[var(--blue)] sm:text-sm">
+                    <span className="size-2 rounded-full bg-[var(--paper-sunken)]" />
                     Answer
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)]">
                     <RotateCcw aria-hidden="true" className="size-3.5" />
                     Tap to flip back
                   </span>
@@ -323,7 +322,7 @@ export default function FlashcardsPage() {
                     }`}
                   >
                     <p
-                      className={`max-w-2xl whitespace-pre-wrap break-words font-medium tracking-[-0.01em] text-slate-100 ${
+                      className={`max-w-2xl whitespace-pre-wrap break-words font-medium tracking-[-0.01em] text-[var(--ink)] ${
                         answerUsesReadingLayout
                           ? "text-left text-[clamp(1rem,2.2vw,1.3rem)] leading-[1.75]"
                           : "text-balance text-center text-[clamp(1.05rem,2.5vw,1.5rem)] leading-[1.7]"
@@ -334,7 +333,7 @@ export default function FlashcardsPage() {
                   </div>
                 </div>
 
-                <p className="relative text-center text-xs font-medium text-slate-500 sm:text-sm">
+                <p className="relative text-center text-xs font-medium text-[var(--ink-muted)] sm:text-sm">
                   Flip back whenever you want to review the question
                 </p>
               </div>
@@ -346,10 +345,10 @@ export default function FlashcardsPage() {
           <button
             type="button"
             onClick={() => setIsFlipped((flipped) => !flipped)}
-            className={`inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base ${
+            className={`inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue-edge)] active:scale-[0.985] motion-reduce:transition-none sm:text-base ${
               isFlipped
-                ? "border-white/[0.12] bg-white/[0.055] text-slate-200 hover:border-sky-300/30 hover:bg-sky-300/[0.08] hover:text-white"
-                : "border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] hover:from-white hover:to-cyan-100"
+                ? "border-[var(--rule)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--blue-edge)] hover:bg-[var(--blue)]/[0.08] hover:text-[var(--ink)]"
+                : "border-[var(--rule)] bg-gradient-to-r from-slate-50 to-[var(--paper-sunken)] text-slate-950 hover:from-white hover:to-[var(--paper-sunken)]"
             }`}
           >
             <RotateCcw
@@ -365,7 +364,7 @@ export default function FlashcardsPage() {
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-sky-200/40 bg-gradient-to-r from-slate-50 to-sky-100 px-5 text-sm font-bold text-slate-950 shadow-[0_12px_36px_rgba(56,189,248,0.16)] transition-all duration-200 hover:from-white hover:to-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:scale-[0.985] motion-reduce:transition-none sm:text-base"
+              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--rule)] bg-gradient-to-r from-slate-50 to-[var(--paper-sunken)] px-5 text-sm font-bold text-slate-950 transition-all duration-200 hover:from-white hover:to-[var(--paper-sunken)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue-edge)] active:scale-[0.985] motion-reduce:transition-none sm:text-base"
             >
               {currentIndex + 1 >= cards.length
                 ? "Review deck again"
@@ -379,7 +378,7 @@ export default function FlashcardsPage() {
           )}
         </div>
 
-        <p className="mt-4 text-center text-xs leading-5 text-slate-600">
+        <p className="mt-4 text-center text-xs leading-5 text-[var(--ink-muted)]">
           You can flip the current card as many times as you need before moving on.
         </p>
       </div>
@@ -401,9 +400,9 @@ export default function FlashcardsPage() {
       {(loadingSets || savedSets.length > 0) && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
-            <Layers3 className="h-4 w-4 text-violet-300" />
-            <h3 className="text-sm font-semibold text-white">My Flashcard Sets</h3>
-            {!loadingSets && <span className="text-xs text-slate-500">({savedSets.length})</span>}
+            <Layers3 className="h-4 w-4 text-[#412454]" />
+            <h3 className="text-sm font-semibold text-[var(--ink)]">My Flashcard Sets</h3>
+            {!loadingSets && <span className="text-xs text-[var(--ink-muted)]">({savedSets.length})</span>}
           </div>
           {loadingSets ? (
             <div className="grid gap-2">
@@ -416,16 +415,16 @@ export default function FlashcardsPage() {
                   key={set.id}
                   type="button"
                   onClick={() => startSet(set)}
-                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-left transition-all hover:border-violet-400/30 hover:bg-violet-400/5 active:scale-[0.99]"
+                  className="group flex items-center gap-3 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 text-left transition-all hover:border-[var(--rule)] hover:bg-[var(--paper-sunken)] active:scale-[0.99]"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--ink-faint)]">
                     <Layers3 className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{set.name}</p>
-                    <p className="text-xs text-slate-500">{set.count} card{set.count !== 1 ? "s" : ""}</p>
+                    <p className="text-sm font-medium text-[var(--ink)] truncate">{set.name}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{set.count} card{set.count !== 1 ? "s" : ""}</p>
                   </div>
-                  <span className="text-xs text-slate-600 group-hover:text-slate-400 transition-colors">Study →</span>
+                  <span className="text-xs text-[var(--ink-muted)] group-hover:text-[var(--ink-muted)] transition-colors">Study →</span>
                 </button>
               ))}
             </div>
@@ -434,18 +433,18 @@ export default function FlashcardsPage() {
       )}
 
       {/* Generate form */}
-      <div className="mb-10 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.72)] p-6 shadow-sm backdrop-blur">
-        <h2 className="mb-1 text-base font-semibold text-white">Generate flashcards</h2>
-        <p className="mb-5 text-sm text-slate-400">Generate AI flashcards from your course notes.</p>
+      <div className="mb-10 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-6 shadow-sm backdrop-blur">
+        <h2 className="mb-1 text-base font-semibold text-[var(--ink)]">Generate flashcards</h2>
+        <p className="mb-5 text-sm text-[var(--ink-muted)]">Generate AI flashcards from your course notes.</p>
         <form onSubmit={handleGenerate} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300" htmlFor="fc-course">Course</label>
+            <label className="text-sm font-medium text-[var(--ink-muted)]" htmlFor="fc-course">Course</label>
             <select
               id="fc-course"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
               required
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
+              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             >
               <option value="">Select a course</option>
               {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -453,31 +452,31 @@ export default function FlashcardsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300" htmlFor="fc-topic">Topic (optional)</label>
+            <label className="text-sm font-medium text-[var(--ink-muted)]" htmlFor="fc-topic">Topic (optional)</label>
             <input
               id="fc-topic"
               type="text"
               placeholder="e.g. Photosynthesis"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
+              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--ink-muted)]">
               Leave blank to create a course-wide review deck.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Difficulty</label>
+            <label className="text-sm font-medium text-[var(--ink-muted)]">Difficulty</label>
             <div className="grid grid-cols-4 gap-2">
               {(["mixed", "easy", "medium", "hard"] as const).map((d) => {
                 const colors: Record<string, string> = {
-                  mixed: "border-sky-400/50 bg-sky-400/15 text-sky-100 shadow-[0_0_12px_rgba(56,189,248,0.1)]",
-                  easy: "border-emerald-400/50 bg-emerald-400/15 text-emerald-100 shadow-[0_0_12px_rgba(52,211,153,0.1)]",
-                  medium: "border-amber-400/50 bg-amber-400/15 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.1)]",
-                  hard: "border-red-400/50 bg-red-400/15 text-red-100 shadow-[0_0_12px_rgba(248,113,113,0.1)]",
+                  mixed: "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]",
+                  easy: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829] shadow-[0_0_12px_rgba(52,211,153,0.1)]",
+                  medium: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] shadow-[0_0_12px_rgba(251,191,36,0.1)]",
+                  hard: "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[var(--danger-ink)] shadow-[0_0_12px_rgba(248,113,113,0.1)]",
                 };
-                const inactive = "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200";
+                const inactive = "border-[var(--rule)] bg-[var(--paper)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]";
                 return (
                   <button
                     key={d}
@@ -495,7 +494,7 @@ export default function FlashcardsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300" htmlFor="fc-count">Number of cards</label>
+            <label className="text-sm font-medium text-[var(--ink-muted)]" htmlFor="fc-count">Number of cards</label>
             <input
               id="fc-count"
               type="number"
@@ -503,7 +502,7 @@ export default function FlashcardsPage() {
               max={30}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-400/40 focus:bg-sky-500/5 transition-colors"
+              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             />
           </div>
 
@@ -516,7 +515,7 @@ export default function FlashcardsPage() {
           </button>
 
           {message ? (
-            <p className="text-center text-sm text-red-400">{message}</p>
+            <p className="text-center text-sm text-[var(--danger-ink)]">{message}</p>
           ) : null}
         </form>
       </div>

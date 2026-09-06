@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
   return (
     <SmartlearnBackdrop>
       <SmartlearnHeader showSignIn />
-      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "120px 1.5rem 4rem" }}>
+      <main className="auth-main">
         <section className="contact-form-column" style={{ width: "100%", maxWidth: 420, background: "rgba(255, 255, 255, 0.04)", borderRadius: 20 }}>
           <h1 className="contact-form-title">Choose a new password</h1>
           <form className="contact-form" onSubmit={submit}>

@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { ThemeProvider } from "@/frontend/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import "./globals.css";
-import "./chain-summit.css";
-import "./hero.css";
-import "./future-ui.css";
+import "./legacy-bridge.css";
+import "./notion-workspace.css";
+import "./notion-public.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://smartlearn.app"),
@@ -49,7 +48,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -60,7 +59,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Script src="/smartlearn-ui.js" strategy="lazyOnload" />
           <Toaster
             position="bottom-right"
             toastOptions={{

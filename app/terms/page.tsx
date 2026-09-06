@@ -84,7 +84,7 @@ const sections = [
   },
   {
     title: "15. Questions and notices",
-    body: <p>Questions, support requests, and legal notices may be submitted through the <Link href="/contact" className="text-sky-300 underline decoration-sky-300/30 underline-offset-4 hover:text-sky-200">Smartlearn contact page</Link>. Please include the email associated with your account and enough detail for us to understand the request.</p>,
+    body: <p>Questions, support requests, and legal notices may be submitted through the <Link href="/contact" className="text-[var(--blue)] underline decoration-sky-300/30 underline-offset-4 hover:text-[var(--blue)]">Smartlearn contact page</Link>. Please include the email associated with your account and enough detail for us to understand the request.</p>,
   },
 ] as const;
 
@@ -92,25 +92,25 @@ export default function TermsPage() {
   return (
     <SmartlearnBackdrop>
       <SmartlearnHeader showSignIn />
-      <main className="mx-auto w-full max-w-6xl px-5 pb-24 pt-36 sm:px-8 lg:pt-40">
-        <div className="rounded-[2rem] border border-white/10 bg-[rgba(8,13,27,0.78)] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-10 lg:p-14">
-          <p className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/[0.07] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-sky-200">
+      <main className="wrap band">
+        <div className="rounded-[2rem] border border-[var(--rule)] bg-[var(--paper)] p-6 backdrop-blur-xl sm:p-10 lg:p-14">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--rule)] bg-[var(--blue)]/[0.07] px-3 py-1 font-mono text-[10px] text-[var(--blue)]">
             <Scale className="h-3.5 w-3.5" /> Legal
           </p>
-          <h1 className="mt-6 max-w-3xl font-sora text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">Terms of Service</h1>
-          <p className="mt-4 text-sm text-slate-400">Effective August 14, 2026 · Last updated August 22, 2026</p>
-          <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300">These terms are designed to make the expectations around Smartlearn&apos;s learning tools, AI assistance, subscriptions, and connected course data clear.</p>
+          <h1 className="mt-6 max-w-3xl font-sora text-4xl font-semibold tracking-[-0.045em] text-[var(--ink)] sm:text-6xl">Terms of Service</h1>
+          <p className="mt-4 text-sm text-[var(--ink-muted)]">Effective August 14, 2026 · Last updated August 22, 2026</p>
+          <p className="mt-6 max-w-3xl text-base leading-7 text-[var(--ink-muted)]">These terms are designed to make the expectations around Smartlearn&apos;s learning tools, AI assistance, subscriptions, and connected course data clear.</p>
 
           <div className="mt-10 space-y-4">
             {sections.map((section) => (
-              <section key={section.title} className="rounded-2xl border border-white/8 bg-white/[0.025] p-5 sm:p-6">
-                <h2 className="text-lg font-semibold tracking-tight text-white">{section.title}</h2>
-                <div className="mt-3 space-y-3 text-sm leading-7 text-slate-300">{section.body}</div>
+              <section key={section.title} className=" p-5 sm:p-6">
+                <h2 className="text-lg font-semibold tracking-tight text-[var(--ink)]">{section.title}</h2>
+                <div className="mt-3 space-y-3 text-sm leading-7 text-[var(--ink-muted)]">{section.body}</div>
               </section>
             ))}
           </div>
 
-          <div className="mt-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-amber-100/90">
+          <div className="mt-8 rounded-2xl border border-[var(--rule)] bg-[var(--warning-bg)]/[0.06] p-5 text-sm leading-6 text-[var(--warning-ink)]">
             Consumer-protection, education, privacy, and subscription laws vary by jurisdiction. Smartlearn will honor rights that cannot be waived by contract.
           </div>
         </div>

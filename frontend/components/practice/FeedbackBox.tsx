@@ -19,13 +19,13 @@ export function FeedbackBox({ selected, correctAnswer, explanation }: FeedbackBo
       aria-live="polite"
       className={cn(
         "mt-4 space-y-1.5 rounded-xl border px-4 py-3.5",
-        isCorrect ? "border-emerald-400/30 bg-emerald-500/8" : "border-rose-400/30 bg-rose-500/8"
+        isCorrect ? "border-[var(--success-ink)] bg-[var(--success-bg)]" : "border-[var(--danger-ink)] bg-[var(--danger-bg)]"
       )}
     >
-      <div className={cn("text-sm font-semibold", isCorrect ? "text-emerald-300" : "text-rose-300")}>
+      <div className={cn("text-sm font-semibold", isCorrect ? "text-[#1c3829]" : "text-[#6e3630]")}>
         {isCorrect ? "Correct!" : "Not quite."}
       </div>
-      <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Solution</div>
+      <div className="text-xs font-medium text-muted-foreground">Solution</div>
       <div className="text-sm text-foreground">
         <strong className="font-semibold">Correct answer:</strong> {correctAnswer}
       </div>

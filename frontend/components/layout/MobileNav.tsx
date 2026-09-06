@@ -50,7 +50,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
       <div
         role="navigation"
         aria-label="Mobile navigation"
-        className="fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 gap-1 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl md:hidden"
+        className="fixed inset-x-2 bottom-2 z-30 grid grid-cols-5 gap-1 rounded-xl border border-border bg-card/95 p-1.5 shadow-none backdrop-blur-xl md:hidden"
       >
         {quickAccess.map((link) => {
           const Icon = link.icon;
@@ -60,8 +60,8 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               key={link.href}
               href={link.href}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
-                active && "bg-sky-500/12 text-sky-200"
+                "flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground",
+                active && "bg-[var(--blue-wash)] text-[var(--blue)]"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -74,7 +74,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
           onClick={() => setOpen(true)}
           aria-label="Open full navigation menu"
           aria-expanded={open}
-          className="flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground"
+          className="flex flex-col items-center gap-1 rounded-md px-2 py-2 text-center text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground"
         >
           <Grid2x2 className="h-4 w-4" />
           More
@@ -85,17 +85,17 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
         <div className="fixed inset-0 z-40 md:hidden">
           <button
             aria-label="Close menu"
-            className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 animate-fade-in bg-[rgba(15,15,15,0.32)] backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] animate-slide-up overflow-y-auto rounded-t-xl border-t border-border bg-card/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] animate-slide-up overflow-y-auto rounded-t-xl border-t border-border bg-card/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-none backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Navigate</p>
+              <p className="text-xs font-medium text-muted-foreground">Navigate</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
-                className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground"
+                className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -106,14 +106,14 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               className={cn(
                 "mb-3 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors",
                 isPaid
-                  ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100"
-                  : "border-sky-400/25 bg-sky-500/10 text-white",
-                isActive("/pricing") && "ring-1 ring-sky-300/50"
+                  ? "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[#1c3829]"
+                  : "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--ink)]",
+                isActive("/pricing") && "ring-1 ring-[var(--blue-edge)]"
               )}
             >
               <CreditCard className="h-[18px] w-[18px]" />
               <span className="flex-1">{isPaid ? "Manage your plan" : "View plans & upgrade"}</span>
-              <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+              <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 text-[10px] font-bold">
                 {PLAN_CATALOG[plan].name}
               </span>
             </Link>
@@ -127,8 +127,8 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-3 text-center text-xs font-medium text-muted-foreground transition-colors duration-150 hover:border-white/15 hover:bg-white/6 hover:text-foreground",
-                      active && "border-sky-400/30 bg-sky-500/12 text-sky-200"
+                      "flex flex-col items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-2 py-3 text-center text-xs font-medium text-muted-foreground transition-colors duration-150 hover:border-[var(--rule)] hover:bg-[var(--wash-hover)] hover:text-foreground",
+                      active && "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />
@@ -139,8 +139,8 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               <Link
                 href="/chat"
                 className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-3 text-center text-xs font-medium text-muted-foreground transition-colors duration-150 hover:border-white/15 hover:bg-white/6 hover:text-foreground",
-                  isActive("/chat") && "border-sky-400/30 bg-sky-500/12 text-sky-200"
+                  "flex flex-col items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-2 py-3 text-center text-xs font-medium text-muted-foreground transition-colors duration-150 hover:border-[var(--rule)] hover:bg-[var(--wash-hover)] hover:text-foreground",
+                  isActive("/chat") && "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
                 )}
               >
                 <MessageCircle className="h-[18px] w-[18px]" />
@@ -148,14 +148,14 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               </Link>
             </div>
 
-            <div className="mt-3 border-t border-white/8 pt-3">
-              <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-sky-300/60">Account</p>
+            <div className="mt-3 border-t border-[var(--rule)] pt-3">
+              <p className="mb-2 px-1 text-[10px] font-semibold text-[var(--blue)]">Account</p>
               <div className="space-y-1">
                 <Link
                   href="/settings"
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
-                    isActive("/settings") && "bg-sky-500/12 text-sky-200"
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground",
+                    isActive("/settings") && "bg-[var(--blue-wash)] text-[var(--blue)]"
                   )}
                 >
                   <Settings className="h-[15px] w-[15px]" />
@@ -165,8 +165,8 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
                   <Link
                     href="/admin"
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-foreground",
-                      isActive("/admin") && "bg-sky-500/12 text-sky-200"
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-foreground",
+                      isActive("/admin") && "bg-[var(--blue-wash)] text-[var(--blue)]"
                     )}
                   >
                     <ShieldCheck className="h-[15px] w-[15px]" />

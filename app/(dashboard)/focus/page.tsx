@@ -6,10 +6,14 @@ import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 
 // ── Mode presets ─────────────────────────────────────────────────────────────
 
+// The three colours encode which mode is running, so they stay distinct — but
+// they are drawn from the workspace palette rather than the old dark-theme
+// pastels, which were near-invisible on paper. Each clears 3:1 on white, the
+// WCAG 1.4.11 bar for a meaningful non-text graphic.
 const MODES = [
-  { label: "Focus",       seconds: 25 * 60, color: "#818cf8" }, // violet
-  { label: "Short break", seconds:  5 * 60, color: "#34d399" }, // emerald
-  { label: "Long break",  seconds: 15 * 60, color: "#38bdf8" }, // sky
+  { label: "Focus",       seconds: 25 * 60, color: "#1b73c9" }, // workspace blue
+  { label: "Short break", seconds:  5 * 60, color: "#2f7d55" }, // green
+  { label: "Long break",  seconds: 15 * 60, color: "#9a6b14" }, // amber
 ] as const;
 
 type Mode = (typeof MODES)[number];
@@ -45,7 +49,7 @@ function ProgressRing({
         cy={150}
         r={RADIUS}
         fill="none"
-        stroke="rgba(255,255,255,0.06)"
+        stroke="var(--rule)"
         strokeWidth={STROKE}
       />
       {/* Progress */}
@@ -173,7 +177,7 @@ export default function FocusPage() {
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-2xl flex-col items-center justify-center px-4 pb-16 pt-8">
 
       {/* Mode tabs */}
-      <div className="mb-10 flex items-center gap-1 rounded-2xl border border-white/8 bg-white/4 p-1 backdrop-blur">
+      <div className="mb-10 flex items-center gap-1 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-1 backdrop-blur">
         {MODES.map((m, i) => (
           <button
             key={m.label}
@@ -181,8 +185,8 @@ export default function FocusPage() {
             disabled={running}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-40 ${
               modeIdx === i
-                ? "bg-white/10 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-[var(--paper)] text-[var(--ink)] shadow-sm"
+                : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
             style={modeIdx === i ? { color: m.color } : {}}
           >
@@ -207,21 +211,21 @@ export default function FocusPage() {
           {completed ? (
             <>
               <CheckCircle2 className="h-10 w-10 mb-1" style={{ color: mode.color }} />
-              <p className="text-lg font-semibold text-white">Done!</p>
+              <p className="text-lg font-semibold text-[var(--ink)]">Done!</p>
               {modeIdx === 0 && (
-                <p className="text-xs text-slate-400">{sessionCount} session{sessionCount !== 1 ? "s" : ""} today</p>
+                <p className="text-xs text-[var(--ink-muted)]">{sessionCount} session{sessionCount !== 1 ? "s" : ""} today</p>
               )}
             </>
           ) : (
             <>
               <span
-                className="font-mono text-6xl font-semibold tracking-tight text-white tabular-nums"
+                className="font-mono text-6xl font-semibold tracking-tight text-[var(--ink)] tabular-nums"
                 style={{ textShadow: `0 0 40px ${mode.color}44` }}
               >
                 {minutesDisplay}:{secsDisplay}
               </span>
               {task && (
-                <p className="mt-1 max-w-[180px] truncate text-center text-xs font-medium text-slate-400">
+                <p className="mt-1 max-w-[180px] truncate text-center text-xs font-medium text-[var(--ink-muted)]">
                   {task}
                 </p>
               )}
@@ -237,14 +241,14 @@ export default function FocusPage() {
         value={task}
         onChange={(e) => setTask(e.target.value)}
         maxLength={60}
-        className="mt-8 w-full max-w-xs rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-center text-sm text-white placeholder-slate-500 outline-none transition focus:border-white/20 focus:bg-white/6"
+        className="mt-8 w-full max-w-xs rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-2.5 text-center text-sm text-[var(--ink)] placeholder-slate-500 outline-none transition focus:border-[var(--rule)] focus:bg-[var(--wash-hover)]"
       />
 
       {/* Controls */}
       <div className="mt-6 flex items-center gap-3">
         <button
           onClick={reset}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--rule)] bg-[var(--paper)] text-[var(--ink-muted)] transition hover:border-[var(--rule)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
           aria-label="Reset"
         >
           <RotateCcw className="h-4 w-4" />
@@ -253,7 +257,7 @@ export default function FocusPage() {
         <button
           onClick={toggleRunning}
           disabled={completed}
-          className="flex h-16 w-16 items-center justify-center rounded-full border text-white shadow-lg transition-all duration-200 disabled:opacity-40 hover:scale-105 active:scale-95"
+          className="flex h-16 w-16 items-center justify-center rounded-full border text-[var(--ink)] shadow-none transition-all duration-200 disabled:opacity-40 hover:scale-105 active:scale-95"
           style={{
             background: `${mode.color}22`,
             borderColor: `${mode.color}55`,
@@ -282,7 +286,7 @@ export default function FocusPage() {
       </div>
 
       {/* Hint */}
-      <p className="mt-8 text-xs text-slate-600">
+      <p className="mt-8 text-xs text-[var(--ink-muted)]">
         {running
           ? "Stay focused — you've got this."
           : completed

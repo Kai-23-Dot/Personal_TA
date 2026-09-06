@@ -1,11 +1,42 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const ROOT = process.cwd();
 
 function source(path: string): string {
   return readFileSync(join(ROOT, path), "utf8");
+}
+
+/**
+ * Every .tsx rendered inside the workspace shell.
+ *
+ * The public site keeps its own dark palette, so the components it owns are
+ * excluded: the auth screens and the three Smartlearn* layout pieces are
+ * rendered outside [data-dashboard-shell] and are allowed raw hue utilities.
+ */
+function workspaceSourceFiles(): string[] {
+  const PUBLIC_ONLY = ["frontend/components/auth/", "frontend/components/layout/Smartlearn"];
+  const roots = ["app/(dashboard)", "frontend/components"];
+  const found: string[] = [];
+
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.name.endsWith(".tsx")) {
+        const rel = relative(ROOT, full);
+        if (!PUBLIC_ONLY.some((prefix) => rel.startsWith(prefix))) found.push(rel);
+      }
+    }
+  };
+
+  for (const root of roots) {
+    const dir = join(ROOT, root);
+    if (existsSync(dir)) walk(dir);
+  }
+  return found;
 }
 
 function relativeLuminance(hex: string): number {
@@ -116,36 +147,94 @@ describe("website product-surface contract", () => {
   });
 
   test("workspace palette has one documented accent and accessible contrast", () => {
-    const css = source("app/future-ui.css").toLowerCase();
+    // The workspace palette moved from future-ui.css (a dark navy theme applied
+    // over the components with !important) to notion-workspace.css, which sets
+    // the design tokens directly. The contract is unchanged in spirit: one
+    // accent, and every text colour readable on the surfaces it actually sits on.
+    const css = source("app/notion-workspace.css").toLowerCase();
     const palette = {
-      canvas: "#0b1020",
-      surface: "#11192a",
-      borderControl: "#586a88",
-      textPrimary: "#f4f7fb",
-      textSecondary: "#c5cedd",
-      textMuted: "#95a2b8",
-      textTertiary: "#7887a0",
-      accent: "#83b9ff",
-      success: "#63d8aa",
-      warning: "#f6c177",
-      danger: "#ff8a9a",
+      canvas: "#ffffff",
+      rail: "#f7f7f5",
+      controlBorder: "#968e82",
+      ink: "#37352f",
+      inkMuted: "#645d52",
+      inkFaint: "#777166",
+      accent: "#1b73c9",
     } as const;
 
     for (const color of Object.values(palette)) expect(css).toContain(color);
-    for (const color of [
-      palette.textPrimary,
-      palette.textSecondary,
-      palette.textMuted,
-      palette.textTertiary,
-      palette.accent,
-      palette.success,
-      palette.warning,
-      palette.danger,
-    ]) {
-      expect(contrastRatio(color, palette.surface), `${color} must pass normal-text contrast`).toBeGreaterThanOrEqual(4.5);
+
+    // Text is checked against BOTH surfaces it can land on. The rail is the
+    // darker of the two and so the binding constraint.
+    for (const color of [palette.ink, palette.inkMuted, palette.inkFaint, palette.accent]) {
+      for (const surface of [palette.canvas, palette.rail]) {
+        expect(
+          contrastRatio(color, surface),
+          `${color} must pass normal-text contrast on ${surface}`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
     }
-    expect(contrastRatio(palette.borderControl, palette.surface)).toBeGreaterThanOrEqual(3);
-    expect(css).toContain("[data-dashboard-shell] nav");
+
+    // The accent doubles as a filled button, so white on it must also pass.
+    expect(contrastRatio("#ffffff", palette.accent)).toBeGreaterThanOrEqual(4.5);
+
+    // Control boundaries are non-text UI: WCAG 1.4.11 sets the bar at 3:1.
+    for (const surface of [palette.canvas, palette.rail]) {
+      expect(contrastRatio(palette.controlBorder, surface)).toBeGreaterThanOrEqual(3);
+    }
+
+    // The workspace theme must not go back to overriding components: the token
+    // layer exists so that it does not need !important. The single sanctioned
+    // exception is the reduced-motion block, where !important is the standard
+    // idiom for cancelling animation the page asked for.
+    const declarations = css
+      .replace(/\/\*[\s\S]*?\*\//g, "")                              // comments
+      .replace(/@media \(prefers-reduced-motion[\s\S]*?\n}\n/g, "");  // motion reset
+    expect(declarations).not.toContain("!important");
+
+    // The three legacy stylesheets (chain-summit.css, hero.css, future-ui.css)
+    // are no longer loaded — only 21 of their 260 classes were still referenced,
+    // and the rest kept repainting the new design through unscoped element
+    // selectors. The assertion that used to live here guarded the workspace from
+    // one of those unscoped rules; there is nothing left to guard against.
+    const layout = source("app/layout.tsx");
+    for (const retired of ["chain-summit.css", "hero.css", "future-ui.css"]) {
+      expect(layout, `${retired} must stay unloaded`).not.toContain(retired);
+    }
+  });
+
+  test("workspace markup colours come only from the palette", () => {
+    // The complaint this encodes: the same three meanings were being spelled a
+    // dozen ways (emerald/green for success, amber/orange/yellow for warning,
+    // rose/red for danger, sky at four shades for the accent), plus violet and
+    // cyan that encoded nothing. Colour in the workspace now comes from the
+    // tokens in notion-workspace.css, so a raw hue utility here is a regression.
+    const HUES = "sky|emerald|violet|indigo|rose|amber|orange|cyan|teal|purple|pink|green|red|blue|yellow";
+    const hueUtility = new RegExp(
+      String.raw`\b(?:bg|text|border|ring|fill|stroke|from|via|to)-(?:${HUES})-\d{2,3}\b`
+    );
+    const offenders = workspaceSourceFiles().filter((file) =>
+      hueUtility.test(source(file))
+    );
+    expect(offenders, `raw hue utilities found in: ${offenders.join(", ")}`).toEqual([]);
+  });
+
+  test("a destination has one icon everywhere it appears", () => {
+    // Quick links, the ⌘K results and the rail all point at the same routes and
+    // had drifted apart (/flashcards was a stack in the rail and a sparkle in
+    // Quick links). Icons are looked up by href from one registry instead.
+    const navItems = source("frontend/lib/nav-items.ts");
+    expect(navItems).toContain("export function iconForHref");
+    expect(source("app/(dashboard)/dashboard/page.tsx")).toContain("iconForHref");
+  });
+
+  test("portalled overlays mount inside the theme that opened them", () => {
+    // Radix portals default to document.body, which is outside
+    // [data-dashboard-shell] — so a Select menu opened in the light workspace
+    // inherited the public site's dark :root and rendered navy on navy.
+    for (const file of ["frontend/components/ui/select.tsx", "frontend/components/ui/dialog.tsx"]) {
+      expect(source(file), `${file} must pass a portal container`).toContain("usePortalContainer");
+    }
   });
 
   test("dashboard redesign research covers at least fifty distinct references", () => {

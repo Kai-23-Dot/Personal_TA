@@ -5,10 +5,10 @@ import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { cn } from "@/backend/utils";
 
 const TONE_STYLES = {
-  sky:     { bg: "bg-sky-400/8",     icon: "text-sky-300",     accent: "bg-sky-400" },
-  orange:  { bg: "bg-orange-500/8",  icon: "text-orange-300",  accent: "bg-orange-400" },
-  violet:  { bg: "bg-violet-500/8",  icon: "text-violet-300",  accent: "bg-violet-400" },
-  emerald: { bg: "bg-emerald-500/8", icon: "text-emerald-300", accent: "bg-emerald-400" },
+  sky:     { bg: "bg-[var(--blue-wash)]",     icon: "text-primary",     accent: "bg-[var(--blue)]" },
+  orange:  { bg: "bg-[var(--warning-bg)]",  icon: "text-[#533b1b]",  accent: "bg-[var(--warning-bg)]" },
+  violet:  { bg: "bg-[var(--paper-sunken)]",  icon: "text-[var(--ink-muted)]",  accent: "bg-[var(--paper-sunken)]" },
+  emerald: { bg: "bg-[var(--success-bg)]", icon: "text-[hsl(var(--success))]", accent: "bg-[var(--success-bg)]" },
 } as const;
 
 export type StatTileTone = keyof typeof TONE_STYLES;
@@ -64,7 +64,7 @@ export function StatTile({
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       style={style}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-white/8 p-5 backdrop-blur transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]",
+        "group relative overflow-hidden rounded-2xl border border-border p-5 backdrop-blur transition-shadow duration-200 hover:shadow-none",
         t.bg,
         className
       )}
@@ -77,7 +77,7 @@ export function StatTile({
         )}
       />
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <span className={cn(t.icon, "opacity-70 transition-opacity duration-200 group-hover:opacity-100")}>
           {icon}
         </span>

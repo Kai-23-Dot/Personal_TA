@@ -208,15 +208,15 @@ export default function GroupsPage() {
 
       {/* Join form */}
       {showJoin && (
-        <form onSubmit={handleJoin} className="mt-4 mb-6 rounded-xl border border-sky-400/20 bg-white/3 p-4 space-y-3">
+        <form onSubmit={handleJoin} className="mt-4 mb-6 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Join with invite code</p>
-            <button type="button" onClick={() => { setShowJoin(false); setJoinError(null); setJoinSuccess(null); }} className="text-slate-500 hover:text-white">
+            <p className="text-sm font-semibold text-[var(--ink)]">Join with invite code</p>
+            <button type="button" onClick={() => { setShowJoin(false); setJoinError(null); setJoinSuccess(null); }} className="text-[var(--ink-muted)] hover:text-[var(--ink)]">
               <X className="h-4 w-4" />
             </button>
           </div>
           <input
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/50 uppercase tracking-widest"
+            className="w-full rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 font-mono text-sm text-[var(--ink)] placeholder-slate-500 outline-none focus:border-[var(--blue-edge)]"
             placeholder="e.g. AB12CD34"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
@@ -224,12 +224,12 @@ export default function GroupsPage() {
             required
             autoFocus
           />
-          {joinError   && <p className="text-xs text-rose-400">{joinError}</p>}
-          {joinSuccess && <p className="text-xs text-emerald-400">{joinSuccess}</p>}
+          {joinError   && <p className="text-xs text-[var(--danger-ink)]">{joinError}</p>}
+          {joinSuccess && <p className="text-xs text-[var(--success-ink)]">{joinSuccess}</p>}
           <button
             type="submit"
             disabled={joining || joinCode.length < 4}
-            className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-[var(--blue)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--blue)] disabled:opacity-50"
           >
             {joining && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Join group
@@ -249,15 +249,15 @@ export default function GroupsPage() {
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
                   statusFilter === f.value
-                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
-                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                    ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
+                    : "border-[var(--rule)] bg-[var(--paper)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
                 )}
               >
                 {f.label}
               </button>
             ))}
           </div>
-          <span className="hidden h-4 w-px bg-white/10 sm:block" />
+          <span className="hidden h-4 w-px bg-[var(--paper)] sm:block" />
           <div className="flex flex-wrap gap-1.5">
             {HEALTH_FILTERS.map((f) => (
               <button
@@ -267,8 +267,8 @@ export default function GroupsPage() {
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150",
                   healthFilter === f.value
-                    ? "border-sky-300/50 bg-sky-400/15 text-sky-100"
-                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                    ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
+                    : "border-[var(--rule)] bg-[var(--paper)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
                 )}
               >
                 {f.label}
@@ -280,7 +280,7 @@ export default function GroupsPage() {
               aria-label="Filter by course"
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
-              className="ml-auto h-8 rounded-full border border-white/10 bg-white/5 px-3 text-xs text-slate-300 outline-none transition-colors duration-150 hover:bg-white/10"
+              className="ml-auto h-8 rounded-full border border-[var(--rule)] bg-[var(--paper)] px-3 text-xs text-[var(--ink-muted)] outline-none transition-colors duration-150 hover:bg-[var(--wash-hover)]"
             >
               <option value="all">All courses</option>
               {courseOptions.map((c) => (
@@ -300,8 +300,8 @@ export default function GroupsPage() {
         </div>
       ) : groups.length > 0 && filteredGroups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Target className="h-8 w-8 text-slate-600" />
-          <p className="text-sm text-slate-400">No groups match these filters.</p>
+          <Target className="h-8 w-8 text-[var(--ink-muted)]" />
+          <p className="text-sm text-[var(--ink-muted)]">No groups match these filters.</p>
           <Button
             variant="secondary"
             size="sm"
@@ -312,23 +312,23 @@ export default function GroupsPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-24 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-            <Users className="h-6 w-6 text-slate-500" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--rule)] bg-[var(--paper)]">
+            <Users className="h-6 w-6 text-[var(--ink-muted)]" />
           </div>
-          <p className="text-base font-medium text-white">No study groups yet</p>
-          <p className="max-w-xs text-sm text-slate-500">
+          <p className="text-base font-medium text-[var(--ink)]">No study groups yet</p>
+          <p className="max-w-xs text-sm text-[var(--ink-muted)]">
             Create a group to collaborate with classmates, or join one using an invite code.
           </p>
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/15 px-4 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/25"
+              className="flex items-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--blue-wash)] px-4 py-2 text-sm font-medium text-[var(--blue)] hover:bg-[var(--blue-wash)]"
             >
               <Plus className="h-4 w-4" /> Create group
             </button>
             <button
               onClick={() => setShowJoin(true)}
-              className="flex items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10"
+              className="flex items-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--wash-hover)]"
             >
               <LogIn className="h-4 w-4" /> Join with code
             </button>
@@ -340,42 +340,42 @@ export default function GroupsPage() {
             <div
               key={group.id}
               onClick={() => router.push(`/groups/${group.id}`)}
-              className="group relative cursor-pointer rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:border-sky-400/25 hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]"
+              className="group relative cursor-pointer rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none transition hover:border-[var(--blue-edge)] hover:shadow-none"
             >
               {/* Avatar + health + member count */}
               <div className="flex items-start justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-300/25 bg-sky-400/10 text-sm font-semibold text-sky-100 select-none">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--rule)] bg-[var(--blue-wash)] text-sm font-semibold text-[var(--blue)] select-none">
                   {group.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <HealthBadge health={group.health} />
                   {group.my_role === "owner" && (
-                    <span className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 text-xs text-amber-300">
+                    <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs text-[#533b1b]">
                       <Crown className="h-2.5 w-2.5" /> Owner
                     </span>
                   )}
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
+                  <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-2.5 py-1 text-xs text-[var(--ink-muted)]">
                     {group.member_count}/{group.max_members}
                   </span>
                 </div>
               </div>
 
-              <h2 className="mt-4 text-lg font-semibold text-white">{group.name}</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <h2 className="mt-4 text-lg font-semibold text-[var(--ink)]">{group.name}</h2>
+              <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
                 {courseName(group.course) ?? "No course linked"}
               </p>
 
               {/* Goal + countdown + progress */}
               {group.goal ? (
                 <div className="mt-2 space-y-2">
-                  <p className="flex items-center gap-1.5 text-sm text-slate-400 line-clamp-1">
-                    <Target className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
+                  <p className="flex items-center gap-1.5 text-sm text-[var(--ink-muted)] line-clamp-1">
+                    <Target className="h-3.5 w-3.5 shrink-0 text-[var(--blue)]" />
                     <span className="truncate">{group.goal}</span>
                   </p>
                   {(() => {
                     const countdown = goalCountdown(group);
                     return countdown ? (
-                      <p className={cn("text-xs font-medium", countdown.ended ? "text-rose-400" : "text-slate-500")}>
+                      <p className={cn("text-xs font-medium", countdown.ended ? "text-[var(--danger-ink)]" : "text-[var(--ink-muted)]")}>
                         {countdown.label}
                       </p>
                     ) : null;
@@ -386,7 +386,7 @@ export default function GroupsPage() {
                 </div>
               ) : (
                 group.description && (
-                  <p className="mt-2 text-sm text-slate-400 line-clamp-2">{group.description}</p>
+                  <p className="mt-2 text-sm text-[var(--ink-muted)] line-clamp-2">{group.description}</p>
                 )
               )}
 
@@ -404,9 +404,9 @@ export default function GroupsPage() {
 
               {/* Invite code row */}
               <div className="mt-4 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5">
-                  <span className="text-[10px] text-slate-600 uppercase tracking-wider">Code</span>
-                  <span className="font-mono text-xs font-semibold tracking-widest text-slate-200">
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-1.5">
+                  <span className="text-[10px] text-[var(--ink-muted)]">Code</span>
+                  <span className="font-mono text-xs font-semibold tracking-widest text-[var(--ink)]">
                     {group.invite_code}
                   </span>
                 </div>
@@ -416,18 +416,18 @@ export default function GroupsPage() {
                   <button
                     onClick={(e) => copyCode(group, e)}
                     title="Copy invite code"
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition hover:bg-white/8"
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition hover:bg-[var(--wash-hover)]"
                   >
                     {copiedId === group.id
-                      ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Copied</span></>
-                      : <><Copy className="h-3.5 w-3.5 text-slate-500" /><span className="text-slate-500">Copy</span></>
+                      ? <><Check className="h-3.5 w-3.5 text-[var(--success-ink)]" /><span className="text-[var(--success-ink)]">Copied</span></>
+                      : <><Copy className="h-3.5 w-3.5 text-[var(--ink-muted)]" /><span className="text-[var(--ink-muted)]">Copy</span></>
                     }
                   </button>
 
                   {/* Leave / Delete */}
                   <button
                     onClick={(e) => handleLeaveOrDelete(group, e)}
-                    className="rounded-lg px-2.5 py-1.5 text-xs text-slate-600 opacity-0 transition hover:bg-rose-500/15 hover:text-rose-400 group-hover:opacity-100"
+                    className="rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink-muted)] opacity-0 transition hover:bg-[var(--danger-bg)] hover:text-[var(--danger-ink)] group-hover:opacity-100"
                   >
                     {group.my_role === "owner" ? "Delete" : "Leave"}
                   </button>

@@ -91,7 +91,7 @@ export function CreateGroupForm({
     <form
       aria-label="Create study group"
       onSubmit={handleSubmit}
-      className="mt-4 mb-6 space-y-4 rounded-xl border border-sky-400/20 bg-white/3 p-4"
+      className="mt-4 mb-6 space-y-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Create a goal-bound group</p>
@@ -171,7 +171,7 @@ export function CreateGroupForm({
         <MeetingSlotBuilder slots={slots} onChange={setSlots} />
       </div>
 
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <p className="text-xs text-[var(--danger-ink)]">{error}</p>}
 
       <Button type="submit" disabled={submitting || !valid}>
         {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

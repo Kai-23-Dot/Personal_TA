@@ -128,8 +128,8 @@ export default async function GradesPage() {
       />
 
       <div className="mb-4 mt-10">
-        <h2 className="text-lg font-semibold tracking-[-0.02em] text-white">Synced grade detail</h2>
-        <p className="mt-1 text-sm text-slate-500">The real graded submissions currently available from Canvas.</p>
+        <h2 className="text-lg font-semibold tracking-[-0.02em] text-[var(--ink)]">Synced grade detail</h2>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">The real graded submissions currently available from Canvas.</p>
       </div>
 
       {activeCourses.length === 0 ? (
@@ -153,18 +153,18 @@ export default async function GradesPage() {
             if (!total || total.count === 0 || total.possible <= 0) return null;
             const score = percent(total.earned, total.possible);
             return (
-              <div key={course.id} className="rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)]">
+              <div key={course.id} className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+                  <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-3 py-1 text-xs text-[var(--ink-muted)]">
                     {course.platform === "canvas" ? "Canvas" : course.platform}
                   </span>
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: course.color ?? "#8ab4ff" }} />
                 </div>
-                <h2 className="mt-4 text-lg font-semibold text-white">{course.name}</h2>
-                <p className="mt-3 text-3xl font-semibold text-sky-200">{score}%</p>
-                <p className="mt-1 text-sm text-slate-400">{total.count} graded item{total.count === 1 ? "" : "s"} synced</p>
+                <h2 className="mt-4 text-lg font-semibold text-[var(--ink)]">{course.name}</h2>
+                <p className="mt-3 text-3xl font-semibold text-[var(--blue)]">{score}%</p>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">{total.count} graded item{total.count === 1 ? "" : "s"} synced</p>
                 {total.latest ? (
-                  <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+                  <p className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 text-xs text-[var(--ink-muted)]">
                     Latest: {total.latest.notes ?? "Grade received"} · {new Date(total.latest.occurred_at).toLocaleDateString()}
                   </p>
                 ) : null}

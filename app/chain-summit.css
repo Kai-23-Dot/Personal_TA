@@ -1411,7 +1411,7 @@ nav {
 	align-items: start;
 }
 
-.contact-form-column {
+.contact-form-column:not([data-public-shell] *) {
 	background: var(--surface);
 	padding: 2rem;
 	border-radius: 15px;
@@ -2625,9 +2625,9 @@ footer {
 }
 
 /* Contrast consistency fixes */
-select,
-option,
-optgroup {
+select:not([data-dashboard-shell] *),
+option:not([data-dashboard-shell] *),
+optgroup:not([data-dashboard-shell] *) {
 	color: var(--ds-text);
 	background-color: #0f172a;
 }
@@ -2860,10 +2860,13 @@ html {
 	scroll-behavior: smooth;
 }
 
+/* The whole product — public pages and workspace — is on the paper palette now,
+   so the page ground is paper. It used to be forced to #0b0b0c here, which
+   showed through as a black band below any short page. */
 html,
 body {
-	background: #0b0b0c !important;
-	color: var(--light);
+	background: var(--paper);
+	color: var(--ink);
 }
 
 .premium-backdrop {
@@ -3439,12 +3442,9 @@ body {
 	max-width: 1480px !important;
 }
 
-[data-dashboard-shell] {
-	background:
-		radial-gradient(circle at 50% -10%, rgba(138, 180, 255, 0.12), transparent 36rem),
-		radial-gradient(circle at 100% 0%, rgba(167, 139, 250, 0.08), transparent 32rem),
-		#05060a !important;
-}
+/* The workspace canvas is set by app/notion-workspace.css via the --background
+   token. It used to be forced dark here with !important, which is what made
+   every light component need an override of its own. */
 
 /* Strip .section top padding inside the dashboard shell.
    The app-container already clears the sticky header via Tailwind pt-16 (64px).
@@ -3468,15 +3468,10 @@ body {
 	width: auto !important;
 }
 
-[data-dashboard-shell] .rounded-2xl,
-[data-dashboard-shell] .rounded-3xl {
-	box-shadow:
-		0 1px 0 rgba(255,255,255,0.055) inset,
-		0 22px 70px rgba(0,0,0,0.28);
-}
 
-.btn,
-.contact-submit-btn {
+
+.btn:not([data-dashboard-shell] *),
+.contact-submit-btn:not([data-dashboard-shell] *) {
 	border-radius: 999px !important;
 }
 

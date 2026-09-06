@@ -49,16 +49,16 @@ export function GradesAutoSync() {
   return (
     <span
       role="status"
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-400"
+      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-[var(--paper)] px-3 py-1 text-xs text-[var(--ink-muted)]"
     >
       {state === "syncing" ? (
         <>
-          <RefreshCw className="h-3 w-3 animate-spin text-sky-300" />
+          <RefreshCw className="h-3 w-3 animate-spin text-[var(--blue)]" />
           Syncing latest grades…
         </>
       ) : (
         <>
-          <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+          <CheckCircle2 className="h-3 w-3 text-[var(--success-ink)]" />
           Grades up to date
         </>
       )}

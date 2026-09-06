@@ -26,7 +26,7 @@ export function OptionsList({
 }: OptionsListProps) {
   return (
     <fieldset className="mt-6">
-      <legend className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <legend className="mb-2 text-xs font-medium text-muted-foreground">
         Answer choices
       </legend>
       <div className="grid gap-2.5">
@@ -42,12 +42,12 @@ export function OptionsList({
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors duration-150",
                 isCorrect
-                  ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                  ? "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829]"
                   : isWrong
-                    ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                    ? "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[#6e3630]"
                     : isSelected
-                      ? "border-sky-400/40 bg-sky-500/10 text-sky-200"
-                      : "border-white/10 bg-white/[0.03] text-foreground hover:border-white/20 hover:bg-white/[0.05]"
+                      ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
+                      : "border-[var(--rule)] bg-[var(--paper)] text-foreground hover:border-[var(--rule)] hover:bg-[var(--wash-hover)]"
               )}
             >
               <input
@@ -58,7 +58,7 @@ export function OptionsList({
                 onChange={() => onSelect(opt.value)}
                 className="accent-sky-400"
               />
-              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/15 text-[11px] font-semibold text-muted-foreground">
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-[var(--rule)] text-[11px] font-semibold text-muted-foreground">
                 {String.fromCharCode(65 + index)}
               </span>
               <span className="flex-1">{opt.label}</span>

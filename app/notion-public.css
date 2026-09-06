@@ -1,0 +1,764 @@
+/* ============================================================================
+   Smartlearn public site
+   ----------------------------------------------------------------------------
+   The marketing pages, on the same paper palette as the signed-in workspace.
+   Tokens come from app/notion-workspace.css, which defines them for
+   [data-dashboard-shell] and [data-public-shell] together — signing in should
+   feel like walking into the same building, not switching products.
+
+   Everything here is scoped to [data-public-shell]. The older dark stylesheets
+   (chain-summit.css, hero.css) still own the class names they invented; this
+   file deliberately uses new ones, so the two never meet. The handful of
+   element-level rules those files declare — header, nav, footer — are reset at
+   the bottom rather than fought with !important.
+   ========================================================================== */
+
+[data-public-shell] {
+  color-scheme: light;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================================
+   Type
+   ----------------------------------------------------------------------------
+   One family, Inter, exactly as in the workspace. Hierarchy is size and weight;
+   there is no second display face and no gradient on any headline.
+   ========================================================================== */
+
+[data-public-shell] h1,
+[data-public-shell] h2,
+[data-public-shell] h3 {
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  text-wrap: balance;
+  margin: 0;
+}
+
+[data-public-shell] h1 { font-size: clamp(2.5rem, 5.5vw, 3.75rem); }
+[data-public-shell] h2 { font-size: clamp(1.75rem, 3.2vw, 2.5rem); }
+[data-public-shell] h3 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.018em; }
+
+[data-public-shell] p { margin: 0; }
+
+[data-public-shell] .lede {
+  margin-top: 20px;
+  max-width: 34em;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .section-lede {
+  margin-top: 12px;
+  max-width: 36em;
+  font-size: 1.0625rem;
+  color: var(--ink-muted);
+}
+
+/* ============================================================================
+   Layout
+   ----------------------------------------------------------------------------
+   A single measured column, left-aligned throughout. Notion never centres body
+   copy, and a left edge gives the eye one place to return to down a long page.
+   ========================================================================== */
+
+[data-public-shell] .page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+[data-public-shell] .wrap {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+[data-public-shell] .band {
+  padding-block: clamp(56px, 9vw, 104px);
+}
+
+[data-public-shell] .band + .band {
+  border-top: 1px solid var(--rule);
+}
+
+/* ============================================================================
+   Header
+   ========================================================================== */
+
+[data-public-shell] .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-public-shell] .site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 56px;
+}
+
+[data-public-shell] .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+[data-public-shell] .site-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-public-shell] .site-nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: background-color 20ms ease-in, color 120ms ease;
+}
+
+[data-public-shell] .site-nav a:hover {
+  background: var(--wash-hover);
+  color: var(--ink);
+}
+
+[data-public-shell] .site-nav a.active { color: var(--ink); }
+
+[data-public-shell] .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ============================================================================
+   Buttons
+   ----------------------------------------------------------------------------
+   Two only: the accent for the one action a page wants, and a quiet outline for
+   everything else. No arrow appended to the label — the label already says what
+   happens, and the arrow is decoration that every generated page reaches for.
+   ========================================================================== */
+
+[data-public-shell] .cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-public-shell] .cta:hover { background: var(--blue-hover); }
+
+[data-public-shell] .cta-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 4px;
+  border: 1px solid var(--control-border);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 20ms ease-in;
+}
+
+[data-public-shell] .cta-quiet:hover { background: var(--wash-hover); }
+
+/* Compact pair used in the header. */
+[data-public-shell] .site-header .cta,
+[data-public-shell] .site-header .cta-quiet {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+[data-public-shell] .cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+/* ============================================================================
+   Masthead
+   ----------------------------------------------------------------------------
+   The headline states what the product does, and the proof directly under it is
+   the product itself. No stat row: "01 / 24-7 / Zero" counted nothing a student
+   could act on, and a big-number band is the default hero move.
+   ========================================================================== */
+
+[data-public-shell] .masthead {
+  padding-block: clamp(64px, 10vw, 120px) clamp(40px, 6vw, 64px);
+}
+
+[data-public-shell] .masthead h1 { max-width: 15ch; }
+
+/* The product preview. A plain bordered frame, the way a screenshot sits on
+   Notion's own pages — the interface is the argument, so nothing decorates it. */
+[data-public-shell] .preview {
+  margin-top: clamp(40px, 6vw, 64px);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper-rail);
+  overflow: hidden;
+}
+
+[data-public-shell] .preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+[data-public-shell] .preview-dot {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  background: var(--rule-strong);
+}
+
+[data-public-shell] .preview-address {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .preview-body {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  background: var(--paper);
+  min-height: 320px;
+}
+
+@media (max-width: 720px) {
+  [data-public-shell] .preview-body { grid-template-columns: 1fr; }
+  [data-public-shell] .preview-rail { display: none; }
+}
+
+[data-public-shell] .preview-rail {
+  border-right: 1px solid var(--rule);
+  background: var(--paper-rail);
+  padding: 14px 10px;
+}
+
+[data-public-shell] .preview-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+[data-public-shell] .preview-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 27px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .preview-nav.active {
+  background: var(--wash-active);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+[data-public-shell] .preview-nav svg {
+  height: 15px;
+  width: 15px;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .preview-main { padding: 22px 24px; }
+
+[data-public-shell] .preview-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+[data-public-shell] .preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+[data-public-shell] .preview-row:first-of-type { border-top: 0; }
+
+[data-public-shell] .preview-meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+[data-public-shell] .preview-callout {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: var(--blue-wash);
+}
+
+[data-public-shell] .preview-callout p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* ============================================================================
+   Feature grid
+   ----------------------------------------------------------------------------
+   Not cards. An icon, a title and a sentence, separated by space — chopping six
+   equal ideas into six bordered boxes with the same shadow is the SaaS kit, and
+   it makes every item look like a product tier.
+   ========================================================================== */
+
+[data-public-shell] .feature-grid {
+  display: grid;
+  gap: 40px 48px;
+  margin-top: 48px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+[data-public-shell] .feature svg {
+  height: 20px;
+  width: 20px;
+  color: var(--ink-faint);
+  stroke-width: 1.9;
+}
+
+[data-public-shell] .feature h3 { margin-top: 14px; }
+
+[data-public-shell] .feature p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 34em;
+}
+
+/* ============================================================================
+   Steps
+   ----------------------------------------------------------------------------
+   Numbered, because this genuinely is a sequence: connect, then Smartlearn
+   reads the course, then you practise. The numbers are the information.
+   ========================================================================== */
+
+[data-public-shell] .steps {
+  margin-top: 48px;
+  counter-reset: step;
+  border-top: 1px solid var(--rule);
+}
+
+[data-public-shell] .step {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 20px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-public-shell] .step::before {
+  counter-increment: step;
+  content: counter(step);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-public-shell] .step p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 46em;
+}
+
+/* ============================================================================
+   Closing call to action
+   ========================================================================== */
+
+[data-public-shell] .closing {
+  padding-block: clamp(56px, 8vw, 88px);
+  border-top: 1px solid var(--rule);
+}
+
+[data-public-shell] .closing h2 { max-width: 18ch; }
+
+/* ============================================================================
+   Footer
+   ========================================================================== */
+
+[data-public-shell] .site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--rule);
+  background: var(--paper-rail);
+  padding-block: 32px;
+}
+
+[data-public-shell] .site-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .site-footer a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+[data-public-shell] .site-footer a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+[data-public-shell] .footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-left: auto;
+}
+
+/* ============================================================================
+   Prose (privacy, terms, about)
+   ========================================================================== */
+
+[data-public-shell] .prose {
+  max-width: 68ch;
+}
+
+[data-public-shell] .prose h2 { margin-top: 40px; font-size: 1.375rem; }
+[data-public-shell] .prose h3 { margin-top: 28px; }
+
+[data-public-shell] .prose p,
+[data-public-shell] .prose li {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .prose a { color: var(--blue); }
+
+/* ============================================================================
+   Focus + motion floor
+   ========================================================================== */
+
+[data-public-shell] :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-shell] *,
+  [data-public-shell] *::before,
+  [data-public-shell] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   Resets for unscoped rules in the older public stylesheets
+   ----------------------------------------------------------------------------
+   chain-summit.css declares bare `header`, `nav` and `footer` rules (fixed
+   positioning, widths, dark backgrounds) from the previous design. They are
+   matched here at higher specificity so the new markup is not dragged back into
+   the old layout.
+   ========================================================================== */
+
+[data-public-shell] header,
+[data-public-shell] nav,
+[data-public-shell] footer {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+  z-index: auto;
+}
+
+[data-public-shell] .site-header {
+  position: sticky;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+[data-public-shell] .site-footer {
+  border-top: 1px solid var(--rule);
+  background: var(--paper-rail);
+  padding-block: 32px;
+}
+
+[data-public-shell] section { padding: 0; }
+
+/* ============================================================================
+   Header responsive behaviour + footer fine print
+   ========================================================================== */
+
+[data-public-shell] .menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  width: 32px;
+  border-radius: 4px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+[data-public-shell] .menu-toggle:hover { background: var(--wash-hover); color: var(--ink); }
+[data-public-shell] .menu-toggle svg { height: 18px; width: 18px; }
+
+@media (min-width: 721px) {
+  [data-public-shell] .menu-toggle { display: none; }
+}
+
+@media (max-width: 720px) {
+  [data-public-shell] .site-nav.is-desktop,
+  [data-public-shell] .cta.is-desktop-inline,
+  [data-public-shell] .cta-quiet.is-desktop-inline { display: none; }
+}
+
+[data-public-shell] .mobile-sheet {
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  padding-block: 8px 12px;
+}
+
+[data-public-shell] .mobile-sheet a {
+  display: block;
+  padding: 10px 0;
+  font-size: 15px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-public-shell] .mobile-sheet a:last-child { border-bottom: 0; }
+
+[data-public-shell] .footer-fine {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  max-width: 72ch;
+}
+
+[data-public-shell] .footer-fine p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .footer-fine p + p { margin-top: 8px; }
+
+/* The previous footer was centred by a bare `footer` rule in chain-summit.css.
+   The public pages are left-aligned throughout, and the fine print is no
+   exception — centred legal text is harder to scan and breaks the page's edge. */
+[data-public-shell] .site-footer,
+[data-public-shell] .site-footer p,
+[data-public-shell] .site-footer-inner {
+  text-align: left;
+}
+
+[data-public-shell] .site-footer p { margin-top: 0; }
+
+/* ============================================================================
+   Auth screens
+   ----------------------------------------------------------------------------
+   Login, signup, forgot-password and reset all share the .contact-form-*
+   class names the previous design gave them, so styling those here covers the
+   four screens at once without touching their markup.
+   ========================================================================== */
+
+[data-public-shell] .auth-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(48px, 10vh, 96px) 24px 64px;
+}
+
+[data-public-shell] .contact-form-column {
+  width: 100%;
+  padding: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* The card announced itself with a tracked-out monospace "SECURE ACCESS /
+   SMARTLEARN" line generated in CSS. It told the reader nothing they did not
+   already know from the heading. */
+[data-public-shell] .contact-form-column::before {
+  content: none;
+}
+
+[data-public-shell] .contact-form-title {
+  margin: 0 0 20px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-align: left;
+}
+
+[data-public-shell] .contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-public-shell] .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-public-shell] .form-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+[data-public-shell] .form-field input,
+[data-public-shell] .form-field select,
+[data-public-shell] .form-field textarea {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  box-shadow: none;
+}
+
+[data-public-shell] .form-field textarea {
+  height: auto;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+[data-public-shell] .form-field input:focus,
+[data-public-shell] .form-field select:focus,
+[data-public-shell] .form-field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-wash);
+}
+
+[data-public-shell] .contact-submit-btn {
+  width: 100%;
+  height: 40px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+[data-public-shell] .contact-submit-btn:hover:not(:disabled) { background: var(--blue-hover); }
+[data-public-shell] .contact-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* The "or continue with" divider between provider and password sign-in. */
+[data-public-shell] .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+[data-public-shell] .auth-divider::before,
+[data-public-shell] .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+[data-public-shell] .auth-footnote {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+[data-public-shell] .auth-footnote a {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+[data-public-shell] .auth-footnote a:hover { text-decoration: underline; }

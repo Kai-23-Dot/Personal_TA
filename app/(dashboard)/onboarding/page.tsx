@@ -77,7 +77,7 @@ export default function OnboardingPage() {
                   onChange={(e) => updateStep(item.key, e.target.checked)}
                 />
                 {item.label}{" "}
-                <Link href={item.href} className="text-sky-400 underline-offset-2 hover:underline">
+                <Link href={item.href} className="text-[var(--blue)] underline-offset-2 hover:underline">
                   {item.linkLabel}
                 </Link>
               </li>

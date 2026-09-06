@@ -12,15 +12,24 @@ export default function ContactPage() {
   return (
     <SmartlearnBackdrop>
       <SmartlearnHeader showSignIn />
-      <main className="section" style={{ paddingTop: "120px" }}>
-        <h1 className="animate-on-scroll">Contact us</h1>
-        <div className="contact-info-section animate-on-scroll" style={{ maxWidth: "900px", margin: "0 auto" }}>
-          <div className="contact-form-column">
-            <h2 className="contact-form-title">Coming soon</h2>
-            <p style={{ color: "var(--gray)" }}>
-              This page will include support channels, office hours, and partnership inquiries.
-            </p>
-          </div>
+      <main className="wrap band">
+        <div className="prose">
+          <h1>Contact us</h1>
+          <p className="lede">
+            Questions about your account, a bug to report, or a partnership to
+            discuss — all of it reaches the same place.
+          </p>
+          <h2>Email</h2>
+          <p>
+            Write to <a href="mailto:support@smartlearn.app">support@smartlearn.app</a>.
+            We answer during the school week, usually within a day.
+          </p>
+          <h2>Reporting a problem</h2>
+          <p>
+            Tell us the page you were on and what you expected to happen. If it
+            involves a course that did not sync, include the course name — it
+            makes the sync log much faster to read.
+          </p>
         </div>
       </main>
       <SmartlearnFooter />

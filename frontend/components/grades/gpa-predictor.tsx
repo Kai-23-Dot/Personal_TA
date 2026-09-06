@@ -94,7 +94,7 @@ function formatDueDate(value: string): string {
 }
 
 function inputClassName(extra = ""): string {
-  return `h-10 w-full rounded-lg border border-white/10 bg-[#080d19] px-3 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-sky-300/45 focus:ring-2 focus:ring-sky-300/10 ${extra}`;
+  return `h-10 w-full rounded-lg border border-[var(--rule)] bg-[#080d19] px-3 text-sm text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--ink-muted)] focus:border-[var(--blue-edge)] focus:ring-2 focus:ring-[var(--blue-edge)] ${extra}`;
 }
 
 export function GpaPredictor({
@@ -277,24 +277,24 @@ export function GpaPredictor({
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[linear-gradient(145deg,rgba(10,17,32,0.96),rgba(5,9,18,0.98))] shadow-[0_24px_90px_rgba(1,6,20,0.28)]"
+      className="overflow-hidden rounded-2xl border border-[var(--rule)] bg-[var(--paper)] shadow-none"
       data-testid="gpa-predictor"
       data-notion-surface
     >
-      <div className="border-b border-white/[0.08] px-4 py-5 sm:px-6">
+      <div className="border-b border-[var(--rule)] px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-sky-300/20 bg-sky-300/[0.08] text-sky-200">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[var(--ink-faint)]">
               <Calculator className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-semibold tracking-[-0.025em] text-white">GPA &amp; grade predictor</h2>
-                <span className="rounded-full border border-amber-300/20 bg-amber-300/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100">
+                <h2 className="text-xl font-semibold tracking-[-0.025em] text-[var(--ink)]">GPA &amp; grade predictor</h2>
+                <span className="rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] px-2.5 py-1 text-[10px] font-semibold text-[#533b1b]">
                   Estimate, not official
                 </span>
               </div>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
                 Forecast an assignment, apply it to a course, and see the resulting weighted and unweighted GPA.
               </p>
             </div>
@@ -302,7 +302,7 @@ export function GpaPredictor({
           <button
             type="button"
             onClick={resetScenario}
-            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             Reset scenario
@@ -310,29 +310,29 @@ export function GpaPredictor({
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-white/[0.08] bg-black/15 p-4" aria-live="polite">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Unweighted</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{gpa ? gpa.unweighted.toFixed(2) : "—"}</p>
-            <p className="mt-1 text-xs text-slate-500">Common 4.0 estimate</p>
+          <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4" aria-live="polite">
+            <p className="text-[10px] font-semibold text-[var(--ink-muted)]">Unweighted</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--ink)]">{gpa ? gpa.unweighted.toFixed(2) : "—"}</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Common 4.0 estimate</p>
           </div>
-          <div className="rounded-xl border border-sky-300/15 bg-sky-300/[0.05] p-4" aria-live="polite">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/70">Weighted</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-sky-100">{gpa ? gpa.weighted.toFixed(2) : "—"}</p>
-            <p className="mt-1 text-xs text-slate-500">Up to a 5.0 estimate</p>
+          <div className="rounded-xl border border-[var(--blue-edge)] bg-[var(--blue-wash)] p-4" aria-live="polite">
+            <p className="text-[10px] font-semibold text-[var(--blue)]">Weighted</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--blue)]">{gpa ? gpa.weighted.toFixed(2) : "—"}</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Up to a 5.0 estimate</p>
           </div>
-          <div className="rounded-xl border border-white/[0.08] bg-black/15 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Included</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{gpa?.includedCourses ?? 0}</p>
-            <p className="mt-1 text-xs text-slate-500">{gpa ? `${formatValue(gpa.totalCredits)} total credits` : "Add a valid course grade"}</p>
+          <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4">
+            <p className="text-[10px] font-semibold text-[var(--ink-muted)]">Included</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--ink)]">{gpa?.includedCourses ?? 0}</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">{gpa ? `${formatValue(gpa.totalCredits)} total credits` : "Add a valid course grade"}</p>
           </div>
         </div>
 
-        <div className="mt-4 inline-flex rounded-lg border border-white/[0.08] bg-black/15 p-1" aria-label="GPA scale">
+        <div className="mt-4 inline-flex rounded-lg border border-[var(--rule)] bg-[var(--paper-sunken)] p-1" aria-label="GPA scale">
           <button
             type="button"
             aria-pressed={scale === "simple"}
             onClick={() => setScale("simple")}
-            className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${scale === "simple" ? "bg-sky-200 text-slate-950" : "text-slate-400 hover:text-white"}`}
+            className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${scale === "simple" ? "bg-[var(--blue)] text-slate-950" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
           >
             No +/−
           </button>
@@ -340,7 +340,7 @@ export function GpaPredictor({
             type="button"
             aria-pressed={scale === "plus_minus"}
             onClick={() => setScale("plus_minus")}
-            className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${scale === "plus_minus" ? "bg-sky-200 text-slate-950" : "text-slate-400 hover:text-white"}`}
+            className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${scale === "plus_minus" ? "bg-[var(--blue)] text-slate-950" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
           >
             Use +/−
           </button>
@@ -348,16 +348,16 @@ export function GpaPredictor({
       </div>
 
       <div className="grid xl:grid-cols-[minmax(0,1.2fr)_minmax(23rem,0.8fr)]">
-        <div className="border-b border-white/[0.08] p-4 sm:p-6 xl:border-b-0 xl:border-r">
+        <div className="border-b border-[var(--rule)] p-4 sm:p-6 xl:border-b-0 xl:border-r">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">Courses in this estimate</h3>
-              <p className="mt-1 text-xs text-slate-500">Adjust the grade, credit value, and course rigor.</p>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">Courses in this estimate</h3>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">Adjust the grade, credit value, and course rigor.</p>
             </div>
             <button
               type="button"
               onClick={addManualCourse}
-              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-300/[0.07]"
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--rule)] px-3 text-xs font-semibold text-[var(--blue)] transition-colors hover:bg-[var(--blue)]/[0.07]"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               Add course
@@ -368,11 +368,11 @@ export function GpaPredictor({
             <button
               type="button"
               onClick={addManualCourse}
-              className="mt-5 flex min-h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-5 text-center transition-colors hover:border-sky-300/30 hover:bg-sky-300/[0.03]"
+              className="mt-5 flex min-h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[var(--rule)] bg-[var(--paper)] px-5 text-center transition-colors hover:border-[var(--blue-edge)] hover:bg-[var(--blue)]/[0.03]"
             >
-              <Plus className="h-5 w-5 text-sky-300" aria-hidden="true" />
-              <span className="mt-2 text-sm font-semibold text-slate-200">Add your first course</span>
-              <span className="mt-1 text-xs text-slate-500">You can calculate GPA without connecting Canvas.</span>
+              <Plus className="h-5 w-5 text-[var(--blue)]" aria-hidden="true" />
+              <span className="mt-2 text-sm font-semibold text-[var(--ink)]">Add your first course</span>
+              <span className="mt-1 text-xs text-[var(--ink-muted)]">You can calculate GPA without connecting Canvas.</span>
             </button>
           ) : (
             <div className="mt-5 space-y-2.5">
@@ -383,7 +383,7 @@ export function GpaPredictor({
                 return (
                   <div
                     key={course.id}
-                    className={`rounded-xl border p-3 transition-colors ${course.included ? "border-white/[0.09] bg-white/[0.025]" : "border-white/[0.05] bg-black/10 opacity-60"}`}
+                    className={`rounded-xl border p-3 transition-colors ${course.included ? "border-[var(--rule)] bg-[var(--paper)]" : "border-[var(--rule)] bg-[var(--paper-sunken)] opacity-60"}`}
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -392,7 +392,7 @@ export function GpaPredictor({
                         aria-checked={course.included}
                         aria-label={`${course.included ? "Exclude" : "Include"} ${course.name} in GPA`}
                         onClick={() => updateCourse(course.id, { included: !course.included })}
-                        className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border transition-colors ${course.included ? "border-sky-300/40 bg-sky-300/15 text-sky-200" : "border-white/15 text-transparent"}`}
+                        className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border transition-colors ${course.included ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]" : "border-[var(--rule)] text-transparent"}`}
                       >
                         <Check className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -402,22 +402,22 @@ export function GpaPredictor({
                           aria-label="Course name"
                           value={course.name}
                           onChange={(event) => updateCourse(course.id, { name: event.target.value })}
-                          className="min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-600"
+                          className="min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)]"
                           placeholder="Course name"
                         />
                       ) : (
-                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white" title={course.name}>{course.name}</p>
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--ink)]" title={course.name}>{course.name}</p>
                       )}
                       <div className="shrink-0 text-right">
-                        <p className="text-sm font-semibold text-slate-200">{grade ? grade.letter : "—"}</p>
-                        <p className="text-[10px] text-slate-600">{grade && weighted !== null ? `${grade.points.toFixed(1)} / ${weighted.toFixed(1)} pts` : "GPA points"}</p>
+                        <p className="text-sm font-semibold text-[var(--ink)]">{grade ? grade.letter : "—"}</p>
+                        <p className="text-[10px] text-[var(--ink-muted)]">{grade && weighted !== null ? `${grade.points.toFixed(1)} / ${weighted.toFixed(1)} pts` : "GPA points"}</p>
                       </div>
                       {course.manual ? (
                         <button
                           type="button"
                           aria-label={`Remove ${course.name}`}
                           onClick={() => removeManualCourse(course.id)}
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-rose-400/10 hover:text-rose-300"
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--ink-muted)] transition-colors hover: hover: text-[var(--ink-faint)]"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -425,7 +425,7 @@ export function GpaPredictor({
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,1.3fr)]">
                       <label className="space-y-1">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">Course grade</span>
+                        <span className="text-[10px] font-medium tracking-[0.1em] text-[var(--ink-muted)]">Course grade</span>
                         <div className="relative">
                           <input
                             aria-label={`${course.name} course grade percent`}
@@ -438,11 +438,11 @@ export function GpaPredictor({
                             className={inputClassName("pr-8")}
                             placeholder="—"
                           />
-                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600">%</span>
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-muted)]">%</span>
                         </div>
                       </label>
                       <label className="space-y-1">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">Credits</span>
+                        <span className="text-[10px] font-medium tracking-[0.1em] text-[var(--ink-muted)]">Credits</span>
                         <input
                           aria-label={`${course.name} credits`}
                           type="number"
@@ -455,7 +455,7 @@ export function GpaPredictor({
                         />
                       </label>
                       <label className="space-y-1">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">Course rigor</span>
+                        <span className="text-[10px] font-medium tracking-[0.1em] text-[var(--ink-muted)]">Course rigor</span>
                         <select
                           aria-label={`${course.name} course rigor`}
                           value={course.rigor}
@@ -469,7 +469,7 @@ export function GpaPredictor({
                       </label>
                     </div>
                     {!course.manual && course.gradedItems > 0 ? (
-                      <p className="mt-2 text-[10px] text-slate-600">
+                      <p className="mt-2 text-[10px] text-[var(--ink-muted)]">
                         Synced basis: {formatValue(course.earnedPoints)} / {formatValue(course.possiblePoints)} points across {course.gradedItems} graded item{course.gradedItems === 1 ? "" : "s"}.
                       </p>
                     ) : null}
@@ -482,19 +482,19 @@ export function GpaPredictor({
 
         <div className="p-4 sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-violet-300/20 bg-violet-300/[0.08] text-violet-200">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg/[0.08] text-[var(--ink-faint)]">
               <Target className="h-4 w-4" aria-hidden="true" />
             </span>
             <div>
-              <h3 className="text-sm font-semibold text-white">Assignment forecast</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Test one score, then apply the result to the GPA scenario.</p>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">Assignment forecast</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">Test one score, then apply the result to the GPA scenario.</p>
             </div>
           </div>
 
           <div className="mt-5 space-y-4">
             {upcomingAssignments.length > 0 ? (
               <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-400">Upcoming assignment</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Upcoming assignment</span>
                 <select
                   value={selectedAssignmentId}
                   onChange={(event) => chooseAssignment(event.target.value)}
@@ -512,7 +512,7 @@ export function GpaPredictor({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1.5 sm:col-span-2">
-                <span className="text-xs font-medium text-slate-400">Course</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Course</span>
                 <select
                   value={selectedCourseId}
                   onChange={(event) => chooseCourse(event.target.value)}
@@ -524,7 +524,7 @@ export function GpaPredictor({
                 </select>
               </label>
               <label className="space-y-1.5 sm:col-span-2">
-                <span className="text-xs font-medium text-slate-400">Assignment name</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Assignment name</span>
                 <input
                   value={assignmentName}
                   onChange={(event) => setAssignmentName(event.target.value)}
@@ -534,14 +534,14 @@ export function GpaPredictor({
             </div>
 
             <fieldset>
-              <legend className="text-xs font-medium text-slate-400">Calculation method</legend>
+              <legend className="text-xs font-medium text-[var(--ink-muted)]">Calculation method</legend>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   aria-pressed={forecastMode === "points"}
                   disabled={!canUsePointsMode}
                   onClick={() => setForecastMode("points")}
-                  className={`min-h-11 rounded-lg border px-3 text-xs font-semibold transition-colors ${forecastMode === "points" ? "border-sky-300/35 bg-sky-300/10 text-sky-100" : "border-white/10 text-slate-400 hover:bg-white/[0.04]"} disabled:cursor-not-allowed disabled:opacity-35`}
+                  className={`min-h-11 rounded-lg border px-3 text-xs font-semibold transition-colors ${forecastMode === "points" ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]" : "border-[var(--rule)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)]"} disabled:cursor-not-allowed disabled:opacity-35`}
                 >
                   Total points
                 </button>
@@ -549,19 +549,19 @@ export function GpaPredictor({
                   type="button"
                   aria-pressed={forecastMode === "weighted"}
                   onClick={() => setForecastMode("weighted")}
-                  className={`min-h-11 rounded-lg border px-3 text-xs font-semibold transition-colors ${forecastMode === "weighted" ? "border-sky-300/35 bg-sky-300/10 text-sky-100" : "border-white/10 text-slate-400 hover:bg-white/[0.04]"}`}
+                  className={`min-h-11 rounded-lg border px-3 text-xs font-semibold transition-colors ${forecastMode === "weighted" ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]" : "border-[var(--rule)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)]"}`}
                 >
                   % of course grade
                 </button>
               </div>
               {!canUsePointsMode ? (
-                <p className="mt-2 text-[11px] leading-4 text-slate-600">Total-points mode needs at least one synced graded item for this course.</p>
+                <p className="mt-2 text-[11px] leading-4 text-[var(--ink-muted)]">Total-points mode needs at least one synced graded item for this course.</p>
               ) : null}
             </fieldset>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-400">Your score</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Your score</span>
                 <input
                   aria-label="Predicted points earned"
                   type="number"
@@ -573,7 +573,7 @@ export function GpaPredictor({
                 />
               </label>
               <label className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-400">Points possible</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Points possible</span>
                 <input
                   aria-label="Predicted points possible"
                   type="number"
@@ -586,7 +586,7 @@ export function GpaPredictor({
               </label>
               {forecastMode === "weighted" ? (
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-400">Course weight</span>
+                  <span className="text-xs font-medium text-[var(--ink-muted)]">Course weight</span>
                   <div className="relative">
                     <input
                       aria-label="Assignment percent of course grade"
@@ -598,12 +598,12 @@ export function GpaPredictor({
                       onChange={(event) => setWeightInput(event.target.value)}
                       className={inputClassName("pr-8")}
                     />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600">%</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-muted)]">%</span>
                   </div>
                 </label>
               ) : null}
               <label className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-400">Target course grade</span>
+                <span className="text-xs font-medium text-[var(--ink-muted)]">Target course grade</span>
                 <div className="relative">
                   <input
                     aria-label="Target course grade percent"
@@ -615,25 +615,25 @@ export function GpaPredictor({
                     onChange={(event) => setTargetInput(event.target.value)}
                     className={inputClassName("pr-8")}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600">%</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-muted)]">%</span>
                 </div>
               </label>
             </div>
 
-            <div className="rounded-xl border border-white/[0.09] bg-black/20 p-4" aria-live="polite">
+            <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4" aria-live="polite">
               {projection && selectedCourse ? (
                 <>
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">Projected course grade</p>
+                      <p className="text-[10px] font-semibold text-[var(--ink-muted)]">Projected course grade</p>
                       <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                        <span className="text-3xl font-semibold tracking-[-0.04em] text-white">{formatValue(projection.projectedPercent)}%</span>
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${projection.change > 0 ? "text-emerald-300" : projection.change < 0 ? "text-rose-300" : "text-slate-400"}`}>
+                        <span className="text-3xl font-semibold tracking-[-0.04em] text-[var(--ink)]">{formatValue(projection.projectedPercent)}%</span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${projection.change > 0 ? "text-[#1c3829]" : projection.change < 0 ? "text-[#6e3630]" : "text-[var(--ink-muted)]"}`}>
                           {projection.change > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : projection.change < 0 ? <ArrowDownRight className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
                           {projection.change > 0 ? "+" : ""}{formatValue(projection.change)} pts
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--ink-muted)]">
                         {projectionGrade ? `${projectionGrade.letter} · ${projectionGrade.points.toFixed(1)} unweighted` : "Outside the selected GPA scale"}
                         {projectionWeightedPoints !== null ? ` · ${projectionWeightedPoints.toFixed(1)} weighted` : ""}
                       </p>
@@ -641,7 +641,7 @@ export function GpaPredictor({
                     <button
                       type="button"
                       onClick={applyProjection}
-                      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg bg-sky-200 px-3 text-xs font-semibold text-slate-950 transition-colors hover:bg-sky-100"
+                      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--blue)] px-3 text-xs font-semibold text-slate-950 transition-colors hover:bg-[var(--blue)]"
                     >
                       Apply to GPA
                       <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -649,7 +649,7 @@ export function GpaPredictor({
                   </div>
                 </>
               ) : (
-                <p className="text-sm leading-6 text-slate-500">
+                <p className="text-sm leading-6 text-[var(--ink-muted)]">
                   {courses.length === 0
                     ? "Add a course to start forecasting."
                     : forecastMode === "points" && !canUsePointsMode
@@ -660,14 +660,14 @@ export function GpaPredictor({
             </div>
 
             {targetScore && targetPercent !== null ? (
-              <div className={`rounded-xl border p-4 ${targetScore.status === "extra-credit-required" ? "border-rose-300/20 bg-rose-300/[0.05]" : targetScore.status === "already-secure" ? "border-emerald-300/20 bg-emerald-300/[0.05]" : "border-violet-300/20 bg-violet-300/[0.05]"}`} aria-live="polite">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Score needed for {formatValue(targetPercent)}%</p>
-                <p className="mt-2 text-lg font-semibold text-white">
+              <div className={`rounded-xl border p-4 ${targetScore.status === "extra-credit-required" ? "border-[var(--danger-ink)] bg-[var(--danger-bg)]/[0.05]" : targetScore.status === "already-secure" ? "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.05]" : "border-[var(--rule)] bg-[var(--paper-sunken)]/[0.05]"}`} aria-live="polite">
+                <p className="text-[10px] font-semibold text-[var(--ink-muted)]">Score needed for {formatValue(targetPercent)}%</p>
+                <p className="mt-2 text-lg font-semibold text-[var(--ink)]">
                   {targetScore.status === "already-secure"
                     ? "Target already secured"
                     : `${formatValue(targetScore.requiredPercent)}%${targetScore.requiredPoints !== null ? ` · ${formatValue(targetScore.requiredPoints)} points` : ""}`}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
                   {targetScore.status === "extra-credit-required"
                     ? "This target is not reachable with the listed points unless extra credit is available."
                     : targetScore.status === "already-secure"
@@ -680,15 +680,15 @@ export function GpaPredictor({
         </div>
       </div>
 
-      <details className="group border-t border-white/[0.08] px-4 py-4 sm:px-6">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-slate-400 transition-colors hover:text-slate-200">
-          <Info className="h-4 w-4 text-sky-300" aria-hidden="true" />
+      <details className="group border-t border-[var(--rule)] px-4 py-4 sm:px-6">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]">
+          <Info className="h-4 w-4 text-[var(--blue)]" aria-hidden="true" />
           How this estimate works
         </summary>
-        <div className="mt-3 grid gap-3 text-xs leading-5 text-slate-500 md:grid-cols-3">
-          <p><strong className="text-slate-300">GPA:</strong> The default maps A/B/C/D/F to 4/3/2/1/0. Honors adds 0.5 and AP, IB, or dual enrollment adds 1.0 for grades of 70% or higher.</p>
-          <p><strong className="text-slate-300">Prediction:</strong> Total-points mode uses synced earned and possible points. Course-weight mode treats this assignment as the percentage of the final grade you enter.</p>
-          <p><strong className="text-slate-300">Important:</strong> Schools may use different cutoffs, credits, category weights, dropped scores, or GPA rules. Smartlearn never writes these what-if values back to Canvas.</p>
+        <div className="mt-3 grid gap-3 text-xs leading-5 text-[var(--ink-muted)] md:grid-cols-3">
+          <p><strong className="text-[var(--ink-muted)]">GPA:</strong> The default maps A/B/C/D/F to 4/3/2/1/0. Honors adds 0.5 and AP, IB, or dual enrollment adds 1.0 for grades of 70% or higher.</p>
+          <p><strong className="text-[var(--ink-muted)]">Prediction:</strong> Total-points mode uses synced earned and possible points. Course-weight mode treats this assignment as the percentage of the final grade you enter.</p>
+          <p><strong className="text-[var(--ink-muted)]">Important:</strong> Schools may use different cutoffs, credits, category weights, dropped scores, or GPA rules. Smartlearn never writes these what-if values back to Canvas.</p>
         </div>
       </details>
     </section>

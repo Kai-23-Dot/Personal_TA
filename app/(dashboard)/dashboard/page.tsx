@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNowStrict, parseISO } from "date-fns";
+import { courseTone } from "@/frontend/lib/course-tone";
+import { iconForHref } from "@/frontend/lib/nav-items";
 import {
   AlertCircle,
-  ArrowRight,
   ArrowUpRight,
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -16,11 +16,9 @@ import {
   Flame,
   GraduationCap,
   Link2,
-  MessageCircleQuestion,
   RefreshCw,
   Sparkles,
   Target,
-  Zap,
 } from "lucide-react";
 
 type CourseRef = { id: string; name: string; color: string | null } | null;
@@ -84,13 +82,13 @@ function Panel({
 }) {
   return (
     <section
-      className={`rounded-xl border border-white/[0.08] bg-white/[0.018] ${className}`}
+      className={`rounded-xl border border-[var(--rule)] bg-[var(--paper)] ${className}`}
       data-notion-surface
     >
-      <div className="flex items-start justify-between gap-4 border-b border-white/[0.065] px-4 py-3.5 sm:px-5">
+      <div className="flex items-start justify-between gap-4 border-b border-[var(--rule)] px-4 py-3.5 sm:px-5">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-[-0.015em] text-slate-100">{title}</h2>
-          {subtitle ? <p className="mt-1 max-w-xl text-[11px] leading-4 text-slate-500">{subtitle}</p> : null}
+          <h2 className="text-sm font-semibold tracking-[-0.015em] text-[var(--ink)]">{title}</h2>
+          {subtitle ? <p className="mt-1 max-w-xl text-[11px] leading-4 text-[var(--ink-muted)]">{subtitle}</p> : null}
         </div>
         {action}
       </div>
@@ -115,13 +113,13 @@ function QuickTool({
   return (
     <Link
       href={href}
-      className="group flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-slate-300 transition-colors hover:bg-white/[0.045] hover:text-white"
+      className="group flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-[var(--ink-muted)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
     >
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-sky-300/[0.08] text-sky-300 transition-colors group-hover:bg-sky-300/[0.14]">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors group-hover: text-[var(--ink-faint)]">
         {icon}
       </span>
       <span>{label}</span>
-      <ChevronRight className="ml-auto h-3.5 w-3.5 text-slate-700 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300" />
+      <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--ink)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--blue)]" />
     </Link>
   );
 }
@@ -137,6 +135,15 @@ function deadlineLabel(due: Date, nowMs: number): string {
 function assignmentHref(assignmentId: string): string {
   return `/assignments?assignmentId=${encodeURIComponent(assignmentId)}`;
 }
+
+/* Labels are page-specific ("Study guide" rather than "Notes"), but the icon for
+   each destination comes from the shared registry so it matches the rail. */
+const QUICK_TOOLS = [
+  { href: "/practice",   label: "Practice" },
+  { href: "/notes",      label: "Study guide" },
+  { href: "/flashcards", label: "Flashcards" },
+  { href: "/chat",       label: "Ask Smartlearn" },
+] as const;
 
 export default function DashboardPage() {
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
@@ -347,21 +354,9 @@ export default function DashboardPage() {
   }
 
   const primaryTone = {
-    urgent: {
-      accent: "bg-orange-300",
-      icon: "bg-orange-300/10 text-orange-200",
-      label: "text-orange-200",
-    },
-    focus: {
-      accent: "bg-sky-300",
-      icon: "bg-sky-300/10 text-sky-200",
-      label: "text-sky-200",
-    },
-    clear: {
-      accent: "bg-emerald-300",
-      icon: "bg-emerald-300/10 text-emerald-200",
-      label: "text-emerald-200",
-    },
+    urgent: { accent: "bg-[var(--warning-ink)]", chip: "status status-due" },
+    focus:  { accent: "bg-[var(--blue)]",        chip: "status status-neutral" },
+    clear:  { accent: "bg-[var(--success-ink)]", chip: "status status-done" },
   }[primaryAction.tone];
 
   const canvasUpdatedLabel = canvasConnection?.last_synced_at
@@ -374,33 +369,33 @@ export default function DashboardPage() {
       value: String(upcomingAssignments.length),
       note: urgentAssignments.length > 0 ? `${urgentAssignments.length} urgent` : "No urgent deadlines",
       tone: urgentAssignments.length > 0
-        ? "bg-orange-300/[0.08] text-orange-200"
-        : "bg-sky-300/[0.08] text-sky-200",
-      line: urgentAssignments.length > 0 ? "via-orange-300/70" : "via-sky-300/70",
+        ? "bg-[var(--warning-bg)]/[0.08] text-[#533b1b]"
+        : "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
+      line: urgentAssignments.length > 0 ? "via-[var(--paper-sunken)]" : "via-[var(--paper-sunken)]",
     },
     {
       icon: <Flame className="h-4 w-4" />,
       label: "Study streak",
       value: `${studyStreak} ${studyStreak === 1 ? "day" : "days"}`,
       note: studyStreak > 0 ? "Momentum active" : "Start with one session",
-      tone: "bg-sky-300/[0.08] text-sky-200",
-      line: "via-sky-300/70",
+      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
+      line: "via-[var(--paper-sunken)]",
     },
     {
       icon: <Clock3 className="h-4 w-4" />,
       label: "Focus this week",
       value: `${hoursThisWeek} hrs`,
       note: "Completed sessions only",
-      tone: "bg-sky-300/[0.08] text-sky-200",
-      line: "via-sky-300/70",
+      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
+      line: "via-[var(--paper-sunken)]",
     },
     {
       icon: <FileStack className="h-4 w-4" />,
       label: "Indexed material",
       value: String(notesCount),
       note: `${courses.length} active course${courses.length === 1 ? "" : "s"}`,
-      tone: "bg-sky-300/[0.08] text-sky-200",
-      line: "via-sky-300/70",
+      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
+      line: "via-[var(--paper-sunken)]",
     },
   ];
 
@@ -410,18 +405,18 @@ export default function DashboardPage() {
       data-dashboard-command-center
       data-dashboard-notion-workspace
     >
-      <header className="mb-6 border-b border-white/[0.07] pb-6">
+      <header className="mb-6 border-b border-[var(--rule)] pb-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-start gap-3.5">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-sky-300/20 bg-sky-300/[0.08] text-sky-200">
-              <GraduationCap className="h-5 w-5" aria-hidden="true" />
+            <span className="grid h-11 w-11 shrink-0 place-items-center text-[var(--ink-faint)]">
+              <GraduationCap className="h-7 w-7" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-slate-500">{format(new Date(), "EEEE, MMMM d")}</p>
-              <h1 className="mt-1 text-[clamp(1.75rem,4vw,2.35rem)] font-semibold leading-tight tracking-[-0.045em] text-white">
+              <p className="text-[11px] font-medium text-[var(--ink-muted)]">{format(new Date(), "EEEE, MMMM d")}</p>
+              <h1 className="mt-1 text-[clamp(1.75rem,4vw,2.35rem)] font-semibold leading-tight tracking-[-0.045em] text-[var(--ink)]">
                 {greeting}{firstName ? `, ${firstName}` : ""}.
               </h1>
-              <p className="mt-1.5 text-sm text-slate-400">
+              <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
                 {urgentAssignments.length > 0
                   ? `${urgentAssignments.length} deadline${urgentAssignments.length === 1 ? " needs" : "s need"} attention within 48 hours.`
                   : upcomingAssignments.length > 0
@@ -433,11 +428,11 @@ export default function DashboardPage() {
 
           <div className="flex items-center justify-between gap-3 sm:justify-end">
             <div className="min-w-0 text-right">
-              <p className="flex items-center justify-end gap-1.5 text-[10px] font-medium text-slate-500">
-                <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-emerald-300" : "bg-orange-300"}`} />
+              <p className="flex items-center justify-end gap-1.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-[var(--success-bg)]" : "bg-[var(--warning-bg)]"}`} />
                 Canvas {canvasConnection ? "connected" : "not connected"}
               </p>
-              <p className="mt-0.5 max-w-44 truncate text-[11px] text-slate-600">
+              <p className="mt-0.5 max-w-44 truncate text-[11px] text-[var(--ink-muted)]">
                 {canvasConnection ? `Updated ${canvasUpdatedLabel}` : "Connect Canvas to import classes"}
               </p>
             </div>
@@ -445,7 +440,7 @@ export default function DashboardPage() {
               type="button"
               onClick={handleSync}
               disabled={syncing || !canvasConnection}
-              className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition-colors hover:border-sky-300/25 hover:bg-sky-300/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-[var(--rule)] bg-[var(--paper)] px-3 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)] hover:text-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} aria-hidden="true" />
               {syncing ? "Syncing" : "Sync"}
@@ -455,8 +450,8 @@ export default function DashboardPage() {
       </header>
 
       {syncMessage ? (
-        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-xs text-slate-300" role="status" data-notion-surface>
-          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-300" aria-hidden="true" />
+        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 text-xs text-[var(--ink-muted)]" role="status" data-notion-surface>
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--blue)]" aria-hidden="true" />
           {syncMessage}
         </div>
       ) : null}
@@ -478,11 +473,11 @@ export default function DashboardPage() {
       ) : null}
 
       {loadState === "error" ? (
-        <div className="rounded-xl border border-red-300/20 bg-red-400/[0.05] p-7 text-center" data-notion-surface>
-          <p className="mb-4 text-sm text-slate-300">{syncMessage ?? "Failed to load your dashboard."}</p>
+        <div className="rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)]/[0.05] p-7 text-center" data-notion-surface>
+          <p className="mb-4 text-sm text-[var(--ink-muted)]">{syncMessage ?? "Failed to load your dashboard."}</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <button type="button" className="rounded-md bg-sky-200 px-4 py-2 text-sm font-semibold text-slate-950" onClick={() => loadDashboardData()}>Retry</button>
-            <Link href="/settings" className="rounded-md border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-medium text-slate-200">Settings</Link>
+            <button type="button" className="rounded-md bg-[var(--blue)] px-4 py-2 text-sm font-semibold text-slate-950" onClick={() => loadDashboardData()}>Retry</button>
+            <Link href="/settings" className="rounded-md border border-[var(--rule)] bg-[var(--paper)] px-4 py-2 text-sm font-medium text-[var(--ink)]">Settings</Link>
           </div>
         </div>
       ) : null}
@@ -491,39 +486,34 @@ export default function DashboardPage() {
         <div className="space-y-4">
           <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]">
             <section
-              className="relative overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.02]"
+              className="relative overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--paper)]"
               data-dashboard-primary-action
               data-notion-surface
             >
               <span className={`absolute inset-y-4 left-0 w-0.5 rounded-r ${primaryTone.accent}`} aria-hidden="true" />
-              <div className="flex items-center justify-between gap-3 border-b border-white/[0.065] px-5 py-3.5">
-                <span className="flex items-center gap-2 text-xs font-medium text-slate-300">
-                  <Sparkles className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--rule)] px-5 py-3.5">
+                <span className="flex items-center gap-2 text-xs font-medium text-[var(--ink-muted)]">
+                  <Sparkles className="h-4 w-4 text-[var(--ink-faint)]" aria-hidden="true" />
                   Smartlearn recommendation
                 </span>
-                <span className="text-[10px] text-slate-600">Priority 01</span>
+                
               </div>
 
               <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_12rem]">
                 <div className="min-w-0">
-                  <div className={`inline-flex items-center gap-2 text-[11px] font-semibold ${primaryTone.label}`}>
-                    <span className={`grid h-6 w-6 place-items-center rounded-md ${primaryTone.icon}`}>
-                      <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-                    </span>
-                    {primaryAction.badge}
-                  </div>
-                  <h2 className="mt-4 max-w-2xl text-[clamp(1.6rem,3.5vw,2.25rem)] font-semibold leading-[1.15] tracking-[-0.045em] text-white">
+                  <span className={primaryTone.chip}>{primaryAction.badge}</span>
+                  <h2 className="mt-4 max-w-2xl text-[clamp(1.6rem,3.5vw,2.25rem)] font-semibold leading-[1.15] tracking-[-0.045em] text-[var(--ink)]">
                     {primaryAction.title}
                   </h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
                     {primaryAction.description}
                   </p>
 
                   <dl className="mt-5 grid max-w-2xl gap-2 sm:grid-cols-2">
                     {primaryAction.meta.map((item, index) => (
-                      <div key={item} className="flex items-center gap-2 rounded-md bg-white/[0.028] px-3 py-2 text-[11px] text-slate-400">
-                        <dt className="text-slate-600">{index === 0 ? "Detail" : "Context"}</dt>
-                        <dd className="min-w-0 truncate text-slate-200">{item}</dd>
+                      <div key={item} className="flex items-center gap-2 rounded-md bg-[var(--paper)] px-3 py-2 text-[11px] text-[var(--ink-muted)]">
+                        <dt className="text-[var(--ink-muted)]">{index === 0 ? "Detail" : "Context"}</dt>
+                        <dd className="min-w-0 truncate text-[var(--ink)]">{item}</dd>
                       </div>
                     ))}
                   </dl>
@@ -531,15 +521,14 @@ export default function DashboardPage() {
                   <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <Link
                       href={primaryAction.href}
-                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-sky-200 px-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[var(--blue)] px-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-[var(--blue)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue-edge)]"
                     >
                       {primaryAction.cta}
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                     {primaryAction.secondaryHref ? (
                       <Link
                         href={primaryAction.secondaryHref}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
+                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--rule)] bg-[var(--paper)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
                       >
                         {primaryAction.secondaryLabel}
                       </Link>
@@ -547,9 +536,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <aside className="border-t border-white/[0.065] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-label="Current semester status">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-600">At a glance</p>
-                  <dl className="mt-3 divide-y divide-white/[0.065]">
+                <aside className="border-t border-[var(--rule)] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-label="Current semester status">
+                  <p className="section-title">At a glance</p>
+                  <dl className="mt-3 divide-y divide-[var(--rule)]">
                     {[
                       ["Due this week", upcomingAssignments.length],
                       ["Urgent", urgentAssignments.length],
@@ -557,8 +546,8 @@ export default function DashboardPage() {
                       ["Active courses", courses.length],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
-                        <dt className="text-[11px] text-slate-500">{label}</dt>
-                        <dd className="text-sm font-semibold tabular-nums text-slate-200">{value}</dd>
+                        <dt className="text-[11px] text-[var(--ink-muted)]">{label}</dt>
+                        <dd className="text-sm font-semibold tabular-nums text-[var(--ink)]">{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -566,8 +555,8 @@ export default function DashboardPage() {
                     {courses.slice(0, 6).map((course) => (
                       <span
                         key={course.id}
-                        className="h-2 w-6 rounded-full opacity-80"
-                        style={{ backgroundColor: course.color ?? "#7dd3fc" }}
+                        data-course-tone={courseTone(course.name)}
+                        className="course-swatch"
                         title={course.name}
                       />
                     ))}
@@ -580,7 +569,7 @@ export default function DashboardPage() {
               title="Upcoming"
               subtitle="Next four deadlines, ordered by due time"
               action={(
-                <Link href="/assignments" className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-300 hover:text-sky-200">
+                <Link href="/assignments" className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--blue)] hover:text-[var(--blue)]">
                   View all <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                 </Link>
               )}
@@ -589,13 +578,13 @@ export default function DashboardPage() {
               {upcomingAssignments.length === 0 ? (
                 <div className="grid min-h-[210px] place-items-center text-center">
                   <div>
-                    <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-300/70" aria-hidden="true" />
-                    <p className="mt-3 text-sm font-medium text-slate-200">No deadlines this week</p>
-                    <p className="mt-1 text-xs text-slate-500">Your active courses are clear for seven days.</p>
+                    <CheckCircle2 className="mx-auto h-7 w-7 text-[#1c3829]/70" aria-hidden="true" />
+                    <p className="mt-3 text-sm font-medium text-[var(--ink)]">No deadlines this week</p>
+                    <p className="mt-1 text-xs text-[var(--ink-muted)]">Your active courses are clear for seven days.</p>
                   </div>
                 </div>
               ) : (
-                <ol className="divide-y divide-white/[0.065]" data-dashboard-deadline-database>
+                <ol className="divide-y divide-[var(--rule)]" data-dashboard-deadline-database>
                   {upcomingAssignments.slice(0, 4).map((assignment) => {
                     const urgent = assignment.due.getTime() - nowMs < 48 * HOUR_MS;
                     return (
@@ -604,20 +593,20 @@ export default function DashboardPage() {
                           href={assignmentHref(assignment.id)}
                           className="group grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-3 py-3 first:pt-0 last:pb-0"
                         >
-                          <span className={`grid h-9 w-9 place-items-center rounded-md text-center ${urgent ? "bg-orange-300/[0.09]" : "bg-white/[0.035]"}`}>
+                          <span className={`grid h-9 w-9 place-items-center rounded-md text-center ${urgent ? "bg-[var(--warning-bg)]/[0.09]" : "bg-[var(--paper)]"}`}>
                             <span>
-                              <span className={`block text-[7px] font-semibold uppercase tracking-[0.1em] ${urgent ? "text-orange-300" : "text-slate-600"}`}>{format(assignment.due, "MMM")}</span>
-                              <span className="block text-xs font-semibold leading-none text-slate-200">{format(assignment.due, "d")}</span>
+                              <span className={`block text-[10px] font-medium ${urgent ? "text-[#6e3630]" : "text-[var(--ink-muted)]"}`}>{format(assignment.due, "MMM")}</span>
+                              <span className="block text-xs font-semibold leading-none text-[var(--ink)]">{format(assignment.due, "d")}</span>
                             </span>
                           </span>
                           <span className="min-w-0">
-                            <span className="line-clamp-1 text-[13px] font-medium text-slate-200 transition-colors group-hover:text-white">{assignment.title}</span>
-                            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-600">
+                            <span className="line-clamp-1 text-[13px] font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--ink)]">{assignment.title}</span>
+                            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-[var(--ink-muted)]">
                               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: assignment.course?.color ?? "#7dd3fc" }} />
                               <span className="truncate">{assignment.course?.name ?? "Course"}</span>
                             </span>
                           </span>
-                          <ChevronRight className="h-3.5 w-3.5 text-slate-700 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300" aria-hidden="true" />
+                          <ChevronRight className="h-3.5 w-3.5 text-[var(--ink)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--blue)]" aria-hidden="true" />
                         </Link>
                       </li>
                     );
@@ -629,15 +618,15 @@ export default function DashboardPage() {
 
           <section aria-label="Weekly snapshot" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" data-dashboard-metrics-grid>
             {weeklyMetrics.map((metric) => (
-              <div key={metric.label} className="group relative overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.015] p-3.5 transition-colors hover:bg-white/[0.03]" data-notion-surface>
+              <div key={metric.label} className="group relative overflow-hidden rounded-lg border border-[var(--rule)] bg-[var(--paper)] p-3.5 transition-colors hover:bg-[var(--wash-hover)]" data-notion-surface>
                 <span className={`pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent ${metric.line} to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100`} />
                 <div className="flex items-center gap-3">
                   <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${metric.tone}`}>{metric.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-medium text-slate-500">{metric.label}</p>
+                    <p className="text-[10px] font-medium text-[var(--ink-muted)]">{metric.label}</p>
                     <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                      <strong className="text-base font-semibold tabular-nums text-white">{metric.value}</strong>
-                      <span className="text-[10px] text-slate-600">{metric.note}</span>
+                      <strong className="text-base font-semibold tabular-nums text-[var(--ink)]">{metric.value}</strong>
+                      <span className="text-[10px] text-[var(--ink-muted)]">{metric.note}</span>
                     </div>
                   </div>
                 </div>
@@ -649,28 +638,28 @@ export default function DashboardPage() {
             <Panel
               title="Study priorities"
               subtitle="Ranked from real deadlines and demonstrated mastery"
-              action={<Link href="/practice" className="text-[11px] font-medium text-sky-300 hover:text-sky-200">Open practice</Link>}
+              action={<Link href="/practice" className="text-[11px] font-medium text-[var(--blue)] hover:text-[var(--blue)]">Open practice</Link>}
             >
               {recommendations.length === 0 ? (
                 <div className="flex min-h-44 flex-col items-center justify-center text-center">
-                  <Target className="h-7 w-7 text-slate-600" aria-hidden="true" />
-                  <p className="mt-3 text-sm font-medium text-slate-300">No study priorities yet</p>
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">Complete a practice session so Smartlearn can rank your strongest next move.</p>
-                  <button type="button" className="mt-4 rounded-md border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-medium text-slate-200" onClick={handleSync} disabled={syncing || !canvasConnection}>
+                  <Target className="h-7 w-7 text-[var(--ink-muted)]" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-medium text-[var(--ink-muted)]">No study priorities yet</p>
+                  <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--ink-muted)]">Complete a practice session so Smartlearn can rank your strongest next move.</p>
+                  <button type="button" className="mt-4 rounded-md border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs font-medium text-[var(--ink)]" onClick={handleSync} disabled={syncing || !canvasConnection}>
                     {canvasConnection ? "Refresh course data" : "Connect Canvas first"}
                   </button>
                 </div>
               ) : (
-                <ol className="divide-y divide-white/[0.065]">
+                <ol className="divide-y divide-[var(--rule)]">
                   {recommendations.slice(0, 3).map((recommendation, index) => {
                     const accuracyLabel = recommendation.accuracy_pct === null
                       ? "Baseline needed"
                       : `${recommendation.accuracy_pct}% mastery`;
                     const accuracyTone = recommendation.accuracy_pct === null
-                      ? "bg-white/[0.035] text-slate-500"
+                      ? "bg-[var(--paper)] text-[var(--ink-muted)]"
                       : recommendation.accuracy_pct < 60
-                        ? "bg-amber-300/[0.08] text-amber-200"
-                        : "bg-emerald-300/[0.08] text-emerald-200";
+                        ? "bg-[var(--warning-bg)]/[0.08] text-[#533b1b]"
+                        : "bg-[var(--success-bg)]/[0.08] text-[#1c3829]";
 
                     return (
                       <li key={`${recommendation.topic}-${index}`}>
@@ -678,19 +667,19 @@ export default function DashboardPage() {
                           href={`/practice${recommendation.course_id ? `?courseId=${recommendation.course_id}` : ""}`}
                           className="group grid gap-3 py-3.5 first:pt-0 last:pb-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
                         >
-                          <span className={`grid h-8 w-8 place-items-center rounded-md text-[10px] font-semibold ${index === 0 ? "bg-sky-300/[0.10] text-sky-200" : "bg-white/[0.035] text-slate-500"}`}>
+                          <span className={`grid h-8 w-8 place-items-center rounded-md text-[10px] font-semibold ${index === 0 ? "bg-[var(--blue)]/[0.10] text-[var(--blue)]" : "bg-[var(--paper)] text-[var(--ink-muted)]"}`}>
                             {index + 1}
                           </span>
                           <span className="min-w-0">
                             {recommendation.course_name ? (
-                              <span className="line-clamp-1 text-[9px] font-medium text-slate-600">{recommendation.course_name}</span>
+                              <span className="line-clamp-1 text-[9px] font-medium text-[var(--ink-muted)]">{recommendation.course_name}</span>
                             ) : null}
-                            <strong className="mt-0.5 line-clamp-1 text-sm font-medium text-slate-100">{recommendation.topic}</strong>
-                            <span className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{recommendation.reason}</span>
+                            <strong className="mt-0.5 line-clamp-1 text-sm font-medium text-[var(--ink)]">{recommendation.topic}</strong>
+                            <span className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">{recommendation.reason}</span>
                           </span>
                           <span className="flex items-center gap-2 pl-11 sm:flex-col sm:items-end sm:pl-0">
                             <span className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-medium ${accuracyTone}`}>{accuracyLabel}</span>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-300">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--blue)]">
                               Practice <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                             </span>
                           </span>
@@ -704,29 +693,29 @@ export default function DashboardPage() {
 
             <Panel title="Quick links" subtitle="Open a learning tool">
               <div className="grid gap-0.5 sm:grid-cols-2 xl:grid-cols-1">
-                <QuickTool href="/practice" icon={<Target className="h-3.5 w-3.5" />} label="Practice" />
-                <QuickTool href="/notes" icon={<BookOpen className="h-3.5 w-3.5" />} label="Study guide" />
-                <QuickTool href="/flashcards" icon={<Sparkles className="h-3.5 w-3.5" />} label="Flashcards" />
-                <QuickTool href="/chat" icon={<MessageCircleQuestion className="h-3.5 w-3.5" />} label="Ask Smartlearn" />
+                {QUICK_TOOLS.map(({ href, label }) => {
+                  const Icon = iconForHref(href);
+                  return <QuickTool key={href} href={href} icon={<Icon className="h-4 w-4" />} label={label} />;
+                })}
               </div>
 
-              <div className="mt-4 border-t border-white/[0.065] pt-4">
+              <div className="mt-4 border-t border-[var(--rule)] pt-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-medium text-slate-600">Workspace status</p>
-                  <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-emerald-300" : "bg-orange-300"}`} />
+                  <p className="text-[10px] font-medium text-[var(--ink-muted)]">Workspace status</p>
+                  <span className={`h-1.5 w-1.5 rounded-full ${canvasConnection ? "bg-[var(--success-bg)]" : "bg-[var(--warning-bg)]"}`} />
                 </div>
                 <dl className="mt-3 space-y-2.5 text-[11px]">
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="flex items-center gap-2 text-slate-500"><Link2 className="h-3.5 w-3.5" /> Canvas</dt>
-                    <dd className={canvasConnection ? "text-emerald-300" : "text-orange-200"}>{canvasConnection ? "Connected" : "Not connected"}</dd>
+                    <dt className="flex items-center gap-2 text-[var(--ink-muted)]"><Link2 className="h-3.5 w-3.5" /> Canvas</dt>
+                    <dd className={canvasConnection ? "text-[#1c3829]" : "text-[#533b1b]"}>{canvasConnection ? "Connected" : "Not connected"}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="flex items-center gap-2 text-slate-500"><GraduationCap className="h-3.5 w-3.5" /> Active courses</dt>
-                    <dd className="tabular-nums text-slate-300">{courses.length}</dd>
+                    <dt className="flex items-center gap-2 text-[var(--ink-muted)]"><GraduationCap className="h-3.5 w-3.5" /> Active courses</dt>
+                    <dd className="tabular-nums text-[var(--ink-muted)]">{courses.length}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="flex items-center gap-2 text-slate-500"><FileStack className="h-3.5 w-3.5" /> Indexed material</dt>
-                    <dd className="tabular-nums text-slate-300">{notesCount} items</dd>
+                    <dt className="flex items-center gap-2 text-[var(--ink-muted)]"><FileStack className="h-3.5 w-3.5" /> Indexed material</dt>
+                    <dd className="tabular-nums text-[var(--ink-muted)]">{notesCount} items</dd>
                   </div>
                 </dl>
               </div>
@@ -736,22 +725,22 @@ export default function DashboardPage() {
           <Panel
             title="Courses"
             subtitle="Active Canvas courses and their next deadlines"
-            action={<Link href="/courses" className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-300 hover:text-sky-200">View all <ArrowUpRight className="h-3 w-3.5" /></Link>}
+            action={<Link href="/courses" className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--blue)] hover:text-[var(--blue)]">View all <ArrowUpRight className="h-3 w-3.5" /></Link>}
           >
             {courses.length === 0 ? (
               <div className="flex flex-col items-center py-7 text-center">
-                <GraduationCap className="h-7 w-7 text-slate-600" aria-hidden="true" />
-                <p className="mt-2 text-sm text-slate-400">No active courses are synced.</p>
+                <GraduationCap className="h-7 w-7 text-[var(--ink-muted)]" aria-hidden="true" />
+                <p className="mt-2 text-sm text-[var(--ink-muted)]">No active courses are synced.</p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-white/[0.065]" data-dashboard-course-database>
-                <div className="hidden grid-cols-[minmax(0,1.6fr)_7rem_9rem_1.25rem] gap-4 border-b border-white/[0.065] bg-white/[0.018] px-3 py-2 text-[9px] font-medium text-slate-600 sm:grid">
+              <div className="overflow-hidden rounded-lg border border-[var(--rule)]" data-dashboard-course-database>
+                <div className="hidden grid-cols-[minmax(0,1.6fr)_7rem_9rem_1.25rem] gap-4 border-b border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-[9px] font-medium text-[var(--ink-muted)] sm:grid">
                   <span>Course</span>
                   <span>Due this week</span>
                   <span>Next deadline</span>
                   <span />
                 </div>
-                <div className="divide-y divide-white/[0.065]">
+                <div className="divide-y divide-[var(--rule)]">
                   {courses.slice(0, 6).map((course) => {
                     const courseDeadlines = upcomingAssignments.filter((assignment) => assignment.course?.id === course.id);
                     const nextDeadline = courseDeadlines[0];
@@ -759,15 +748,15 @@ export default function DashboardPage() {
                       <Link
                         key={course.id}
                         href={`/courses/${course.id}`}
-                        className="group grid gap-2 px-3 py-3 transition-colors hover:bg-white/[0.03] sm:grid-cols-[minmax(0,1.6fr)_7rem_9rem_1.25rem] sm:items-center sm:gap-4"
+                        className="group grid gap-2 px-3 py-3 transition-colors hover:bg-[var(--wash-hover)] sm:grid-cols-[minmax(0,1.6fr)_7rem_9rem_1.25rem] sm:items-center sm:gap-4"
                       >
                         <span className="flex min-w-0 items-center gap-2.5">
                           <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: course.color ?? "#7dd3fc" }} />
-                          <span className="truncate text-[13px] font-medium text-slate-200 group-hover:text-white">{course.name}</span>
+                          <span className="truncate text-[13px] font-medium text-[var(--ink)] group-hover:text-[var(--ink)]">{course.name}</span>
                         </span>
-                        <span className="pl-[1.125rem] text-[11px] text-slate-500 sm:pl-0">{courseDeadlines.length} item{courseDeadlines.length === 1 ? "" : "s"}</span>
-                        <span className="pl-[1.125rem] text-[11px] text-slate-500 sm:pl-0">{nextDeadline ? deadlineLabel(nextDeadline.due, nowMs) : "Schedule clear"}</span>
-                        <ChevronRight className="hidden h-3.5 w-3.5 text-slate-700 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300 sm:block" aria-hidden="true" />
+                        <span className="pl-[1.125rem] text-[11px] text-[var(--ink-muted)] sm:pl-0">{courseDeadlines.length} item{courseDeadlines.length === 1 ? "" : "s"}</span>
+                        <span className="pl-[1.125rem] text-[11px] text-[var(--ink-muted)] sm:pl-0">{nextDeadline ? deadlineLabel(nextDeadline.due, nowMs) : "Schedule clear"}</span>
+                        <ChevronRight className="hidden h-3.5 w-3.5 text-[var(--ink)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--blue)] sm:block" aria-hidden="true" />
                       </Link>
                     );
                   })}
@@ -778,13 +767,13 @@ export default function DashboardPage() {
 
           {unreadNotifications.length > 0 ? (
             <Panel title="Updates" subtitle="Unread information that may affect your plan">
-              <ul className="divide-y divide-white/[0.065]">
+              <ul className="divide-y divide-[var(--rule)]">
                 {unreadNotifications.slice(0, 3).map((notification) => (
                   <li key={notification.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-300" />
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-slate-200">{notification.title}</p>
-                      {notification.body ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{notification.body}</p> : null}
+                      <p className="text-[13px] font-medium text-[var(--ink)]">{notification.title}</p>
+                      {notification.body ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">{notification.body}</p> : null}
                     </div>
                   </li>
                 ))}

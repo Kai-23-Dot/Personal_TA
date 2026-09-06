@@ -70,16 +70,16 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
     const correct = results.filter((r) => r.grade >= 3).length;
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15">
-          <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--success-ink)] text-[var(--ink-faint)]">
+          <CheckCircle2 className="h-7 w-7 text-[var(--success-ink)]" />
         </div>
-        <p className="text-lg font-semibold text-white">Session complete!</p>
-        <p className="text-sm text-slate-400">
+        <p className="text-lg font-semibold text-[var(--ink)]">Session complete!</p>
+        <p className="text-sm text-[var(--ink-muted)]">
           {correct} of {cards.length} cards recalled correctly
         </p>
         <button
           onClick={onDone}
-          className="mt-2 rounded-xl border border-white/12 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+          className="mt-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
         >
           Back to review
         </button>
@@ -89,29 +89,29 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs text-[var(--ink-muted)]">
         <span>{idx + 1} of {cards.length}</span>
         <div className="flex gap-1">
           {cards.map((_, i) => (
-            <div key={i} className={`h-1.5 w-5 rounded-full ${i < idx ? "bg-emerald-500" : i === idx ? "bg-sky-400" : "bg-white/10"}`} />
+            <div key={i} className={`h-1.5 w-5 rounded-full ${i < idx ? "bg-[var(--success-bg)]" : i === idx ? "bg-[var(--blue)]" : "bg-[var(--paper)]"}`} />
           ))}
         </div>
       </div>
 
       {/* Card */}
       <div
-        className="cursor-pointer rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.9)] p-8 text-center shadow-[0_8px_40px_rgba(0,0,0,0.3)] transition hover:border-sky-400/20 min-h-[160px] flex flex-col items-center justify-center gap-4"
+        className="cursor-pointer rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-8 text-center shadow-none transition hover:border-[var(--blue-edge)] min-h-[160px] flex flex-col items-center justify-center gap-4"
         onClick={() => setFlipped(!flipped)}
       >
         {!flipped ? (
           <>
-            <p className="text-lg font-medium text-white leading-relaxed">{card.front}</p>
-            <p className="text-xs text-slate-500">Tap to reveal answer</p>
+            <p className="text-lg font-medium text-[var(--ink)] leading-relaxed">{card.front}</p>
+            <p className="text-xs text-[var(--ink-muted)]">Tap to reveal answer</p>
           </>
         ) : (
           <>
-            <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Answer</p>
-            <p className="text-base text-slate-200 leading-relaxed">{card.back}</p>
+            <p className="text-xs font-semibold text-[var(--blue)]">Answer</p>
+            <p className="text-base text-[var(--ink)] leading-relaxed">{card.back}</p>
           </>
         )}
       </div>
@@ -120,10 +120,10 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
       {flipped && (
         <div className="grid grid-cols-4 gap-2">
           {[
-            { g: 0, label: "Forgot", color: "border-rose-400/30 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25" },
-            { g: 2, label: "Hard",   color: "border-orange-400/25 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20" },
-            { g: 3, label: "Good",   color: "border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20" },
-            { g: 5, label: "Easy",   color: "border-emerald-400/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" },
+            { g: 0, label: "Forgot", color: "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[#6e3630] hover:bg-[var(--danger-bg)]" },
+            { g: 2, label: "Hard",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] hover:bg-[var(--warning-bg)]" },
+            { g: 3, label: "Good",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] hover:bg-[var(--warning-bg)]" },
+            { g: 5, label: "Easy",   color: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829] hover:bg-[var(--success-bg)]" },
           ].map(({ g, label, color }) => (
             <button
               key={g}
@@ -139,7 +139,7 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
       {!flipped && (
         <button
           onClick={() => setFlipped(true)}
-          className="w-full rounded-xl border border-sky-400/25 bg-sky-500/10 py-2.5 text-sm font-medium text-sky-200 transition hover:bg-sky-500/20"
+          className="w-full rounded-xl border border-[var(--rule)] bg-[var(--blue-wash)] py-2.5 text-sm font-medium text-[var(--blue)] transition hover:bg-[var(--blue-wash)]"
         >
           Show answer
         </button>
@@ -152,10 +152,10 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
 
 function ReadinessBadge({ score, label }: { score: number; label: string }) {
   const color =
-    score >= 80 ? "text-emerald-400 border-emerald-400/30 bg-emerald-500/10" :
-    score >= 60 ? "text-sky-400 border-sky-400/30 bg-sky-500/10" :
-    score >= 40 ? "text-amber-300 border-amber-400/25 bg-amber-400/8" :
-    "text-rose-400 border-rose-400/30 bg-rose-500/10";
+    score >= 80 ? "text-[var(--success-ink)] border-[var(--success-ink)] bg-[var(--success-bg)]" :
+    score >= 60 ? "text-[var(--blue)] border-[var(--rule)] bg-[var(--blue-wash)]" :
+    score >= 40 ? "text-[#533b1b] border-[var(--warning-ink)] bg-[var(--warning-bg)]" :
+    "text-[var(--danger-ink)] border-[var(--danger-ink)] bg-[var(--danger-bg)]";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${color}`}>
       <span>{score}%</span>
@@ -170,10 +170,10 @@ function SectionCard({ title, subtitle, children, className = "" }: {
   title: string; subtitle?: string; children: React.ReactNode; className?: string;
 }) {
   return (
-    <section className={`rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.3)] backdrop-blur ${className}`}>
+    <section className={`rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none backdrop-blur ${className}`}>
       <div className="mb-4">
-        <h2 className="text-base font-semibold text-white">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+        <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{subtitle}</p>}
       </div>
       {children}
     </section>
@@ -181,6 +181,15 @@ function SectionCard({ title, subtitle, children, className = "" }: {
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+/* How far below the line a topic sits is the whole point of this list, so the
+   bar carries it in colour as well as length — the percentage is also printed
+   beside each bar, so colour is never the only signal. */
+function masteryFill(accuracyPct: number): string {
+  if (accuracyPct < 60) return "bg-[var(--danger-ink)]";
+  if (accuracyPct < 80) return "bg-[var(--warning-ink)]";
+  return "bg-[var(--success-ink)]";
+}
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -273,12 +282,12 @@ export default function ReviewPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-6">
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-400">
+          <p className="text-sm font-medium text-[var(--ink-muted)]">
             Flashcard review — {reviewCards.length} due card{reviewCards.length === 1 ? "" : "s"}
           </p>
           <button
             onClick={() => { setReviewCards(null); load(); }}
-            className="text-slate-500 hover:text-white"
+            className="text-[var(--ink-muted)] hover:text-[var(--ink)]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -309,26 +318,26 @@ export default function ReviewPage() {
             subtitle="Spaced repetition — review cards scheduled for today"
           >
             {dueCards.length === 0 ? (
-              <p className="text-sm text-slate-500">No flashcards due right now. Check back later!</p>
+              <p className="text-sm text-[var(--ink-muted)]">No flashcards due right now. Check back later!</p>
             ) : (
               <div className="space-y-4">
-                <p className="text-3xl font-bold text-white">
+                <p className="text-3xl font-bold text-[var(--ink)]">
                   {dueCards.length}
-                  <span className="ml-2 text-sm font-normal text-slate-400">card{dueCards.length === 1 ? "" : "s"} due</span>
+                  <span className="ml-2 text-sm font-normal text-[var(--ink-muted)]">card{dueCards.length === 1 ? "" : "s"} due</span>
                 </p>
                 <div className="space-y-1.5">
                   {dueCards.slice(0, 3).map((c) => (
-                    <div key={c.id} className="rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-xs text-slate-300 truncate">
+                    <div key={c.id} className="rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs text-[var(--ink-muted)] truncate">
                       {c.front}
                     </div>
                   ))}
                   {dueCards.length > 3 && (
-                    <p className="text-xs text-slate-500">+{dueCards.length - 3} more</p>
+                    <p className="text-xs text-[var(--ink-muted)]">+{dueCards.length - 3} more</p>
                   )}
                 </div>
                 <button
                   onClick={() => setReviewCards(dueCards)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/15 py-2.5 text-sm font-medium text-violet-200 transition hover:bg-violet-500/25"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] py-2.5 text-sm font-medium text-[#412454] transition hover:bg-[var(--paper-sunken)]"
                 >
                   <Brain className="h-4 w-4" /> Start flashcard review
                 </button>
@@ -342,21 +351,21 @@ export default function ReviewPage() {
             subtitle="Topics where your practice accuracy is below 70%"
           >
             {weakTopics.length === 0 ? (
-              <p className="text-sm text-slate-500">No weak topics yet. Complete a practice session to see trends.</p>
+              <p className="text-sm text-[var(--ink-muted)]">No weak topics yet. Complete a practice session to see trends.</p>
             ) : (
               <div className="space-y-2.5">
                 {weakTopics.slice(0, 6).map((t) => (
                   <div key={t.topic} className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm text-white">{t.topic}</p>
-                      <div className="mt-1 h-1.5 rounded-full bg-white/8">
+                      <p className="truncate text-sm text-[var(--ink)]">{t.topic}</p>
+                      <div className="mt-1 h-1.5 rounded-full bg-[var(--paper-sunken)]">
                         <div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-rose-500 to-orange-400"
+                          className={`h-1.5 rounded-full ${masteryFill(t.accuracy_pct)}`}
                           style={{ width: `${t.accuracy_pct}%` }}
                         />
                       </div>
                     </div>
-                    <span className="flex-shrink-0 text-xs font-medium text-slate-400">
+                    <span className="flex-shrink-0 text-xs font-medium text-[var(--ink-muted)]">
                       {Math.round(t.accuracy_pct)}%
                     </span>
                   </div>
@@ -372,7 +381,7 @@ export default function ReviewPage() {
             className="md:col-span-2"
           >
             {upcomingExams.length === 0 ? (
-              <p className="text-sm text-slate-500">No exams or tests coming up.</p>
+              <p className="text-sm text-[var(--ink-muted)]">No exams or tests coming up.</p>
             ) : (
               <div className="space-y-3">
                 {upcomingExams.slice(0, 4).map((exam) => {
@@ -380,26 +389,26 @@ export default function ReviewPage() {
                   return (
                     <div
                       key={exam.id}
-                      className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/3 p-4"
+                      className="flex items-center gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-white">{exam.title}</p>
+                        <p className="truncate text-sm font-medium text-[var(--ink)]">{exam.title}</p>
                         {r ? (
                           <div className="mt-1 flex flex-wrap items-center gap-2">
                             <ReadinessBadge score={r.score} label={r.label} />
                             {r.daysLeft > 0 && (
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-[var(--ink-muted)]">
                                 {r.daysLeft} day{r.daysLeft === 1 ? "" : "s"} left
                               </span>
                             )}
                             {r.weakTopics.length > 0 && (
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-[var(--ink-muted)]">
                                 {r.weakTopics.length} weak topic{r.weakTopics.length === 1 ? "" : "s"}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <p className="mt-1 text-xs text-slate-600">
+                          <p className="mt-1 text-xs text-[var(--ink-muted)]">
                             <Loader2 className="inline h-3 w-3 animate-spin" /> Calculating readiness…
                           </p>
                         )}
@@ -407,7 +416,7 @@ export default function ReviewPage() {
                       <button
                         onClick={() => launchReview(exam.title, exam.course_id, 10)}
                         disabled={generating}
-                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-300 transition hover:bg-violet-500/20 disabled:opacity-50"
+                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] px-3 py-2 text-xs font-medium text-[#412454] transition hover:bg-[var(--paper-sunken)] disabled:opacity-50"
                       >
                         {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                         Practice
@@ -423,11 +432,11 @@ export default function ReviewPage() {
           <SectionCard title="Quick review session">
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs text-slate-500">Course</label>
+                <label className="mb-1 block text-xs text-[var(--ink-muted)]">Course</label>
                 <select
                   value={courseId}
                   onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50"
+                  className="w-full rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)]"
                 >
                   <option value="">Select course</option>
                   {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -439,31 +448,31 @@ export default function ReviewPage() {
                   await launchReview(topic, courseId, 6);
                 }}
                 disabled={generating || !courseId || weakTopics.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 py-2.5 text-sm font-medium text-sky-200 transition hover:bg-sky-500/20 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--blue-wash)] py-2.5 text-sm font-medium text-[var(--blue)] transition hover:bg-[var(--blue-wash)] disabled:opacity-50"
               >
                 {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Target className="h-4 w-4" />}
                 {generating ? "Generating…" : "Start quick review"}
               </button>
-              {actionMessage && <p className="text-xs text-slate-500">{actionMessage}</p>}
+              {actionMessage && <p className="text-xs text-[var(--ink-muted)]">{actionMessage}</p>}
             </div>
           </SectionCard>
 
           {/* Accuracy trend */}
           <SectionCard title="Accuracy trend" subtitle="Last 14 days">
             {trends.length === 0 ? (
-              <p className="text-sm text-slate-500">No quiz data yet.</p>
+              <p className="text-sm text-[var(--ink-muted)]">No quiz data yet.</p>
             ) : (
               <div className="space-y-2">
                 {trends.map((t) => (
                   <div key={t.day} className="flex items-center gap-3">
-                    <span className="w-20 flex-shrink-0 text-xs text-slate-500">{t.day}</span>
-                    <div className="flex-1 rounded-full bg-white/8 h-2">
+                    <span className="w-20 flex-shrink-0 text-xs text-[var(--ink-muted)]">{t.day}</span>
+                    <div className="flex-1 rounded-full bg-[var(--paper-sunken)] h-2">
                       <div
-                        className="h-2 rounded-full bg-gradient-to-r from-sky-400 to-violet-400"
+                        className={`h-2 rounded-full ${masteryFill(t.accuracy)}`}
                         style={{ width: `${t.accuracy}%` }}
                       />
                     </div>
-                    <span className="w-10 flex-shrink-0 text-right text-xs text-slate-400">{t.accuracy}%</span>
+                    <span className="w-10 flex-shrink-0 text-right text-xs text-[var(--ink-muted)]">{t.accuracy}%</span>
                   </div>
                 ))}
               </div>

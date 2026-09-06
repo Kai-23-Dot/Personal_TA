@@ -51,28 +51,28 @@ export default function PrivacyPage() {
   return (
     <SmartlearnBackdrop>
       <SmartlearnHeader showSignIn />
-      <main className="mx-auto w-full max-w-6xl px-5 pb-24 pt-36 sm:px-8 lg:pt-40">
-        <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(8,13,27,0.8)] shadow-[0_30px_100px_rgba(0,0,0,0.36)] backdrop-blur-xl">
-          <header className="border-b border-white/8 p-6 sm:p-10 lg:p-14">
-            <p className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/[0.07] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-sky-200">
+      <main className="wrap band">
+        <article className="prose">
+          <header className="border-b border-[var(--rule)] p-6 sm:p-10 lg:p-14">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--rule)] bg-[var(--blue)]/[0.07] px-3 py-1 font-mono text-[10px] text-[var(--blue)]">
               <LockKeyhole className="h-3.5 w-3.5" /> Privacy at Smartlearn
             </p>
-            <h1 className="mt-6 max-w-3xl font-sora text-4xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">
+            <h1 className="mt-6 max-w-3xl font-sora text-4xl font-semibold tracking-[-0.045em] text-[var(--ink)] sm:text-6xl">
               Your learning data deserves clear rules.
             </h1>
-            <p className="mt-4 text-sm text-slate-400">Effective August 22, 2026 · Last updated August 22, 2026</p>
-            <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300">
+            <p className="mt-4 text-sm text-[var(--ink-muted)]">Effective August 22, 2026 · Last updated August 22, 2026</p>
+            <p className="mt-6 max-w-3xl text-base leading-7 text-[var(--ink-muted)]">
               This Privacy Policy explains what Smartlearn collects, why it is needed, who may process it, and the choices available to students, parents, educators, and other users.
             </p>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3">
               {summaryCards.map(({ icon: Icon, title, body }) => (
-                <div key={title} className="rounded-2xl border border-white/8 bg-white/[0.025] p-5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-400/[0.08] text-sky-200">
+                <div key={title} className=" p-5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--rule)] text-[var(--ink-faint)]">
                     <Icon className="h-4 w-4" />
                   </span>
-                  <h2 className="mt-4 text-sm font-semibold text-white">{title}</h2>
-                  <p className="mt-2 text-xs leading-5 text-slate-400">{body}</p>
+                  <h2 className="mt-4 text-sm font-semibold text-[var(--ink)]">{title}</h2>
+                  <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">{body}</p>
                 </div>
               ))}
             </div>
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
                 ["students", "Students & parents"],
                 ["contact", "Contact"],
               ].map(([href, label]) => (
-                <a key={href} href={`#${href}`} className="rounded-full border border-white/10 px-3 py-2 text-xs text-slate-300 transition hover:border-sky-300/25 hover:bg-sky-300/[0.06] hover:text-white">
+                <a key={href} href={`#${href}`} className="rounded-full border border-[var(--rule)] px-3 py-2 text-xs text-[var(--ink-muted)] transition hover:border-[var(--rule)] hover:bg-[var(--blue)]/[0.06] hover:text-[var(--ink)]">
                   {label}
                 </a>
               ))}
@@ -138,8 +138,8 @@ export default function PrivacyPage() {
                     "Debug, maintain, measure, and improve reliability using aggregated or de-identified information where practical.",
                     "Comply with law, enforce agreements, and protect users, Smartlearn, and third parties.",
                   ].map((item) => (
-                    <li key={item} className="flex gap-2 rounded-xl border border-white/7 bg-black/10 p-3 text-sm leading-6 text-slate-300">
-                      <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300" />
+                    <li key={item} className="flex gap-2 rounded-xl border border-[var(--rule)] bg-black/10 p-3 text-sm leading-6 text-[var(--ink-muted)]">
+                      <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--blue)]" />
                       {item}
                     </li>
                   ))}
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
                 <p>When you request an AI feature, Smartlearn may send the prompt and the minimum relevant course context, notes, files, images, or audio to OpenAI so the request can be completed. Smartlearn also stores certain prompts, chat messages, generated material, embeddings, and usage totals in your account when needed to provide history, retrieval, and learning features.</p>
                 <p>According to OpenAI&apos;s current API documentation, API inputs and outputs are not used to train OpenAI models by default unless the API customer explicitly opts in. OpenAI may retain abuse-monitoring logs containing prompts, responses, or related metadata for up to 30 days by default, subject to its policies, legal requirements, and available data-control settings.</p>
                 <p>Do not submit information that is unnecessary for learning, such as government identifiers, financial credentials, medical records, or another person&apos;s confidential information. AI output may be inaccurate and is not an official academic decision or grade.</p>
-                <a href="https://developers.openai.com/api/docs/guides/your-data" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-300 underline decoration-sky-300/30 underline-offset-4 hover:text-sky-200">
+                <a href="https://developers.openai.com/api/docs/guides/your-data" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--blue)] underline decoration-sky-300/30 underline-offset-4 hover:text-[var(--blue)]">
                   OpenAI API data controls <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </PolicySection>
@@ -159,21 +159,21 @@ export default function PrivacyPage() {
               <PolicySection id="sharing" number="05" title="When information is disclosed" icon={UsersRound}>
                 <p>Smartlearn does not sell or rent personal information, does not share student course content for third-party advertising, and does not act as a data broker. Information may be disclosed only in these circumstances:</p>
                 <ul className="space-y-2">
-                  <Bullet><strong className="text-white">Service providers.</strong> Vendors process information under their terms and agreements to host Smartlearn, authenticate users, run AI features, process payments, deliver transactional email, and prevent abuse.</Bullet>
-                  <Bullet><strong className="text-white">Connected services.</strong> Smartlearn exchanges data with an LMS or account provider at your direction and within the permissions authorized for the connection.</Bullet>
-                  <Bullet><strong className="text-white">People you choose.</strong> Content, messages, display information, or progress you intentionally share in a study group may be visible to that group&apos;s members.</Bullet>
-                  <Bullet><strong className="text-white">Legal and safety reasons.</strong> Information may be preserved or disclosed when reasonably necessary to comply with law or valid legal process, investigate abuse or fraud, enforce agreements, or protect rights and safety.</Bullet>
-                  <Bullet><strong className="text-white">Business changes.</strong> Information may transfer in a financing, merger, acquisition, reorganization, or sale, subject to appropriate confidentiality and this policy or notice of materially different practices.</Bullet>
-                  <Bullet><strong className="text-white">With permission.</strong> Smartlearn may disclose information for another purpose when you direct or consent to it.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">Service providers.</strong> Vendors process information under their terms and agreements to host Smartlearn, authenticate users, run AI features, process payments, deliver transactional email, and prevent abuse.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">Connected services.</strong> Smartlearn exchanges data with an LMS or account provider at your direction and within the permissions authorized for the connection.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">People you choose.</strong> Content, messages, display information, or progress you intentionally share in a study group may be visible to that group&apos;s members.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">Legal and safety reasons.</strong> Information may be preserved or disclosed when reasonably necessary to comply with law or valid legal process, investigate abuse or fraud, enforce agreements, or protect rights and safety.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">Business changes.</strong> Information may transfer in a financing, merger, acquisition, reorganization, or sale, subject to appropriate confidentiality and this policy or notice of materially different practices.</Bullet>
+                  <Bullet><strong className="text-[var(--ink)]">With permission.</strong> Smartlearn may disclose information for another purpose when you direct or consent to it.</Bullet>
                 </ul>
 
-                <div className="mt-5 overflow-hidden rounded-2xl border border-white/8">
+                <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--rule)]">
                   {serviceLinks.map((service) => (
-                    <div key={service.label} className="flex flex-col gap-1 border-b border-white/7 bg-white/[0.02] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <a href={service.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-300 hover:text-sky-200">
+                    <div key={service.label} className="flex flex-col gap-1 border-b border-[var(--rule)] bg-[var(--paper-sunken)] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <a href={service.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--blue)] hover:text-[var(--blue)]">
                         {service.label} <ExternalLink className="h-3 w-3" />
                       </a>
-                      <span className="text-xs leading-5 text-slate-400 sm:text-right">{service.use}</span>
+                      <span className="text-xs leading-5 text-[var(--ink-muted)] sm:text-right">{service.use}</span>
                     </div>
                   ))}
                 </div>
@@ -202,7 +202,7 @@ export default function PrivacyPage() {
                   <Bullet>Disconnect supported LMS accounts from Settings and revoke access with the original provider.</Bullet>
                   <Bullet>Remove supported notes, group content, or other records using available product controls.</Bullet>
                   <Bullet>Manage subscription and payment information through Stripe&apos;s hosted billing portal.</Bullet>
-                  <Bullet>Request access, correction, export, or deletion through the <Link href="/contact" className="font-semibold text-sky-300 underline decoration-sky-300/30 underline-offset-4 hover:text-sky-200">Contact page</Link>. Smartlearn may verify your identity before acting.</Bullet>
+                  <Bullet>Request access, correction, export, or deletion through the <Link href="/contact" className="font-semibold text-[var(--blue)] underline decoration-sky-300/30 underline-offset-4 hover:text-[var(--blue)]">Contact page</Link>. Smartlearn may verify your identity before acting.</Bullet>
                 </ul>
                 <p>Because Smartlearn does not sell personal information or share it for cross-context behavioral advertising, there is no sale or targeted-advertising opt-out currently required for those practices. If that changes, this policy and the required controls will be updated first.</p>
               </PolicySection>
@@ -221,12 +221,12 @@ export default function PrivacyPage() {
               </PolicySection>
 
               <PolicySection id="contact" number="13" title="Privacy questions and requests" icon={ShieldCheck}>
-                <p>For questions, safety concerns, or privacy-rights requests, use the <Link href="/contact" className="font-semibold text-sky-300 underline decoration-sky-300/30 underline-offset-4 hover:text-sky-200">Smartlearn Contact page</Link>. Include the email associated with your account and describe the request. Do not include passwords, API tokens, payment-card numbers, or unnecessary sensitive information.</p>
+                <p>For questions, safety concerns, or privacy-rights requests, use the <Link href="/contact" className="font-semibold text-[var(--blue)] underline decoration-sky-300/30 underline-offset-4 hover:text-[var(--blue)]">Smartlearn Contact page</Link>. Include the email associated with your account and describe the request. Do not include passwords, API tokens, payment-card numbers, or unnecessary sensitive information.</p>
                 <p>If your account is managed by a school or organization, you may also contact that institution. Smartlearn may need to coordinate with it when the institution controls the relevant education record.</p>
               </PolicySection>
             </div>
 
-            <div className="mt-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-amber-100/90">
+            <div className="mt-8 rounded-2xl border border-[var(--rule)] bg-[var(--warning-bg)]/[0.06] p-5 text-sm leading-6 text-[var(--warning-ink)]">
               Privacy and education laws vary by location and relationship. Nothing in this policy limits privacy rights that cannot legally be waived.
             </div>
           </div>
@@ -251,34 +251,34 @@ function PolicySection({
   title: string;
 }) {
   return (
-    <section id={id} className="scroll-mt-28 rounded-2xl border border-white/8 bg-white/[0.022] p-5 sm:p-7">
+    <section id={id} className="scroll-mt-28  p-5 sm:p-7">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-400/[0.07] text-sky-200">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--rule)] text-[var(--ink-faint)]">
           <Icon className="h-4 w-4" />
         </span>
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-sky-300/70">Section {number}</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">{title}</h2>
+          <p className="font-mono text-[10px] text-[var(--blue)]">Section {number}</p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--ink)] sm:text-xl">{title}</h2>
         </div>
       </div>
-      <div className="mt-5 space-y-3 text-sm leading-7 text-slate-300">{children}</div>
+      <div className="mt-5 space-y-3 text-sm leading-7 text-[var(--ink-muted)]">{children}</div>
     </section>
   );
 }
 
 function DataCard({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <div className="rounded-xl border border-white/7 bg-black/10 p-4">
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-xs leading-6 text-slate-400">{children}</p>
+    <div className="rounded-xl border border-[var(--rule)] bg-black/10 p-4">
+      <h3 className="text-sm font-semibold text-[var(--ink)]">{title}</h3>
+      <p className="mt-2 text-xs leading-6 text-[var(--ink-muted)]">{children}</p>
     </div>
   );
 }
 
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex gap-2 text-sm leading-7 text-slate-300">
-      <span aria-hidden="true" className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300" />
+    <li className="flex gap-2 text-sm leading-7 text-[var(--ink-muted)]">
+      <span aria-hidden="true" className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--blue)]" />
       <span>{children}</span>
     </li>
   );

@@ -73,7 +73,7 @@ export function CanvasConnectionAgreement({
 
   return (
     <section className="min-w-0" aria-labelledby="canvas-agreement-title" data-testid="canvas-connection-agreement">
-      <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/[0.07] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-sky-200">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--rule)] bg-[var(--blue)]/[0.07] px-3 py-1 font-mono text-[10px] text-[var(--blue)]">
         <ShieldCheck className="h-3.5 w-3.5" /> Required before syncing
       </div>
       <h2 id="canvas-agreement-title" className="mt-4 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -85,8 +85,8 @@ export function CanvasConnectionAgreement({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {commitments.map(({ icon: Icon, title, body }) => (
-          <article key={title} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-400/[0.08] text-sky-200">
+          <article key={title} className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-4">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--ink-faint)]">
               <Icon className="h-4 w-4" />
             </span>
             <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
@@ -95,7 +95,7 @@ export function CanvasConnectionAgreement({
         ))}
       </div>
 
-      <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 transition hover:border-sky-300/25">
+      <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4 transition hover:border-[var(--blue-edge)]">
         <input
           type="checkbox"
           className="mt-0.5 h-4 w-4 shrink-0 rounded accent-sky-400"
@@ -103,8 +103,8 @@ export function CanvasConnectionAgreement({
           disabled={busy}
           onChange={(event) => { setAgreed(event.target.checked); setError(null); }}
         />
-        <span className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">
-          I am authorized to connect this Canvas account. I agree to the <Link href="/terms" target="_blank" className="font-semibold text-sky-300 underline decoration-sky-300/30 underline-offset-2">Smartlearn Terms</Link> and <Link href="/privacy" target="_blank" className="font-semibold text-sky-300 underline decoration-sky-300/30 underline-offset-2">Privacy Policy</Link>, and I will follow my school’s rules and the guidelines above.
+        <span className="text-xs leading-5 text-[var(--ink-muted)] sm:text-sm sm:leading-6">
+          I am authorized to connect this Canvas account. I agree to the <Link href="/terms" target="_blank" className="font-semibold text-[var(--blue)] underline decoration-sky-300/30 underline-offset-2">Smartlearn Terms</Link> and <Link href="/privacy" target="_blank" className="font-semibold text-[var(--blue)] underline decoration-sky-300/30 underline-offset-2">Privacy Policy</Link>, and I will follow my school’s rules and the guidelines above.
         </span>
       </label>
 
@@ -122,7 +122,7 @@ export function CanvasConnectionAgreement({
         </Button>
       </div>
 
-      {error ? <div role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}
+      {error ? <div role="alert" className="mt-4 rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[#6e3630]">{error}</div> : null}
       <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">
         You can revoke the token in Canvas or disconnect Smartlearn from Settings at any time.
       </p>

@@ -167,23 +167,23 @@ export default function LoginPage() {
         actionHref="/signup"
       />
 
-      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 1.5rem 4rem" }}>
+      <main className="auth-main">
         <div style={{ width: "100%", maxWidth: "420px" }}>
-          <div className="contact-form-column" style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "20px" }}>
+          <div className="contact-form-column">
             <h2 className="contact-form-title">Sign in to Smartlearn</h2>
 
             {accountCreated || emailNotVerified ? (
               <div
                 role="status"
-                className="mb-5 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-100"
+                className="mb-5 rounded-xl border border-[var(--rule)] bg-[var(--success-bg)] px-4 py-3 text-sm leading-6 text-[var(--success-ink)]"
               >
-                <strong className="block text-emerald-200">Verify your email to activate your account.</strong>
+                <strong className="block text-[var(--success-ink)]">Verify your email to activate your account.</strong>
                 Open the Smartlearn verification link, then return here to sign in. If the email is missing or expired, enter your address below and{" "}
                 <button
                   type="button"
                   onClick={handleResendVerification}
                   disabled={resending}
-                  className="font-semibold text-sky-300 underline decoration-sky-300/40 underline-offset-2 hover:text-sky-200 disabled:cursor-wait disabled:opacity-60"
+                  className="font-semibold text-[var(--blue)] underline decoration-sky-300/40 underline-offset-2 hover:text-[var(--blue)] disabled:cursor-wait disabled:opacity-60"
                 >
                   {resending ? "sending a new link…" : "send a new link"}
                 </button>

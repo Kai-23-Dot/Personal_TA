@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookOpen, CalendarDays, RefreshCw, Sparkles } from "lucide-react";
+import { courseTone } from "@/frontend/lib/course-tone";
 import { EmptyState } from "@/frontend/components/ui/empty-state";
 import { createClient } from "@/backend/supabase/server";
 import { PageHero } from "@/frontend/components/ui/page-hero";
@@ -91,7 +92,7 @@ export default async function CoursesPage() {
       />
       <div className="mb-8">
         {canvasConnection?.last_synced_at ? (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--ink-muted)]">
             Last Canvas sync: {new Date(canvasConnection.last_synced_at).toLocaleString()}
           </p>
         ) : null}
@@ -120,34 +121,34 @@ export default async function CoursesPage() {
               <Link
                 key={course.id}
                 href={`/courses/${course.id}`}
-                className="group rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.74)] p-5 shadow-[0_8px_40px_rgba(1,6,20,0.35)] transition hover:-translate-y-0.5 hover:border-sky-300/35 hover:bg-sky-400/5"
+                className="group rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none transition hover:-translate-y-0.5 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div
-                    className="flex h-14 w-14 items-center justify-center rounded-2xl text-sm font-semibold text-[#05110b]"
-                    style={{ backgroundColor: course.color ?? "#8ab4ff" }}
+                    className="course-avatar"
+                    data-course-tone={courseTone(course.name)}
                   >
                     {initialsFor(course.name)}
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
+                  <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-2.5 py-1 text-xs text-[var(--ink-muted)]">
                     {course.platform === "canvas" ? "Canvas" : course.platform}
                   </span>
                 </div>
-                <h2 className="mt-5 text-lg font-semibold text-white group-hover:text-sky-100">{course.name}</h2>
-                <p className="mt-1 text-sm text-slate-400">
+                <h2 className="mt-5 text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--blue)]">{course.name}</h2>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">
                   {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
                 </p>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-lg font-semibold text-white">{counts.total}</p>
-                    <p className="text-xs text-slate-400">assignments</p>
+                  <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3">
+                    <p className="text-lg font-semibold text-[var(--ink)]">{counts.total}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">assignments</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-lg font-semibold text-white">{counts.upcoming}</p>
-                    <p className="text-xs text-slate-400">upcoming</p>
+                  <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3">
+                    <p className="text-lg font-semibold text-[var(--ink)]">{counts.upcoming}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">upcoming</p>
                   </div>
                 </div>
-                <p className="mt-4 inline-flex items-center gap-2 text-xs text-slate-400">
+                <p className="mt-4 inline-flex items-center gap-2 text-xs text-[var(--ink-muted)]">
                   <CalendarDays className="h-3.5 w-3.5" /> Updated {new Date(course.updated_at).toLocaleDateString()}
                 </p>
               </Link>
@@ -157,15 +158,15 @@ export default async function CoursesPage() {
       )}
 
       <section className="mt-8 grid gap-4 md:grid-cols-2">
-        <Link href="/dashboard" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
-          <RefreshCw className="mb-3 h-5 w-5 text-sky-300" />
-          <h2 className="text-lg font-semibold text-white">Sync content</h2>
-          <p className="mt-1 text-sm text-slate-400">Pull updated Canvas courses, assignments, modules, files, and notes.</p>
+        <Link href="/dashboard" className="rounded-2xl border border-[var(--rule)] bg-card/70 p-5 transition hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]">
+          <RefreshCw className="mb-3 h-5 w-5 text-[var(--blue)]" />
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Sync content</h2>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">Pull updated Canvas courses, assignments, modules, files, and notes.</p>
         </Link>
-        <Link href="/practice" className="rounded-2xl border border-white/10 bg-card/70 p-5 transition hover:border-sky-300/35 hover:bg-sky-400/5">
-          <BookOpen className="mb-3 h-5 w-5 text-sky-300" />
-          <h2 className="text-lg font-semibold text-white">Generate practice</h2>
-          <p className="mt-1 text-sm text-slate-400">Use synced course materials to build source-grounded practice tests.</p>
+        <Link href="/practice" className="rounded-2xl border border-[var(--rule)] bg-card/70 p-5 transition hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]">
+          <BookOpen className="mb-3 h-5 w-5 text-[var(--blue)]" />
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Generate practice</h2>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">Use synced course materials to build source-grounded practice tests.</p>
         </Link>
       </section>
     </div>

@@ -240,7 +240,7 @@ export default function GroupDetailPage() {
   if (error || !group) {
     return (
       <div className="mx-auto max-w-5xl px-4 pt-6 text-center">
-        <p className="text-sm text-slate-400 mb-4">{error ?? "Group not found"}</p>
+        <p className="text-sm text-[var(--ink-muted)] mb-4">{error ?? "Group not found"}</p>
         <button className="btn btn-secondary" onClick={() => router.push("/groups")}>
           ← Back to groups
         </button>
@@ -254,10 +254,10 @@ export default function GroupDetailPage() {
     <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 space-y-5">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(9,12,26,0.84)] px-6 py-6 shadow-[0_20px_80px_rgba(0,0,0,0.3)]">
+      <div className="relative overflow-hidden rounded-3xl border border-[var(--rule)] bg-[var(--paper)] px-6 py-6 shadow-none">
         <button
           onClick={() => router.push("/groups")}
-          className="mb-4 flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          className="mb-4 flex items-center gap-2 text-xs text-[var(--ink-muted)] hover:text-[var(--ink-muted)] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to groups
         </button>
@@ -267,40 +267,40 @@ export default function GroupDetailPage() {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <HealthBadge health={health} showScore />
               {myRole === "owner" && (
-                <span className="flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 text-xs font-medium text-amber-300">
+                <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs font-medium text-[#533b1b]">
                   <Crown className="h-3 w-3" /> Owner
                 </span>
               )}
               {group.course && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-slate-400">
+                <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
                   {group.course.name}
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-semibold text-white">{group.name}</h1>
+            <h1 className="text-2xl font-semibold text-[var(--ink)]">{group.name}</h1>
             {group.description && (
-              <p className="mt-1 text-sm text-slate-400">{group.description}</p>
+              <p className="mt-1 text-sm text-[var(--ink-muted)]">{group.description}</p>
             )}
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">
               {members.length} / {group.max_members} member{group.max_members !== 1 ? "s" : ""}
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Invite code */}
-            <div className="flex items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 py-2">
-              <span className="text-xs text-slate-500">Invite code</span>
-              <span className="font-mono text-sm font-semibold tracking-widest text-white">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2">
+              <span className="text-xs text-[var(--ink-muted)]">Invite code</span>
+              <span className="font-mono text-sm font-semibold tracking-widest text-[var(--ink)]">
                 {group.invite_code}
               </span>
               <button
                 onClick={copyCode}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition hover:bg-white/10"
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition hover:bg-[var(--wash-hover)]"
                 title="Copy invite code"
               >
                 {codeCopied
-                  ? <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
-                  : <><Copy className="h-3.5 w-3.5 text-slate-400" /><span className="text-slate-400">Copy</span></>
+                  ? <><Check className="h-3.5 w-3.5 text-[var(--success-ink)]" /><span className="text-[var(--success-ink)]">Copied!</span></>
+                  : <><Copy className="h-3.5 w-3.5 text-[var(--ink-muted)]" /><span className="text-[var(--ink-muted)]">Copy</span></>
                 }
               </button>
             </div>
@@ -308,7 +308,7 @@ export default function GroupDetailPage() {
             {/* Leave / Delete */}
             <button
               onClick={handleLeaveOrDelete}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs font-medium text-rose-400 transition hover:bg-rose-500/15"
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] px-3 py-2 text-xs font-medium text-[var(--danger-ink)] transition hover:bg-[var(--danger-bg)]"
             >
               {myRole === "owner"
                 ? <><Trash2 className="h-3.5 w-3.5" /> Delete group</>
@@ -323,29 +323,29 @@ export default function GroupDetailPage() {
       {group.goal && (
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Goal & Health */}
-          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+          <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-slate-500" />
-                <h2 className="text-sm font-semibold text-white">Goal & health</h2>
+                <Target className="h-4 w-4 text-[var(--ink-muted)]" />
+                <h2 className="text-sm font-semibold text-[var(--ink)]">Goal & health</h2>
               </div>
               <HealthBadge health={health} showScore />
             </div>
 
-            <p className="text-sm text-slate-300">{group.goal}</p>
+            <p className="text-sm text-[var(--ink-muted)]">{group.goal}</p>
             {group.target_end_date && (
-              <p className="mt-1.5 text-xs text-slate-500">
+              <p className="mt-1.5 text-xs text-[var(--ink-muted)]">
                 Target: {format(new Date(`${group.target_end_date}T00:00:00`), "MMMM d, yyyy")}
                 {goalStatus === "ended_incomplete" && (
-                  <span className="ml-2 font-medium text-rose-400">Ended without completion</span>
+                  <span className="ml-2 font-medium text-[var(--danger-ink)]">Ended without completion</span>
                 )}
               </p>
             )}
 
             {goalStatus === "completed" ? (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                <p className="text-sm text-emerald-200">
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--success-ink)] bg-[var(--success-bg)] px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success-ink)]" />
+                <p className="text-sm text-[#1c3829]">
                   Goal completed
                   {group.goal_completed_at &&
                     ` on ${format(new Date(group.goal_completed_at), "MMMM d, yyyy")}`}
@@ -356,8 +356,8 @@ export default function GroupDetailPage() {
               <>
                 <div className="mt-4">
                   <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Progress toward goal</span>
-                    <span className="font-semibold text-slate-300">{group.progress_pct}%</span>
+                    <span className="text-[var(--ink-muted)]">Progress toward goal</span>
+                    <span className="font-semibold text-[var(--ink-muted)]">{group.progress_pct}%</span>
                   </div>
                   <Progress value={group.progress_pct} className="h-2" />
                 </div>
@@ -371,10 +371,10 @@ export default function GroupDetailPage() {
                         ["Progress", health.components?.progress ?? 0, 30],
                       ] as const
                     ).map(([label, value, max]) => (
-                      <div key={label} className="rounded-xl border border-white/8 bg-white/3 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
-                        <p className="mt-0.5 text-sm font-semibold text-white">
-                          {value}<span className="text-xs font-normal text-slate-500">/{max}</span>
+                      <div key={label} className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2">
+                        <p className="text-[10px] font-medium text-[var(--ink-muted)]">{label}</p>
+                        <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+                          {value}<span className="text-xs font-normal text-[var(--ink-muted)]">/{max}</span>
                         </p>
                       </div>
                     ))}
@@ -382,7 +382,7 @@ export default function GroupDetailPage() {
                 )}
 
                 {myRole === "owner" && (
-                  <div className="mt-4 space-y-3 border-t border-white/6 pt-4">
+                  <div className="mt-4 space-y-3 border-t border-[var(--rule)] pt-4">
                     <div className="flex items-center gap-3">
                       <input
                         type="range"
@@ -394,7 +394,7 @@ export default function GroupDetailPage() {
                         className="flex-1 accent-sky-400"
                         aria-label="Goal progress percentage"
                       />
-                      <span className="w-10 text-right text-xs font-semibold text-slate-300">{progressDraft}%</span>
+                      <span className="w-10 text-right text-xs font-semibold text-[var(--ink-muted)]">{progressDraft}%</span>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -415,33 +415,33 @@ export default function GroupDetailPage() {
           </div>
 
           {/* Schedule & Check-in */}
-          <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+          <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
             <div className="mb-4 flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-white">Schedule & check-in</h2>
+              <CalendarDays className="h-4 w-4 text-[var(--ink-muted)]" />
+              <h2 className="text-sm font-semibold text-[var(--ink)]">Schedule & check-in</h2>
             </div>
 
             {meetings.length > 0 ? (
               <ul className="space-y-2">
                 {meetings.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm">
-                    <span className="text-slate-200">
+                  <li key={m.id} className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3.5 py-2.5 text-sm">
+                    <span className="text-[var(--ink)]">
                       {DAY_LABELS[m.day_of_week]} · {formatSlotTime(m.start_time)}
                     </span>
-                    <span className="text-xs text-slate-500 capitalize">
+                    <span className="text-xs text-[var(--ink-muted)] capitalize">
                       {m.frequency === "biweekly" ? "Every 2 weeks" : "Weekly"}
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500">No recurring meetings set.</p>
+              <p className="text-sm text-[var(--ink-muted)]">No recurring meetings set.</p>
             )}
 
             {nextMeetingAt && goalStatus === "active" && (
-              <p className="mt-3 text-xs text-slate-400">
-                Next session in <span className="font-semibold text-sky-300">{untilLabel(nextMeetingAt)}</span>
-                <span className="text-slate-600"> · {format(new Date(nextMeetingAt), "EEE, MMM d 'at' h:mm a")}</span>
+              <p className="mt-3 text-xs text-[var(--ink-muted)]">
+                Next session in <span className="font-semibold text-[var(--blue)]">{untilLabel(nextMeetingAt)}</span>
+                <span className="text-[var(--ink-muted)]"> · {format(new Date(nextMeetingAt), "EEE, MMM d 'at' h:mm a")}</span>
               </p>
             )}
 
@@ -457,7 +457,7 @@ export default function GroupDetailPage() {
                     setMemberStreaks((prev) => ({ ...prev, [userId]: streak }));
                   }}
                 />
-                <p className="text-center text-xs text-slate-500">
+                <p className="text-center text-xs text-[var(--ink-muted)]">
                   {checkinsToday.length} of {members.length} member{members.length !== 1 ? "s" : ""} checked in today
                 </p>
               </div>
@@ -469,10 +469,10 @@ export default function GroupDetailPage() {
       <div className="grid gap-5 lg:grid-cols-3">
 
         {/* Members */}
-        <div className="rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] p-5">
+        <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
           <div className="mb-4 flex items-center gap-2">
-            <Users className="h-4 w-4 text-slate-500" />
-            <h2 className="text-sm font-semibold text-white">Members</h2>
+            <Users className="h-4 w-4 text-[var(--ink-muted)]" />
+            <h2 className="text-sm font-semibold text-[var(--ink)]">Members</h2>
           </div>
           <ul className="space-y-3">
             {members.map((m) => {
@@ -481,25 +481,25 @@ export default function GroupDetailPage() {
                 : m.profile?.full_name;
               return (
                 <li key={m.user_id} className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-xs font-semibold text-sky-200">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--blue-wash)] text-xs font-semibold text-[var(--blue)]">
                     {initials(name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-white">{name ?? "Unknown"}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="truncate text-sm text-[var(--ink)]">{name ?? "Unknown"}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">
                       Joined {new Date(m.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                   </div>
                   {(memberStreaks[m.user_id] ?? 0) > 0 && (
                     <span
-                      className="flex shrink-0 items-center gap-0.5 rounded-full border border-orange-400/25 bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-orange-300"
+                      className="flex shrink-0 items-center gap-0.5 rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)] px-1.5 py-0.5 text-[11px] font-semibold text-[#533b1b]"
                       title={`${memberStreaks[m.user_id]}-day check-in streak`}
                     >
                       <Flame className="h-3 w-3" /> {memberStreaks[m.user_id]}
                     </span>
                   )}
                   {m.role === "owner" && (
-                    <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-label="Owner" />
+                    <Crown className="h-3.5 w-3.5 shrink-0 text-[var(--warning-ink)]" aria-label="Owner" />
                   )}
                 </li>
               );
@@ -508,17 +508,17 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Chat */}
-        <div className="flex flex-col rounded-2xl border border-white/8 bg-[rgba(9,12,24,0.76)] lg:col-span-2 overflow-hidden" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
-          <div className="border-b border-white/6 px-5 py-3.5">
-            <h2 className="text-sm font-semibold text-white">Group chat</h2>
+        <div className="flex flex-col rounded-2xl border border-[var(--rule)] bg-[var(--paper)] lg:col-span-2 overflow-hidden" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
+          <div className="border-b border-[var(--rule)] px-5 py-3.5">
+            <h2 className="text-sm font-semibold text-[var(--ink)]">Group chat</h2>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {msgLoading ? (
-              <p className="text-xs text-slate-500 text-center pt-4">Loading messages…</p>
+              <p className="text-xs text-[var(--ink-muted)] text-center pt-4">Loading messages…</p>
             ) : messages.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center pt-8">
+              <p className="text-xs text-[var(--ink-muted)] text-center pt-8">
                 No messages yet. Say hi to your group!
               </p>
             ) : (
@@ -529,21 +529,21 @@ export default function GroupDetailPage() {
                 const isMe = msg.user_id === myUserId;
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-xs font-semibold text-sky-200">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--blue-wash)] text-xs font-semibold text-[var(--blue)]">
                       {initials(name)}
                     </div>
                     <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-1`}>
                       {!isMe && (
-                        <p className="text-xs text-slate-500">{name ?? "Unknown"}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{name ?? "Unknown"}</p>
                       )}
                       <div className={`rounded-2xl px-3 py-2 text-sm ${
                         isMe
-                          ? "rounded-tr-sm bg-sky-500/20 text-sky-100"
-                          : "rounded-tl-sm bg-white/6 text-slate-200"
+                          ? "rounded-tr-sm bg-[var(--blue-wash)] text-[var(--blue)]"
+                          : "rounded-tl-sm bg-[var(--paper)] text-[var(--ink)]"
                       }`}>
                         {msg.content}
                       </div>
-                      <p className="text-[10px] text-slate-600">{timeAgo(msg.created_at)}</p>
+                      <p className="text-[10px] text-[var(--ink-muted)]">{timeAgo(msg.created_at)}</p>
                     </div>
                   </div>
                 );
@@ -553,18 +553,18 @@ export default function GroupDetailPage() {
           </div>
 
           {/* Input */}
-          <form onSubmit={sendMessage} className="border-t border-white/6 px-4 py-3 flex gap-2">
+          <form onSubmit={sendMessage} className="border-t border-[var(--rule)] px-4 py-3 flex gap-2">
             <input
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
               placeholder="Send a message…"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-sky-400/40"
+              className="flex-1 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] placeholder-slate-600 outline-none focus:border-[var(--blue-edge)]"
               maxLength={500}
             />
             <button
               type="submit"
               disabled={!newMsg.trim() || sending}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-400 disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--blue)] text-white transition hover:bg-[var(--blue)] disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </button>

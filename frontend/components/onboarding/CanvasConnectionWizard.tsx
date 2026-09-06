@@ -168,7 +168,7 @@ export function CanvasConnectionWizard({
   if (step === STEP_LABELS.length) {
     return (
       <div className="min-w-0 py-4 text-center sm:py-6" data-testid="canvas-connection-success">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-[var(--ink-faint)]">
           <CheckCircle2 className="h-7 w-7" />
         </span>
         <h2 className="mt-5 text-xl font-semibold text-foreground sm:text-2xl">Canvas is connected</h2>
@@ -176,11 +176,11 @@ export function CanvasConnectionWizard({
           Smartlearn can now organize your Canvas courses, assignments, pages, modules, and files.
         </p>
         {syncWarning ? (
-          <div role="status" className="mx-auto mt-4 max-w-lg rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-left text-sm text-amber-100">
+          <div role="status" className="mx-auto mt-4 max-w-lg rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-left text-sm text-[#533b1b]">
             {syncWarning}
           </div>
         ) : (
-          <p role="status" className="mt-4 text-sm text-emerald-300">Your first Canvas sync finished successfully.</p>
+          <p role="status" className="mt-4 text-sm text-[#1c3829]">Your first Canvas sync finished successfully.</p>
         )}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           <Button asChild className="h-11 w-full sm:w-auto"><Link href="/dashboard">Go to dashboard</Link></Button>
@@ -203,7 +203,7 @@ export function CanvasConnectionWizard({
       {step === 0 ? (
         <div className="space-y-4 sm:space-y-5">
           <div>
-            <div className="flex items-center gap-2 text-sky-300"><ShieldCheck className="h-5 w-5" /><span className="text-sm font-semibold">No Canvas password required</span></div>
+            <div className="flex items-center gap-2 text-[var(--blue)]"><ShieldCheck className="h-5 w-5" /><span className="text-sm font-semibold">No Canvas password required</span></div>
             <h2 className="mt-3 text-xl font-semibold text-foreground sm:text-2xl">Connect your school Canvas</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Paste your Canvas website or any Canvas course link. Smartlearn uses the school address to find your Canvas account and never asks for your Canvas password.
@@ -237,8 +237,8 @@ export function CanvasConnectionWizard({
             </p>
           </div>
           <ol className="space-y-3 text-sm text-muted-foreground">
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Sign in to Canvas if asked.</li>
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">2.</strong> In the Canvas sidebar, choose <strong className="text-foreground">Account</strong>, then <strong className="text-foreground">Settings</strong>.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Sign in to Canvas if asked.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">2.</strong> In the Canvas sidebar, choose <strong className="text-foreground">Account</strong>, then <strong className="text-foreground">Settings</strong>.</li>
           </ol>
           <Button asChild className="h-11 w-full sm:w-auto">
             <a href={settingsUrl ?? "#"} target="_blank" rel="noreferrer">Open Canvas settings <ExternalLink /></a>
@@ -250,16 +250,16 @@ export function CanvasConnectionWizard({
       {step === 2 ? (
         <div className="space-y-4 sm:space-y-5">
           <div>
-            <div className="flex items-center gap-2 text-sky-300"><KeyRound className="h-5 w-5" /><span className="text-sm font-semibold">Canvas access token</span></div>
+            <div className="flex items-center gap-2 text-[var(--blue)]"><KeyRound className="h-5 w-5" /><span className="text-sm font-semibold">Canvas access token</span></div>
             <h2 className="mt-3 text-xl font-semibold text-foreground sm:text-2xl">Create a token for Smartlearn</h2>
           </div>
           <ol className="space-y-3 text-sm leading-6 text-muted-foreground">
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Scroll to <strong className="text-foreground">Approved Integrations</strong>.</li>
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">2.</strong> Select <strong className="text-foreground">+ New Access Token</strong>. If it is missing, your school has disabled personal tokens; ask your Canvas administrator or use Canvas OAuth from Settings.</li>
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">3.</strong> Enter <strong className="text-foreground">Smartlearn</strong> for Purpose. An expiration date is optional but recommended.</li>
-            <li className="rounded-xl border border-white/8 bg-white/[0.03] p-3 sm:p-4"><strong className="text-foreground">4.</strong> Select <strong className="text-foreground">Generate Token</strong>, then copy it now—Canvas normally shows the full token only once.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Scroll to <strong className="text-foreground">Approved Integrations</strong>.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">2.</strong> Select <strong className="text-foreground">+ New Access Token</strong>. If it is missing, your school has disabled personal tokens; ask your Canvas administrator or use Canvas OAuth from Settings.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">3.</strong> Enter <strong className="text-foreground">Smartlearn</strong> for Purpose. An expiration date is optional but recommended.</li>
+            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">4.</strong> Select <strong className="text-foreground">Generate Token</strong>, then copy it now—Canvas normally shows the full token only once.</li>
           </ol>
-          <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-100">
+          <div className="rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[#533b1b]">
             Treat this token like a password. Personal tokens are intended for authorized testing; Canvas recommends OAuth for multi-user apps. If your school does not allow tokens, use Canvas OAuth from <Link href="/settings" className="font-semibold underline underline-offset-2">Settings</Link> or contact your Canvas administrator.
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><Button className="h-11 w-full sm:w-auto" variant="ghost" onClick={() => setStep(1)}><ArrowLeft /> Back</Button><Button className="h-11 w-full sm:w-auto" onClick={() => setStep(3)}>I copied the token <ArrowRight /></Button></div>
@@ -302,7 +302,7 @@ export function CanvasConnectionWizard({
         />
       ) : null}
 
-      {error ? <div role="alert" className="rounded-xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}
+      {error ? <div role="alert" className="rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[#6e3630]">{error}</div> : null}
     </div>
   );
 }

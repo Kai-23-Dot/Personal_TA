@@ -66,16 +66,16 @@ function MetricCard({
   tone?: "sky" | "emerald" | "violet" | "amber";
 }) {
   const tones = {
-    sky: "border-sky-400/20 bg-sky-400/[0.07] text-sky-200",
-    emerald: "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-200",
-    violet: "border-violet-400/20 bg-violet-400/[0.07] text-violet-200",
-    amber: "border-amber-400/20 bg-amber-400/[0.07] text-amber-200",
+    sky: "border-[var(--rule)] bg-[var(--blue)]/[0.07] text-[var(--blue)]",
+    emerald: "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[#1c3829]",
+    violet: "border-[var(--rule)] bg-[var(--paper-sunken)]/[0.07] text-[#412454]",
+    amber: "border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] text-[#533b1b]",
   };
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+          <p className="font-mono text-[10px] text-muted-foreground">{label}</p>
           <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
           <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{detail}</p>
         </div>
@@ -91,7 +91,7 @@ function LoadingState() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Loading owner analytics">
       {Array.from({ length: 8 }, (_, index) => (
-        <div key={index} className="h-36 animate-pulse rounded-2xl border border-white/8 bg-white/[0.035]" />
+        <div key={index} className="h-36 animate-pulse rounded-2xl border border-[var(--rule)] bg-[var(--paper)]" />
       ))}
     </div>
   );
@@ -160,7 +160,7 @@ export function AdminDashboard() {
         description="Private provider, revenue, usage, and product health analytics. This route and its data API are protected by the server-side owner allowlist."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-full border border-white/10 bg-black/20 p-1">
+            <div className="flex rounded-full border border-[var(--rule)] bg-[var(--paper-sunken)] p-1">
               {PERIODS.map((item) => (
                 <button
                   key={item.value}
@@ -169,7 +169,7 @@ export function AdminDashboard() {
                   className={cn(
                     "rounded-full px-3 py-1.5 font-mono text-[10px] font-semibold transition",
                     period === item.value
-                      ? "bg-sky-300 text-slate-950"
+                      ? "bg-[var(--blue)] text-slate-950"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -181,7 +181,7 @@ export function AdminDashboard() {
               type="button"
               onClick={() => void loadOverview()}
               disabled={refreshing}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs text-muted-foreground transition hover:border-sky-300/30 hover:text-sky-100 disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--rule)] bg-[var(--paper)] px-3 text-xs text-muted-foreground transition hover:border-[var(--blue-edge)] hover:text-[var(--blue)] disabled:opacity-50"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
               Refresh
@@ -191,7 +191,7 @@ export function AdminDashboard() {
       />
 
       {error ? (
-        <Card className="mb-6 border-rose-400/25 bg-rose-400/[0.06] p-4 text-sm text-rose-100">
+        <Card className="mb-6 border-[var(--danger-ink)] bg-[var(--danger-bg)]/[0.06] p-4 text-sm text-[#6e3630]">
           {error} Your existing data remains unchanged; retry in a moment.
         </Card>
       ) : null}
@@ -240,7 +240,7 @@ export function AdminDashboard() {
             <Card className="overflow-hidden p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-sky-300">Token activity</p>
+                  <p className="font-mono text-[10px] text-[var(--blue)]">Token activity</p>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">Provider usage over time</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -252,21 +252,21 @@ export function AdminDashboard() {
                   {tokenSeries.map((day) => (
                     <div key={day.date} className="group relative flex h-full min-w-0 flex-1 items-end">
                       <div
-                        className="w-full rounded-t-sm bg-gradient-to-t from-sky-500/35 to-violet-400/80 transition group-hover:from-sky-400/55 group-hover:to-violet-300"
+                        className="w-full rounded-t-sm bg-[var(--blue)] transition group-hover:bg-[var(--blue-hover)]"
                         style={{ height: `${Math.max(3, (day.value / maxTokenDay) * 100)}%` }}
                       />
-                      <span className="pointer-events-none absolute bottom-[calc(100%+0.4rem)] left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-slate-950 px-2 py-1 font-mono text-[9px] text-slate-200 shadow-xl group-hover:block">
+                      <span className="pointer-events-none absolute bottom-[calc(100%+0.4rem)] left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--rule)] bg-slate-950 px-2 py-1 font-mono text-[9px] text-[var(--ink)] shadow-none group-hover:block">
                         {day.date} · {compact(day.value)}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="mt-6 flex h-48 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-sm text-muted-foreground">
+                <div className="mt-6 flex h-48 items-center justify-center rounded-2xl border border-dashed border-[var(--rule)] bg-[var(--paper)] text-sm text-muted-foreground">
                   No token activity in this period.
                 </div>
               )}
-              <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/8 pt-5 sm:grid-cols-4">
+              <div className="mt-5 grid grid-cols-2 gap-3 border-t border-[var(--rule)] pt-5 sm:grid-cols-4">
                 <div><p className="text-xs text-muted-foreground">Input</p><p className="mt-1 font-semibold text-foreground">{overview.openai.configured && !overview.openai.error ? compact(overview.openai.inputTokens) : "Unavailable"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Output</p><p className="mt-1 font-semibold text-foreground">{overview.openai.configured && !overview.openai.error ? compact(overview.openai.outputTokens) : "Unavailable"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Cached</p><p className="mt-1 font-semibold text-foreground">{overview.openai.configured && !overview.openai.error ? compact(overview.openai.cachedTokens) : "Unavailable"}</p></div>
@@ -275,7 +275,7 @@ export function AdminDashboard() {
             </Card>
 
             <Card className="p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">Provider status</p>
+              <p className="font-mono text-[10px] text-[#1c3829]">Provider status</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Live connections</h2>
               <div className="mt-5 space-y-3">
                 <ProviderRow
@@ -292,7 +292,7 @@ export function AdminDashboard() {
                 />
                 <ProviderRow icon={Database} label="Smartlearn database" ready detail="Owner-wide product metering connected" />
               </div>
-              <div className="mt-5 rounded-2xl border border-white/8 bg-black/20 p-4">
+              <div className="mt-5 rounded-2xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs text-muted-foreground">Available balance</span>
                   <span className="text-sm font-semibold text-foreground">{overview.stripe.configured && !overview.stripe.error ? moneyFromCents(overview.stripe.availableBalanceCents) : "Unavailable"}</span>
@@ -303,7 +303,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <span className="text-xs text-muted-foreground">Past due</span>
-                  <span className="text-sm font-semibold text-amber-200">{overview.stripe.configured && !overview.stripe.error ? overview.stripe.pastDueSubscriptions : "Unavailable"}</span>
+                  <span className="text-sm font-semibold text-[#533b1b]">{overview.stripe.configured && !overview.stripe.error ? overview.stripe.pastDueSubscriptions : "Unavailable"}</span>
                 </div>
               </div>
             </Card>
@@ -311,40 +311,40 @@ export function AdminDashboard() {
 
           <div className="mt-6 grid gap-6 xl:grid-cols-2">
             <Card className="overflow-hidden p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-violet-300">OpenAI model mix</p>
+              <p className="font-mono text-[10px] text-[#412454]">OpenAI model mix</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Tokens by model</h2>
               <div className="mt-5 space-y-2">
                 {overview.openai.models.length > 0 ? overview.openai.models.slice(0, 10).map((model) => (
-                  <div key={model.model} className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3">
+                  <div key={model.model} className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{model.model}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{compact(model.requests)} requests · {compact(model.cachedTokens)} cached</p>
                     </div>
-                    <p className="shrink-0 font-mono text-xs text-sky-200">{compact(model.inputTokens + model.outputTokens)} tokens</p>
+                    <p className="shrink-0 font-mono text-xs text-[var(--blue)]">{compact(model.inputTokens + model.outputTokens)} tokens</p>
                   </div>
                 )) : (
-                  <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-muted-foreground">Exact model detail appears after the OpenAI organization admin key is connected.</p>
+                  <p className="rounded-xl border border-dashed border-[var(--rule)] p-6 text-center text-sm text-muted-foreground">Exact model detail appears after the OpenAI organization admin key is connected.</p>
                 )}
               </div>
             </Card>
 
             <Card className="overflow-hidden p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-sky-300">Stripe activity</p>
+              <p className="font-mono text-[10px] text-[var(--blue)]">Stripe activity</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Recent balance transactions</h2>
               <div className="mt-5 space-y-2">
                 {overview.stripe.recentTransactions.length > 0 ? overview.stripe.recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3">
+                  <div key={transaction.id} className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium capitalize text-foreground">{transaction.description}</p>
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" /> {new Date(transaction.createdAt).toLocaleString()}</p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className={cn("font-mono text-xs", transaction.netCents >= 0 ? "text-emerald-200" : "text-rose-200")}>{moneyFromCents(transaction.netCents, transaction.currency)}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">Net</p>
+                      <p className={cn("font-mono text-xs", transaction.netCents >= 0 ? "text-[#1c3829]" : "text-[#6e3630]")}>{moneyFromCents(transaction.netCents, transaction.currency)}</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground">Net</p>
                     </div>
                   </div>
                 )) : (
-                  <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-muted-foreground">No revenue transactions in this period.</p>
+                  <p className="rounded-xl border border-dashed border-[var(--rule)] p-6 text-center text-sm text-muted-foreground">No revenue transactions in this period.</p>
                 )}
               </div>
             </Card>
@@ -353,7 +353,7 @@ export function AdminDashboard() {
           <Card className="mt-6 p-5 sm:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber-300">Product footprint</p>
+                <p className="font-mono text-[10px] text-[#533b1b]">Product footprint</p>
                 <h2 className="mt-2 text-xl font-semibold text-foreground">Accounts and connected learning data</h2>
               </div>
               <p className="text-xs text-muted-foreground">Auto-refreshes every 60 seconds · Last updated {new Date(overview.generatedAt).toLocaleTimeString()}</p>
@@ -387,12 +387,12 @@ function ProviderRow({
   detail: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.025] p-3.5">
-      <span className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-sky-200"><Icon className="h-4 w-4" /></span>
+    <div className="flex items-start gap-3 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-3.5">
+      <span className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-2 text-[var(--blue)]"><Icon className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-foreground">{label}</p>
-          <span className={cn("h-2 w-2 rounded-full", ready ? "bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.7)]" : "bg-amber-300")} />
+          <span className={cn("h-2 w-2 rounded-full", ready ? "bg-[var(--success-bg)] shadow-[0_0_12px_rgba(110,231,183,0.7)]" : "bg-[var(--warning-bg)]")} />
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
       </div>
@@ -402,8 +402,8 @@ function ProviderRow({
 
 function Footprint({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+    <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper-sunken)] p-4">
+      <p className="font-mono text-[10px] text-muted-foreground">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-foreground">{compact(value)}</p>
     </div>
   );

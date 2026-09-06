@@ -1,0 +1,239 @@
+/* ============================================================================
+   Legacy class bridge
+   ----------------------------------------------------------------------------
+   app/chain-summit.css and app/hero.css defined 260 classes for a dark design
+   that no longer exists. After the Notion rebuild only 21 of them were still
+   referenced anywhere in the app, while the other 239 kept fighting the new
+   styles through unscoped element selectors and 142 !important declarations —
+   the auth card and the page ground were both being repainted dark by rules for
+   components that had already been deleted.
+
+   Both stylesheets are gone. The handful of class names still in the markup are
+   redefined here, on the paper palette. Everything here is a candidate for
+   renaming into the design system proper; it lives in one file so that is easy
+   to see.
+   ========================================================================== */
+
+/* --- Layout ------------------------------------------------------------- */
+
+.section {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* --- Buttons ------------------------------------------------------------
+   The workspace and public shells each style .btn for their own context; this
+   is the bare fallback for anything rendered outside both. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--btn-radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 20ms ease-in, border-color 120ms ease;
+}
+
+.btn:hover:not(:disabled) { background: var(--wash-hover); }
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--blue);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--blue-hover); }
+
+.btn-secondary {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- Loading ------------------------------------------------------------
+   A skeleton is a placeholder for text, so it is a text-coloured wash rather
+   than the white-on-dark shimmer the old canvas needed. */
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--paper-sunken),
+    rgba(55, 53, 47, 0.09),
+    var(--paper-sunken)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer { animation: none; }
+}
+
+/* --- Code samples in practice questions ---------------------------------
+   Re-tuned for a light background; each token colour clears 4.5:1 on paper. */
+
+.code-keyword { color: #8250df; font-weight: 600; }
+.code-string  { color: #0a6b4f; }
+.code-number  { color: #8a5100; }
+.code-comment { color: var(--ink-faint); font-style: italic; }
+
+/* --- Practice hints ----------------------------------------------------- */
+
+.hint-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: var(--blue-wash);
+  color: var(--ink);
+}
+
+.hint-title {
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+/* --- Contact / auth supporting blocks ----------------------------------- */
+
+.contact-info-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.contact-info-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+/* --- Scroll reveal ------------------------------------------------------
+   public/smartlearn-ui.js adds .visible to these. The old rule translated and
+   faded every section on the way in; entrance animation on each block is the
+   generic default, so the class is kept as a no-op hook for that script rather
+   than removed and left dangling. */
+
+.animate-on-scroll { opacity: 1; transform: none; }
+
+/* ============================================================================
+   Assignment document
+   ----------------------------------------------------------------------------
+   Canvas hands back raw HTML for an assignment's instructions, so this styles
+   arbitrary tags rather than classes. Ported from future-ui.css (the last of
+   the three legacy stylesheets) and re-tuned for paper: prose set in the
+   reading serif, tables bounded by hairlines, links in the one accent.
+   ========================================================================== */
+
+.assignment-document {
+  font-family: var(--font-doc);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.assignment-document > :first-child { margin-top: 0; }
+.assignment-document > :last-child { margin-bottom: 0; }
+.assignment-document p { margin: 0.8em 0; }
+
+.assignment-document h1,
+.assignment-document h2,
+.assignment-document h3,
+.assignment-document h4,
+.assignment-document h5,
+.assignment-document h6 {
+  font-family: var(--font-ui);
+  margin: 1.6em 0 0.5em;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.assignment-document h1 { font-size: 1.5rem; }
+.assignment-document h2 { font-size: 1.25rem; }
+.assignment-document h3 { font-size: 1.0625rem; }
+
+.assignment-document strong { color: var(--ink); font-weight: 600; }
+.assignment-document em { color: var(--ink-muted); }
+
+.assignment-document ul,
+.assignment-document ol { margin: 0.9em 0; padding-left: 1.4em; }
+.assignment-document ul { list-style: disc; }
+.assignment-document ol { list-style: decimal; }
+.assignment-document li { margin: 0.35em 0; }
+
+.assignment-document a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.assignment-document blockquote {
+  margin: 1em 0;
+  padding: 0.2em 0 0.2em 1em;
+  border-left: 3px solid var(--rule-strong);
+  color: var(--ink-muted);
+}
+
+.assignment-document table {
+  width: 100%;
+  margin: 1.1em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+.assignment-document th,
+.assignment-document td {
+  padding: 8px 12px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.assignment-document tr:last-child > * { border-bottom: 0; }
+.assignment-document tr > *:last-child { border-right: 0; }
+
+.assignment-document th {
+  background: var(--paper-sunken);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.assignment-document img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+  border-radius: 6px;
+}
+
+.assignment-document hr {
+  margin: 1.4em 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}

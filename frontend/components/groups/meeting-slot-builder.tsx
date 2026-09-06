@@ -86,7 +86,7 @@ export function MeetingSlotBuilder({
             aria-label="Remove meeting slot"
             disabled={slots.length <= 1}
             onClick={() => onChange(slots.filter((_, j) => j !== i))}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-white/5 hover:text-rose-400 disabled:pointer-events-none disabled:opacity-30"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-[var(--wash-hover)] hover:text-[var(--danger-ink)] disabled:pointer-events-none disabled:opacity-30"
           >
             <X className="h-4 w-4" />
           </button>

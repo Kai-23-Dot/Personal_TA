@@ -1,0 +1,1090 @@
+/* ============================================================================
+   Smartlearn workspace theme
+   ----------------------------------------------------------------------------
+   The signed-in workspace, styled as a document tool: white canvas, warm grey
+   rail, hairline rules, warm near-black ink, one blue for actions.
+
+   Everything here is scoped to [data-dashboard-shell]. That scope is doing real
+   work: the app's :root tokens are a dark navy theme that the public landing
+   page still depends on, so rather than repainting dark components light with
+   !important (the previous approach — 327 of them across six stylesheets), we
+   redefine the same custom properties inside the workspace. Tailwind reads
+   hsl(var(--token)) for bg-background, text-foreground, border-border and the
+   rest, so every shadcn component renders light in here by default and keeps
+   rendering dark on the landing page. No overrides needed.
+
+   Consequence worth knowing: do not add !important to this file. If something
+   looks wrong the token is wrong, or a component hardcodes a colour that should
+   be a token.
+   ========================================================================== */
+
+/* Font stacks. Declared at :root so the workspace and any document surface
+   share one definition; only the workspace actually applies them.
+   Inter is the UI face (Notion's own interface sans is a grotesque of the same
+   class). Source Serif is the reading face for note bodies. */
+:root {
+  --font-ui: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-doc: "Source Serif 4", ui-serif, Georgia, Cambria, "Times New Roman",
+    serif;
+
+  /* ------------------------------------------------------------------------
+     The palette, as the site-wide default.
+
+     These were the dark marketing values while only the workspace was on paper.
+     The public pages are on the same palette now, so there is no second theme to
+     fall back to: :root IS the paper palette, the page ground is paper, and the
+     shared ui/ primitives resolve correctly wherever they render. The two shell
+     scopes below re-declare the same values so the scoping stays explicit and a
+     future dark surface has one obvious place to override. */
+  --paper: #ffffff;
+  --paper-rail: #f7f7f5;
+  --paper-sunken: #f1f1ef;
+  --ink: #37352f;
+  --ink-muted: #645d52;
+  --ink-faint: #777166;
+  --rule: #edece9;
+  --rule-strong: #dfddd9;
+  --control-border: #968e82;
+  --blue: #1b73c9;
+  --blue-hover: #145a9e;
+  --blue-wash: #e7f3f8;
+  --blue-edge: rgba(27, 115, 201, 0.4);
+  --success-bg: #dbeddb;
+  --success-ink: #1c3829;
+  --warning-bg: #fdecc8;
+  --warning-ink: #533b1b;
+  --danger-bg: #ffe2dd;
+  --danger-ink: #6e3630;
+  --wash-hover: rgba(55, 53, 47, 0.06);
+  --wash-active: rgba(55, 53, 47, 0.09);
+  --wash-selected: rgba(35, 131, 226, 0.09);
+  --tone: transparent;
+  --tone-ink: inherit;
+
+  /* Buttons are 4px everywhere now that the public site shares the theme; the
+     pill was part of the design that has been replaced. */
+  --btn-radius: 4px;
+
+  /* The shadcn/Tailwind tokens, light. globals.css still declares the dark navy
+     set these replace — that set is what painted the band of #0b1020 below any
+     page shorter than the viewport, since body reads hsl(var(--background)). */
+  --background: 0 0% 100%;
+  --foreground: 45 8% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 45 8% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 45 8% 20%;
+  --primary: 210 76% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 60 11% 96%;
+  --secondary-foreground: 45 8% 20%;
+  --muted: 60 11% 96%;
+  --muted-foreground: 37 10% 36%;
+  --accent: 60 11% 96%;
+  --accent-foreground: 45 8% 20%;
+  --destructive: 4 68% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 45 10% 92%;
+  --input: 45 10% 88%;
+  --ring: 210 76% 45%;
+  --surface-0: 0 0% 100%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 60 11% 96%;
+  --success: 152 42% 32%;
+  --warning: 38 74% 34%;
+  --danger: 4 68% 52%;
+  --radius: 6px;
+}
+
+/* The page ground. globals.css layers a blue radial wash over the background
+   token; on paper that reads as a smudge in the top-left corner. */
+body {
+  background: hsl(var(--background));
+}
+
+/* The paper palette is shared by the signed-in workspace and the public site:
+   one theme across the whole product, so signing in is continuous rather than a
+   jump between two visual languages. Both scopes are listed here so the values
+   can never drift apart. */
+[data-dashboard-shell],
+[data-public-shell] {
+  /* --- Notion palette ------------------------------------------------------
+     Warm greys throughout. The ink is #37352F, a brown-black rather than a
+     neutral one; it is the single most recognisable thing about Notion's text
+     and the reason the canvas reads as paper instead of screen. */
+  --paper: #ffffff;
+  --paper-rail: #f7f7f5;
+  --paper-sunken: #f1f1ef;
+  --ink: #37352f;
+  /* Notion's own secondary greys sit around 3:1 on white, which is fine for a
+     page you skim and not for one you work in for three hours. These are the
+     nearest values in the same hue that clear 4.5:1 on BOTH the white canvas
+     and the #f7f7f5 rail — the rail is the stricter of the two and is exactly
+     where the nav labels live. */
+  --ink-muted: #645d52;
+  --ink-faint: #777166;
+  /* Decorative hairlines. These separate content and carry no contrast
+     requirement of their own. */
+  --rule: #edece9;
+  --rule-strong: #dfddd9;
+  /* The boundary of an actual control (input, select, textarea) is non-text UI
+     and has to clear 3:1 — WCAG 1.4.11 — so it is a separate, darker token
+     rather than the decorative rule. */
+  --control-border: #968e82;
+  /* 4.84:1 on white and 4.51:1 on the rail, and white text on it clears 4.5,
+     so one blue serves links, focus rings and filled buttons. */
+  --blue: #1b73c9;
+  --blue-hover: #145a9e;
+  --blue-wash: #e7f3f8;
+
+  /* Status pairs. Every success/warning/danger surface in the workspace comes
+     from these six values — before this, the same three meanings were expressed
+     with emerald/green, amber/orange/yellow and rose/red at a dozen different
+     shades and alphas, which is what made the colour read as inconsistent.
+     Each ink clears 4.5:1 on its own tint and on paper. */
+  --success-bg: #dbeddb;
+  --success-ink: #1c3829;
+  --warning-bg: #fdecc8;
+  --warning-ink: #533b1b;
+  --danger-bg: #ffe2dd;
+  --danger-ink: #6e3630;
+
+  /* A visible edge in the accent colour, for selected controls and focus rings
+     where a hairline would disappear. */
+  --blue-edge: rgba(27, 115, 201, 0.4);
+
+  /* Interaction washes. Notion tints with its own ink at low alpha rather than
+     using a separate grey, which keeps hover states warm on any background. */
+  --wash-hover: rgba(55, 53, 47, 0.06);
+  --wash-active: rgba(55, 53, 47, 0.09);
+  --wash-selected: rgba(35, 131, 226, 0.09);
+
+  /* --- shadcn/Tailwind token overrides ------------------------------------
+     Same names as :root in globals.css, light values. This is what makes
+     bg-card, text-muted-foreground, border-border &c. correct in the
+     workspace without touching a single component's classes. */
+  --background: 0 0% 100%;
+  --foreground: 45 8% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 45 8% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 45 8% 20%;
+  --primary: 210 76% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 60 11% 96%;
+  --secondary-foreground: 45 8% 20%;
+  --muted: 60 11% 96%;
+  --muted-foreground: 37 10% 36%;
+  --accent: 60 11% 96%;
+  --accent-foreground: 45 8% 20%;
+  --destructive: 4 68% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 45 10% 92%;
+  --input: 45 10% 88%;
+  --ring: 210 76% 45%;
+
+  --surface-0: 0 0% 100%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 60 11% 96%;
+
+  --success: 152 42% 32%;
+  --warning: 38 74% 34%;
+  --danger: 4 68% 52%;
+
+  --sidebar-background: 60 11% 96%;
+  --sidebar-foreground: 45 8% 20%;
+  --sidebar-primary: 210 76% 45%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 60 6% 92%;
+  --sidebar-accent-foreground: 45 8% 20%;
+  --sidebar-border: 45 10% 92%;
+  --sidebar-ring: 210 76% 45%;
+
+  /* Notion's corners are 3px on controls and 6px at most on containers. The
+     app default was 12px, which is what made every region read as a SaaS card;
+     lg/md/sm derive from this one value. */
+  --radius: 6px;
+  --btn-radius: 4px;
+
+  /* Reading measure for document-like pages. */
+  --measure: 900px;
+
+  color-scheme: light;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-feature-settings: "cv05" 1, "cv11" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================================
+   Type
+   ----------------------------------------------------------------------------
+   One family for chrome. Hierarchy comes from size, weight and tracking, not
+   from a second display face. The serif is reserved for document bodies where
+   students read for an hour at a time.
+   ========================================================================== */
+
+[data-dashboard-shell] {
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.003em;
+}
+
+[data-dashboard-shell] h1,
+[data-dashboard-shell] h2,
+[data-dashboard-shell] h3,
+[data-dashboard-shell] h4 {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+[data-dashboard-shell] h1 { font-size: 30px; letter-spacing: -0.026em; }
+[data-dashboard-shell] h2 { font-size: 20px; }
+[data-dashboard-shell] h3 { font-size: 16px; }
+[data-dashboard-shell] h4 { font-size: 14px; }
+
+[data-dashboard-shell] p { line-height: 1.55; }
+
+/* The page title that opens each workspace route. Notion sets these large and
+   heavy with tight tracking, sitting directly on the canvas with no rule. */
+[data-dashboard-shell] .page-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-dashboard-shell] .page-lede {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--ink-muted);
+  max-width: 68ch;
+}
+
+/* Section headings inside a page. Sentence case, never tracked-out caps. */
+[data-dashboard-shell] .section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0;
+  margin: 0;
+}
+
+/* Long-form reading. Notion offers Default / Serif / Mono as a page font; the
+   serif is the right default for study notes, where the session is long and the
+   content is prose rather than interface. */
+[data-dashboard-shell] .doc-body {
+  font-family: var(--font-doc);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+  max-width: 72ch;
+  letter-spacing: 0;
+}
+
+[data-dashboard-shell] .doc-body p + p { margin-top: 1em; }
+
+/* ============================================================================
+   Layout
+   ========================================================================== */
+
+[data-dashboard-shell] .workspace-main {
+  background: var(--paper);
+}
+
+/* Content column. Left-aligned inside a centred container — Notion never
+   centres body text, and a measure keeps line length readable on wide screens. */
+[data-dashboard-shell] .workspace-column {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  text-align: left;
+}
+
+[data-dashboard-shell] .workspace-column--wide {
+  max-width: 1180px;
+}
+
+/* Vertical rhythm between page regions, set once here so pages don't each
+   invent their own margin stack. */
+[data-dashboard-shell] .stack > * + * { margin-top: 24px; }
+[data-dashboard-shell] .stack-tight > * + * { margin-top: 12px; }
+
+/* ============================================================================
+   Rail (sidebar)
+   ========================================================================== */
+
+[data-dashboard-shell] .workspace-sidebar {
+  background: var(--paper-rail);
+  border-right: 1px solid var(--rule);
+  backdrop-filter: none;
+}
+
+[data-dashboard-shell] .sidebar-brand {
+  display: flex;
+  align-items: center;
+  padding: 10px 8px 6px;
+}
+
+[data-dashboard-shell] .sidebar-brand-name {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+[data-dashboard-shell] .sidebar-brand-caption {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 1px;
+}
+
+/* Rail rows. Notion's are 27px tall with a 2px radius and a warm hover wash —
+   compact enough that ten of them read as one list rather than ten buttons. */
+[data-dashboard-shell] .nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 27px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: background-color 20ms ease-in;
+}
+
+[data-dashboard-shell] .nav-item:hover {
+  background: var(--wash-hover);
+  color: var(--ink);
+}
+
+[data-dashboard-shell] .nav-item.active {
+  background: var(--wash-active);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+[data-dashboard-shell] .nav-item:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+[data-dashboard-shell] .nav-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  /* Was --ink-faint at 1.75: the lightest ink at the thinnest weight, which is
+     why the rail icons read as washed out beside their labels. Notion draws its
+     icons at roughly the weight of its text. */
+  color: var(--ink-muted);
+  stroke-width: 1.9;
+}
+
+[data-dashboard-shell] .nav-item:hover .nav-icon,
+[data-dashboard-shell] .nav-item.active .nav-icon {
+  color: var(--ink);
+}
+
+/* Group labels between rail sections. Sentence case at 12px grey — these say
+   what the group is, so they stay; they are not decorative eyebrows. */
+[data-dashboard-shell] .nav-label {
+  padding: 14px 8px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  letter-spacing: 0;
+}
+
+/* ============================================================================
+   Top bar
+   ----------------------------------------------------------------------------
+   45px, no blur, no shadow. It carries the current page name and little else;
+   search moved into the rail and the ⌘K overlay, which gives every page back
+   ~11px of vertical space on every screen.
+   ========================================================================== */
+
+[data-dashboard-shell] .workspace-topbar {
+  min-height: 45px;
+  background: var(--paper);
+  border-bottom: 1px solid transparent;
+  backdrop-filter: none;
+  transition: border-color 120ms ease;
+}
+
+/* The rule appears only once content scrolls under the bar, so a page at rest
+   has no horizontal line cutting it. */
+[data-dashboard-shell] .workspace-topbar[data-scrolled="true"] {
+  border-bottom-color: var(--rule);
+}
+
+[data-dashboard-shell] .topbar-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ============================================================================
+   Surfaces
+   ----------------------------------------------------------------------------
+   A region is bounded by a hairline or a wash — not by a shadow. This is the
+   main thing keeping the dashboard from turning into a grid of identical cards.
+   ========================================================================== */
+
+[data-dashboard-shell] .surface {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+[data-dashboard-shell] .surface-sunken {
+  background: var(--paper-rail);
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+/* Row lists. Hairline between rows, no border around the group — the way a
+   Notion database renders. */
+[data-dashboard-shell] .row-list > * + * {
+  border-top: 1px solid var(--rule);
+}
+
+[data-dashboard-shell] .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 3px;
+  transition: background-color 20ms ease-in;
+}
+
+[data-dashboard-shell] .row:hover {
+  background: var(--wash-hover);
+}
+
+[data-dashboard-shell] .divider {
+  height: 1px;
+  background: var(--rule);
+  border: 0;
+  margin: 0;
+}
+
+/* ============================================================================
+   Controls
+   ========================================================================== */
+
+[data-dashboard-shell] [data-workspace-control] {
+  background: var(--paper);
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  color: var(--ink);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+[data-dashboard-shell] [data-workspace-control]:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-wash);
+}
+
+[data-dashboard-shell] input::placeholder,
+[data-dashboard-shell] textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* Keyboard shortcut chips. */
+[data-dashboard-shell] .kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--paper-sunken);
+  color: var(--ink-faint);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Focus ring, applied once for everything that doesn't set its own. */
+[data-dashboard-shell] :is(a, button, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ============================================================================
+   Course colour identity
+   ----------------------------------------------------------------------------
+   Students carry five to seven courses at once, and the thing they do most
+   often is scan a mixed list — today's assignments, this week's deadlines — for
+   one course. Each course keeps one pastel across the dashboard, assignments,
+   grades and notes, so that scan is a colour match rather than a read. The set
+   is Notion's own page-tag palette.
+
+   Assign with data-course-tone="1".."7" on any element; the swatch and text
+   tones are picked up by .course-dot and .course-chip below.
+   ========================================================================== */
+
+[data-dashboard-shell] [data-course-tone="1"],
+[data-public-shell] [data-course-tone="1"] { --tone: #d3e5ef; --tone-ink: #28456c; }
+[data-dashboard-shell] [data-course-tone="2"],
+[data-public-shell] [data-course-tone="2"] { --tone: #dbeddb; --tone-ink: #1c3829; }
+[data-dashboard-shell] [data-course-tone="3"],
+[data-public-shell] [data-course-tone="3"] { --tone: #fadec9; --tone-ink: #5c3b23; }
+[data-dashboard-shell] [data-course-tone="4"],
+[data-public-shell] [data-course-tone="4"] { --tone: #e8deee; --tone-ink: #412454; }
+[data-dashboard-shell] [data-course-tone="5"],
+[data-public-shell] [data-course-tone="5"] { --tone: #ffe2dd; --tone-ink: #6e3630; }
+[data-dashboard-shell] [data-course-tone="6"],
+[data-public-shell] [data-course-tone="6"] { --tone: #fdecc8; --tone-ink: #533b1b; }
+[data-dashboard-shell] [data-course-tone="7"],
+[data-public-shell] [data-course-tone="7"] { --tone: #e3e2e0; --tone-ink: #3c3c3a; }
+
+[data-dashboard-shell] .course-dot,
+[data-public-shell] .course-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone, var(--rule-strong));
+  flex-shrink: 0;
+}
+
+[data-dashboard-shell] .course-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--tone, var(--paper-sunken));
+  color: var(--tone-ink, var(--ink-muted));
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   Status
+   ----------------------------------------------------------------------------
+   Deadline states. Muted enough to sit in a list without shouting, distinct
+   enough to find. Colour is never the only signal — each carries its own word.
+   ========================================================================== */
+
+[data-dashboard-shell] .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+[data-dashboard-shell] .status-overdue { background: #ffe2dd; color: #6e3630; }
+[data-dashboard-shell] .status-due     { background: #fdecc8; color: #533b1b; }
+[data-dashboard-shell] .status-done    { background: #dbeddb; color: #1c3829; }
+[data-dashboard-shell] .status-neutral { background: var(--paper-sunken); color: var(--ink-muted); }
+
+/* ============================================================================
+   Motion
+   ----------------------------------------------------------------------------
+   Hover washes are 20ms — fast enough to feel like the cursor, not an
+   animation. Nothing animates on page load.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dashboard-shell] *,
+  [data-dashboard-shell] *::before,
+  [data-dashboard-shell] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   Scrollbars — thin and warm, so the rail doesn't grow a grey stripe.
+   ========================================================================== */
+
+[data-dashboard-shell] ::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-dashboard-shell] ::-webkit-scrollbar-thumb {
+  background: rgba(55, 53, 47, 0.16);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+[data-dashboard-shell] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(55, 53, 47, 0.28);
+  background-clip: content-box;
+}
+[data-dashboard-shell] ::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================================
+   Rail footer
+   ========================================================================== */
+
+[data-dashboard-shell] .sidebar-footer {
+  border-top: 1px solid var(--rule);
+  padding: 6px 8px 8px;
+}
+
+[data-dashboard-shell] .avatar-fallback {
+  background: var(--paper-sunken);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Sign-out stays hidden until the row is hovered or the button is focused —
+   keyboard users must still be able to reach it, so focus-visible counts. */
+[data-dashboard-shell] .sign-out {
+  flex-shrink: 0;
+  padding: 6px;
+  border-radius: 3px;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 20ms ease-in, color 120ms ease;
+}
+
+[data-dashboard-shell] .group:hover .sign-out,
+[data-dashboard-shell] .sign-out:focus-visible {
+  opacity: 1;
+}
+
+[data-dashboard-shell] .sign-out:hover {
+  background: var(--wash-hover);
+  color: var(--ink);
+}
+
+/* Plan name beside the upgrade row. Sentence case — the plan is a name, not a
+   shout, and tracked-out caps here read as template chrome. */
+[data-dashboard-shell] .plan-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--paper-sunken);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+[data-dashboard-shell] .plan-badge--paid {
+  background: #dbeddb;
+  color: #1c3829;
+}
+
+/* ============================================================================
+   Top bar actions
+   ========================================================================== */
+
+[data-dashboard-shell] .topbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  border-radius: 3px;
+  color: var(--ink-muted);
+  transition: background-color 20ms ease-in;
+}
+
+[data-dashboard-shell] .topbar-action:hover {
+  background: var(--wash-hover);
+  color: var(--ink);
+}
+
+/* ============================================================================
+   Search overlay (⌘K)
+   ----------------------------------------------------------------------------
+   The one place in the workspace that gets a shadow. It is floating above the
+   canvas rather than sitting on it, so it needs to read as lifted — everything
+   that sits *on* the page is bounded by a hairline instead.
+   ========================================================================== */
+
+[data-dashboard-shell] .search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  background: rgba(15, 15, 15, 0.28);
+}
+
+[data-dashboard-shell] .search-panel {
+  width: 100%;
+  max-width: 560px;
+  height: fit-content;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  box-shadow:
+    0 8px 16px rgba(15, 15, 15, 0.08),
+    0 2px 40px rgba(15, 15, 15, 0.12);
+  overflow: hidden;
+}
+
+[data-dashboard-shell] .search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-dashboard-shell] .search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+[data-dashboard-shell] .search-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+[data-dashboard-shell] .search-result {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 3px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* Highlight follows one cursor driven by both arrow keys and the pointer, so
+   the keyboard selection and the mouse never disagree. */
+[data-dashboard-shell] .search-result[data-active="true"] {
+  background: var(--wash-hover);
+}
+
+[data-dashboard-shell] .search-empty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+/* ============================================================================
+   Callout
+   ----------------------------------------------------------------------------
+   Notion's callout block: a tinted panel with no border and no shadow. Used for
+   the setup prompt, which is guidance rather than an alert.
+   ========================================================================== */
+
+[data-dashboard-shell] .onboarding-callout {
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: var(--blue-wash);
+  color: var(--ink);
+}
+
+[data-dashboard-shell] .callout-action {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+[data-dashboard-shell] .callout-action:hover {
+  background: var(--blue-hover);
+}
+
+/* ============================================================================
+   Neutralising unscoped public-site rules
+   ----------------------------------------------------------------------------
+   A few rules in future-ui.css / chain-summit.css are written without a scope
+   because they were meant for the marketing pages, but their selectors also
+   match workspace markup. They are matched here at equal-or-higher specificity
+   rather than with !important, so the workspace opts out without the public
+   site changing.
+   ========================================================================== */
+
+[data-dashboard-shell] [class*="rounded-2xl"][class*="border"][class*="bg-"],
+[data-dashboard-shell] .card-raised,
+[data-dashboard-shell] .future-page-hero {
+  box-shadow: none;
+}
+
+[data-dashboard-shell] .card-raised::after,
+[data-dashboard-shell] .future-page-hero::after,
+[data-dashboard-shell] .future-page-hero::before {
+  display: none;
+}
+
+/* Pill buttons are a public-site treatment; controls in the workspace use the
+   4px radius the rest of the interface uses. */
+[data-dashboard-shell] .btn {
+  border-radius: 4px;
+}
+
+/* Course swatch row — a compact legend of the courses in play. */
+[data-dashboard-shell] .course-swatch {
+  height: 8px;
+  width: 24px;
+  border-radius: 999px;
+  background: var(--tone, var(--rule-strong));
+}
+
+/* ============================================================================
+   Course-toned surfaces
+   ----------------------------------------------------------------------------
+   A card belonging to a course carries that course's colour on its left edge
+   only. The fill stays paper-white so a grid of them still reads as a list of
+   documents rather than a set of coloured tiles, and the edge is enough to scan
+   by. Pair with data-course-tone.
+   ========================================================================== */
+
+[data-dashboard-shell] .course-card {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--tone, var(--rule-strong));
+  border-radius: 6px;
+  background: var(--paper);
+  transition: background-color 20ms ease-in, border-color 120ms ease;
+}
+
+[data-dashboard-shell] .course-card:hover {
+  background: var(--wash-hover);
+}
+
+/* Date chip on an assignment row — tinted with the course tone so the row's
+   colour identity survives at a glance. */
+[data-dashboard-shell] .course-date-chip {
+  display: flex;
+  min-width: 52px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--tone, var(--paper-sunken));
+  color: var(--tone-ink, var(--ink-muted));
+  text-align: center;
+}
+
+/* Form controls. The public site's unscoped input/select rules no longer reach
+   in here, so these are plain declarations rather than counter-overrides. */
+[data-dashboard-shell] input:not([type="checkbox"]):not([type="radio"]),
+[data-dashboard-shell] textarea,
+[data-dashboard-shell] select {
+  border-radius: 4px;
+  border: 1px solid var(--control-border);
+  background-color: var(--paper);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+[data-dashboard-shell] option,
+[data-dashboard-shell] optgroup {
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+[data-dashboard-shell] input:focus,
+[data-dashboard-shell] textarea:focus,
+[data-dashboard-shell] select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-wash);
+  outline: none;
+}
+
+/* In the search overlay the whole field is the control, so the input itself
+   must not also draw the focus ring — otherwise the border doubles. */
+[data-dashboard-shell] .search-field input,
+[data-dashboard-shell] .search-field input:focus {
+  border: 0;
+  box-shadow: none;
+  outline: none;
+  background: transparent;
+}
+
+[data-dashboard-shell] .search-field:focus-within {
+  border-bottom-color: var(--rule);
+}
+
+/* Course avatar — the initials tile on a course card, in that course's tone. */
+[data-dashboard-shell] .course-avatar {
+  display: flex;
+  height: 44px;
+  width: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--tone, var(--paper-sunken));
+  color: var(--tone-ink, var(--ink-muted));
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================================
+   Menus (Select, and anything else that portals a floating list)
+   ----------------------------------------------------------------------------
+   These mount inside the shell — see frontend/lib/portal-container.ts — so they
+   inherit the workspace tokens instead of falling back to the public site's
+   dark :root. Like the ⌘K panel, a menu floats above the canvas rather than
+   sitting on it, so it is the other place a shadow is earned.
+   ========================================================================== */
+
+[data-dashboard-shell] .workspace-menu {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow:
+    0 8px 16px rgba(15, 15, 15, 0.08),
+    0 2px 24px rgba(15, 15, 15, 0.1);
+}
+
+[data-dashboard-shell] .workspace-menu-item {
+  border-radius: 3px;
+  color: var(--ink);
+}
+
+/* Radix moves focus with both keyboard and pointer, so one state covers both. */
+[data-dashboard-shell] .workspace-menu-item:focus,
+[data-dashboard-shell] .workspace-menu-item[data-highlighted] {
+  background: var(--wash-hover);
+  color: var(--ink);
+}
+
+/* ============================================================================
+   Icons
+   ----------------------------------------------------------------------------
+   lucide stamps every icon with a .lucide class, which gives one place to set
+   the weight. The default 2.0 at 16px is thin and wiry next to Inter; 1.9 with
+   the ink colours below is what makes an icon read as part of the text rather
+   than a grey decoration floating beside it.
+   ========================================================================== */
+
+[data-dashboard-shell] .lucide {
+  stroke-width: 1.9;
+}
+
+/* Icons at display sizes carry their own weight from sheer area, so they get a
+   lighter stroke to avoid looking blunt. */
+[data-dashboard-shell] .lucide.h-10,
+[data-dashboard-shell] .lucide.h-11,
+[data-dashboard-shell] .lucide.h-12,
+[data-dashboard-shell] .lucide.h-16 {
+  stroke-width: 1.5;
+}
+
+/* An icon tile: the small tinted square an icon sits in throughout the
+   dashboard. One shape and one radius, so these stop being invented per page. */
+[data-dashboard-shell] .icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 28px;
+  width: 28px;
+  border-radius: 4px;
+  background: var(--paper-sunken);
+  color: var(--ink-muted);
+}
+
+[data-dashboard-shell] .icon-tile--accent {
+  background: var(--blue-wash);
+  color: var(--blue);
+}
+
+/* Suggested-prompt chips in the assistant. Quiet by default, accent on hover —
+   they are offers, not the primary action on the screen. */
+[data-dashboard-shell] .suggestion-chip {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 20ms ease-in, border-color 120ms ease, color 120ms ease;
+}
+
+[data-dashboard-shell] .suggestion-chip:hover:not(:disabled) {
+  background: var(--blue-wash);
+  border-color: var(--blue-edge);
+  color: var(--blue);
+}
+
+[data-dashboard-shell] .suggestion-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   Shared .btn classes inside the workspace
+   ----------------------------------------------------------------------------
+   .btn / .btn-primary come from the public site's stylesheet, where the primary
+   button is a pale gradient built to sit on a dark canvas — on paper it read as
+   a near-invisible white slab. In here they are the accent button and a quiet
+   secondary, matching the buttons the workspace pages build with utilities.
+   ========================================================================== */
+
+[data-dashboard-shell] .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 20ms ease-in, border-color 120ms ease;
+}
+
+[data-dashboard-shell] .btn:hover:not(:disabled) {
+  background: var(--wash-hover);
+}
+
+[data-dashboard-shell] .btn-primary {
+  border-color: transparent;
+  background: var(--blue);
+  color: #fff;
+}
+
+[data-dashboard-shell] .btn-primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+  transform: none;
+}
+
+[data-dashboard-shell] .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

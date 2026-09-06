@@ -303,7 +303,7 @@ export default function SettingsPage() {
                 {savingProfile ? "Saving..." : "Save profile"}
               </Button>
               {message ? (
-                <p className={cn("text-sm", messageType === "error" ? "text-rose-400" : "text-emerald-400")}>
+                <p className={cn("text-sm", messageType === "error" ? "text-[var(--danger-ink)]" : "text-[var(--success-ink)]")}>
                   {message}
                 </p>
               ) : null}
@@ -319,7 +319,7 @@ export default function SettingsPage() {
         <CardContent>
           {billing ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm font-semibold text-foreground">
                     {PLAN_CATALOG[billing.plan].name} plan
@@ -378,7 +378,7 @@ export default function SettingsPage() {
               {canvasConnections.map((conn) => (
                 <li
                   key={conn.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3"
                 >
                   <div>
                     <span className="text-sm font-medium text-foreground">{conn.canvas_domain ?? "Canvas"}</span>
@@ -433,7 +433,7 @@ export default function SettingsPage() {
               {otherConnections.map((conn) => (
                 <li
                   key={conn.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3"
                 >
                   <span className="text-sm font-medium text-foreground">{platformLabel(conn)}</span>
                   <Button variant="secondary" size="sm" onClick={() => handleDisconnect(conn.id)}>

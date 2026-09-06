@@ -100,21 +100,21 @@ export default function ChatPage() {
         {/* ── Message list ── */}
         <div
           style={{
-            border: "1px solid rgba(148, 163, 184, 0.24)",
+            border: "1px solid var(--rule)",
             borderRadius: "16px",
-            background: "rgba(15, 22, 38, 0.72)",
+            background: "var(--paper)",
             padding: "1rem",
             overflowY: "auto",
           }}
         >
           {messages.length === 0 ? (
             <div style={{ maxWidth: "600px", margin: "12vh auto 0", textAlign: "center" }}>
-              <p style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "#e6edf8", fontWeight: 600, lineHeight: 1.2 }}>
+              <p style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "var(--ink)", fontWeight: 600, lineHeight: 1.2 }}>
                 How can I help?
               </p>
-              <p style={{ color: "#9aa8bf", marginBottom: "1.5rem" }}>
+              <p style={{ color: "var(--ink-muted)", marginBottom: "1.5rem" }}>
                 Ask anything about your classes, notes, assignments, or exam prep.
-                Paste a screenshot with <kbd style={{ background: "rgba(148,163,184,0.15)", borderRadius: "4px", padding: "1px 5px", fontSize: "0.8em" }}>Ctrl+V</kbd> or use the attach button.
+                Paste a screenshot with <kbd style={{ background: "var(--paper-sunken)", borderRadius: "4px", padding: "1px 5px", fontSize: "0.8em" }}>Ctrl+V</kbd> or use the attach button.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "center" }}>
                 {CHIPS.map((chip) => (
@@ -123,19 +123,7 @@ export default function ChatPage() {
                     type="button"
                     onClick={() => append({ role: "user", content: chip })}
                     disabled={isLoading}
-                    style={{
-                      padding: "0.45rem 0.9rem",
-                      borderRadius: "999px",
-                      border: "1px solid rgba(125,211,252,0.25)",
-                      background: "rgba(125,211,252,0.06)",
-                      color: "#7dd3fc",
-                      fontSize: "0.82rem",
-                      cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s",
-                      whiteSpace: "nowrap",
-                    }}
-                    onMouseOver={(e) => { (e.currentTarget.style.background = "rgba(125,211,252,0.14)"); (e.currentTarget.style.borderColor = "rgba(125,211,252,0.45)"); }}
-                    onMouseOut={(e) => { (e.currentTarget.style.background = "rgba(125,211,252,0.06)"); (e.currentTarget.style.borderColor = "rgba(125,211,252,0.25)"); }}
+                    className="suggestion-chip"
                   >
                     {chip}
                   </button>
@@ -161,11 +149,11 @@ export default function ChatPage() {
                       borderRadius: "14px",
                       padding: "0.85rem 1rem",
                       background: isUser
-                        ? "linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(99, 102, 241, 0.28))"
-                        : "rgba(255, 255, 255, 0.06)",
+                        ? "var(--blue-wash)"
+                        : "var(--paper-sunken)",
                       border: isUser
-                        ? "1px solid rgba(56, 189, 248, 0.42)"
-                        : "1px solid rgba(148, 163, 184, 0.22)",
+                        ? "1px solid var(--blue-edge)"
+                        : "1px solid var(--rule)",
                     }}
                   >
                     {/* Attached images */}
@@ -181,14 +169,14 @@ export default function ChatPage() {
                               maxHeight: "360px",
                               borderRadius: "10px",
                               objectFit: "contain",
-                              border: "1px solid rgba(56, 189, 248, 0.25)",
+                              border: "1px solid var(--blue-edge)",
                             }}
                           />
                         ))}
                       </div>
                     )}
                     {message.content && (
-                      <div className="md-content chat-readable" style={{ margin: 0, color: "#e6edf8" }}>
+                      <div className="md-content chat-readable" style={{ margin: 0, color: "var(--ink)" }}>
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                       </div>
                     )}
@@ -202,9 +190,9 @@ export default function ChatPage() {
                     alignSelf: "flex-start",
                     borderRadius: "14px",
                     padding: "0.7rem 0.9rem",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid rgba(148, 163, 184, 0.2)",
-                    color: "#9aa8bf",
+                    background: "var(--paper-sunken)",
+                    border: "1px solid var(--rule)",
+                    color: "var(--ink-muted)",
                     fontSize: "0.9rem",
                   }}
                 >
@@ -232,7 +220,7 @@ export default function ChatPage() {
                       height: "72px",
                       objectFit: "cover",
                       borderRadius: "8px",
-                      border: "1px solid rgba(56, 189, 248, 0.5)",
+                      border: "1px solid var(--blue-edge)",
                     }}
                   />
                   <button
@@ -246,9 +234,9 @@ export default function ChatPage() {
                       width: "18px",
                       height: "18px",
                       borderRadius: "50%",
-                      background: "#1e293b",
-                      border: "1px solid rgba(148, 163, 184, 0.4)",
-                      color: "#94a3b8",
+                      background: "var(--paper-sunken)",
+                      border: "1px solid var(--control-border)",
+                      color: "var(--ink-muted)",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -270,13 +258,13 @@ export default function ChatPage() {
               gap: "0.6rem",
               padding: "0.7rem",
               borderRadius: "16px",
-              background: "rgba(12, 18, 32, 0.94)",
+              background: "var(--paper)",
               border: inputFocused
-                ? "1px solid rgba(125, 211, 252, 0.45)"
-                : "1px solid rgba(148, 163, 184, 0.20)",
+                ? "1px solid var(--blue-edge)"
+                : "1px solid var(--control-border)",
               boxShadow: inputFocused
-                ? "0 18px 48px rgba(1, 6, 19, 0.5), 0 0 0 4px rgba(56, 189, 248, 0.10)"
-                : "0 14px 42px rgba(1, 6, 19, 0.45)",
+                ? "0 0 0 2px var(--blue-wash)"
+                : "none",
               transition: "border-color 0.2s ease, box-shadow 0.2s ease",
             }}
           >
@@ -290,11 +278,11 @@ export default function ChatPage() {
                 width: "44px",
                 height: "44px",
                 borderRadius: "10px",
-                border: "1px solid rgba(148, 163, 184, 0.28)",
+                border: "1px solid var(--rule)",
                 background: attachments.length > 0
-                  ? "rgba(56, 189, 248, 0.18)"
-                  : "rgba(148, 163, 184, 0.10)",
-                color: attachments.length > 0 ? "#38bdf8" : "#9aa8bf",
+                  ? "var(--blue-wash)"
+                  : "var(--rule)",
+                color: attachments.length > 0 ? "var(--blue)" : "var(--ink-muted)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -331,8 +319,8 @@ export default function ChatPage() {
                 border: "none",
                 outline: "none",
                 background: "transparent",
-                color: "#e6edf8",
-                caretColor: "#38bdf8",
+                color: "var(--ink)",
+                caretColor: "var(--blue)",
                 fontSize: "0.95rem",
                 lineHeight: 1.5,
               }}

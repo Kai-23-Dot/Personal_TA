@@ -60,23 +60,25 @@ export default async function DashboardLayout({
         {/* Legacy .app-container (chain-summit.css) is deliberately NOT used here:
             its `padding` shorthand zeroed the top padding and capped width at
             1200px, silently overriding these utilities. */}
-        <main className="w-full px-4 pb-28 pt-7 sm:px-6 md:pb-10 lg:px-8">
+        <main className="workspace-main w-full px-4 pb-28 pt-8 sm:px-6 md:pb-16 lg:px-8">
+        <div className="workspace-column workspace-column--wide">
         <DashboardClientWrapper pendingCanvasAgreement={pendingCanvasAgreement ?? null}>
           {showOnboardingBanner ? (
-            <div className="mb-6 rounded-lg border border-sky-400/20 bg-sky-500/[0.08] p-4" data-notion-surface>
+            <div className="onboarding-callout mb-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <strong className="text-sm text-sky-100">Finish onboarding</strong>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <strong className="block text-sm font-semibold">Finish setting up</strong>
+                  <p className="mt-1 text-sm text-[var(--ink-muted)]">
                     Connect your classes, upload notes, and generate your first plan.
                   </p>
                 </div>
-                <a className="btn btn-primary w-fit" href="/onboarding">Go to onboarding</a>
+                <a className="callout-action w-fit" href="/onboarding">Connect my classes</a>
               </div>
             </div>
           ) : null}
           {children}
         </DashboardClientWrapper>
+        </div>
         </main>
       </div>
       <MobileNav plan={plan} isAdmin={isAdmin} />

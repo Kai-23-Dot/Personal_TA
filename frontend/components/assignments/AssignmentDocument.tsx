@@ -33,7 +33,7 @@ export function AssignmentDocument({ html }: { html: string }) {
   }, [html]);
 
   if (!safeHtml) {
-    return <p className="text-sm text-slate-400">Loading assignment instructions…</p>;
+    return <p className="text-sm text-[var(--ink-muted)]">Loading assignment instructions…</p>;
   }
 
   return (
