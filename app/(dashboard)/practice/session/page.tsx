@@ -256,7 +256,7 @@ export default function PracticeSessionPage() {
 
   if (submitted) {
     const scoreColorClass =
-      scorePct >= 80 ? "text-[var(--blue)]" : scorePct >= 60 ? "text-[#533b1b]" : "text-[#6e3630]";
+      scorePct >= 80 ? "text-[var(--blue)]" : scorePct >= 60 ? "text-[var(--warning-ink)]" : "text-[var(--danger-ink)]";
 
     return (
       <div className="mx-auto max-w-3xl space-y-6 pb-16 pt-6">
@@ -293,7 +293,7 @@ export default function PracticeSessionPage() {
                 className={cn("border-l-[3px] p-6", isCorrect ? "border-l-sky-400" : "border-l-rose-400")}
               >
                 <div className="mb-3 flex items-center gap-2">
-                  <span className={cn("text-base font-bold", isCorrect ? "text-[var(--blue)]" : "text-[#6e3630]")}>
+                  <span className={cn("text-base font-bold", isCorrect ? "text-[var(--blue)]" : "text-[var(--danger-ink)]")}>
                     {isCorrect ? "✓" : "✗"}
                   </span>
                   <h4 className="text-sm font-semibold text-foreground">Question {idx + 1}</h4>
@@ -375,7 +375,7 @@ export default function PracticeSessionPage() {
               submitting={submitting}
             />
             {submissionError ? (
-              <p className="mt-3 text-sm text-[#6e3630]" role="alert">
+              <p className="mt-3 text-sm text-[var(--danger-ink)]" role="alert">
                 {submissionError} Your answers are still saved; please try again.
               </p>
             ) : null}

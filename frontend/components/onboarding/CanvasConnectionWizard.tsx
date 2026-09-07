@@ -176,11 +176,11 @@ export function CanvasConnectionWizard({
           Smartlearn can now organize your Canvas courses, assignments, pages, modules, and files.
         </p>
         {syncWarning ? (
-          <div role="status" className="mx-auto mt-4 max-w-lg rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-left text-sm text-[#533b1b]">
+          <div role="status" className="mx-auto mt-4 max-w-lg rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-left text-sm text-[var(--warning-ink)]">
             {syncWarning}
           </div>
         ) : (
-          <p role="status" className="mt-4 text-sm text-[#1c3829]">Your first Canvas sync finished successfully.</p>
+          <p role="status" className="mt-4 text-sm text-[var(--success-ink)]">Your first Canvas sync finished successfully.</p>
         )}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           <Button asChild className="h-11 w-full sm:w-auto"><Link href="/dashboard">Go to dashboard</Link></Button>
@@ -259,7 +259,7 @@ export function CanvasConnectionWizard({
             <li className="card p-3 sm:p-4"><strong className="text-foreground">3.</strong> Enter <strong className="text-foreground">Smartlearn</strong> for Purpose. An expiration date is optional but recommended.</li>
             <li className="card p-3 sm:p-4"><strong className="text-foreground">4.</strong> Select <strong className="text-foreground">Generate Token</strong>, then copy it now—Canvas normally shows the full token only once.</li>
           </ol>
-          <div className="rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[#533b1b]">
+          <div className="rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[var(--warning-ink)]">
             Treat this token like a password. Personal tokens are intended for authorized testing; Canvas recommends OAuth for multi-user apps. If your school does not allow tokens, use Canvas OAuth from <Link href="/settings" className="font-semibold underline underline-offset-2">Settings</Link> or contact your Canvas administrator.
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><Button className="h-11 w-full sm:w-auto" variant="ghost" onClick={() => setStep(1)}><ArrowLeft /> Back</Button><Button className="h-11 w-full sm:w-auto" onClick={() => setStep(3)}>I copied the token <ArrowRight /></Button></div>
@@ -302,7 +302,7 @@ export function CanvasConnectionWizard({
         />
       ) : null}
 
-      {error ? <div role="alert" className="rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[#6e3630]">{error}</div> : null}
+      {error ? <div role="alert" className="rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-ink)]">{error}</div> : null}
     </div>
   );
 }

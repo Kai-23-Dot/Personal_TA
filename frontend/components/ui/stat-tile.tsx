@@ -6,7 +6,7 @@ import { cn } from "@/backend/utils";
 
 const TONE_STYLES = {
   sky:     { bg: "bg-[var(--blue-wash)]",     icon: "text-primary",     accent: "bg-[var(--blue)]" },
-  orange:  { bg: "bg-[var(--warning-bg)]",  icon: "text-[#533b1b]",  accent: "bg-[var(--warning-bg)]" },
+  orange:  { bg: "bg-[var(--warning-bg)]",  icon: "text-[var(--warning-ink)]",  accent: "bg-[var(--warning-bg)]" },
   violet:  { bg: "bg-[var(--paper-sunken)]",  icon: "text-[var(--ink-muted)]",  accent: "bg-[var(--paper-sunken)]" },
   emerald: { bg: "bg-[var(--success-bg)]", icon: "text-[hsl(var(--success))]", accent: "bg-[var(--success-bg)]" },
 } as const;

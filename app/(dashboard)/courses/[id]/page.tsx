@@ -113,7 +113,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
                   }`}
                 >
                   {due && (
-                    <div className={`flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 text-center w-12 shrink-0 ${urgent ? "bg-[var(--warning-bg)] text-[#533b1b]" : "bg-[var(--blue-wash)] text-[var(--blue)]"}`}>
+                    <div className={`flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 text-center w-12 shrink-0 ${urgent ? "bg-[var(--warning-bg)] text-[var(--warning-ink)]" : "bg-[var(--blue-wash)] text-[var(--blue)]"}`}>
                       <span className="text-[9px] font-bold leading-none">{format(due, "MMM")}</span>
                       <span className="text-base font-bold leading-snug">{format(due, "d")}</span>
                     </div>

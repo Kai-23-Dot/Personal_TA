@@ -67,9 +67,9 @@ function MetricCard({
 }) {
   const tones = {
     sky: "border-[var(--rule)] bg-[var(--blue)]/[0.07] text-[var(--blue)]",
-    emerald: "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[#1c3829]",
-    violet: "border-[var(--rule)] bg-[var(--paper-sunken)]/[0.07] text-[#412454]",
-    amber: "border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] text-[#533b1b]",
+    emerald: "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[var(--success-ink)]",
+    violet: "border-[var(--rule)] bg-[var(--paper-sunken)]/[0.07] text-[var(--ink-muted)]",
+    amber: "border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] text-[var(--warning-ink)]",
   };
   return (
     <Card className="p-5">
@@ -191,7 +191,7 @@ export function AdminDashboard() {
       />
 
       {error ? (
-        <Card className="mb-6 border-[var(--danger-ink)] bg-[var(--danger-bg)]/[0.06] p-4 text-sm text-[#6e3630]">
+        <Card className="mb-6 border-[var(--danger-ink)] bg-[var(--danger-bg)]/[0.06] p-4 text-sm text-[var(--danger-ink)]">
           {error} Your existing data remains unchanged; retry in a moment.
         </Card>
       ) : null}
@@ -275,7 +275,7 @@ export function AdminDashboard() {
             </Card>
 
             <Card className="p-5 sm:p-6">
-              <p className="font-mono text-[10px] text-[#1c3829]">Provider status</p>
+              <p className="font-mono text-[10px] text-[var(--success-ink)]">Provider status</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Live connections</h2>
               <div className="mt-5 space-y-3">
                 <ProviderRow
@@ -303,7 +303,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <span className="text-xs text-muted-foreground">Past due</span>
-                  <span className="text-sm font-semibold text-[#533b1b]">{overview.stripe.configured && !overview.stripe.error ? overview.stripe.pastDueSubscriptions : "Unavailable"}</span>
+                  <span className="text-sm font-semibold text-[var(--warning-ink)]">{overview.stripe.configured && !overview.stripe.error ? overview.stripe.pastDueSubscriptions : "Unavailable"}</span>
                 </div>
               </div>
             </Card>
@@ -311,7 +311,7 @@ export function AdminDashboard() {
 
           <div className="mt-6 grid gap-6 xl:grid-cols-2">
             <Card className="overflow-hidden p-5 sm:p-6">
-              <p className="font-mono text-[10px] text-[#412454]">OpenAI model mix</p>
+              <p className="font-mono text-[10px] text-[var(--ink-muted)]">OpenAI model mix</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">Tokens by model</h2>
               <div className="mt-5 space-y-2">
                 {overview.openai.models.length > 0 ? overview.openai.models.slice(0, 10).map((model) => (
@@ -339,7 +339,7 @@ export function AdminDashboard() {
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" /> {new Date(transaction.createdAt).toLocaleString()}</p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className={cn("font-mono text-xs", transaction.netCents >= 0 ? "text-[#1c3829]" : "text-[#6e3630]")}>{moneyFromCents(transaction.netCents, transaction.currency)}</p>
+                      <p className={cn("font-mono text-xs", transaction.netCents >= 0 ? "text-[var(--success-ink)]" : "text-[var(--danger-ink)]")}>{moneyFromCents(transaction.netCents, transaction.currency)}</p>
                       <p className="mt-1 text-[10px] text-muted-foreground">Net</p>
                     </div>
                   </div>
@@ -353,7 +353,7 @@ export function AdminDashboard() {
           <Card className="mt-6 p-5 sm:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="font-mono text-[10px] text-[#533b1b]">Product footprint</p>
+                <p className="font-mono text-[10px] text-[var(--warning-ink)]">Product footprint</p>
                 <h2 className="mt-2 text-xl font-semibold text-foreground">Accounts and connected learning data</h2>
               </div>
               <p className="text-xs text-muted-foreground">Auto-refreshes every 60 seconds · Last updated {new Date(overview.generatedAt).toLocaleTimeString()}</p>

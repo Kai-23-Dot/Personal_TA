@@ -120,10 +120,10 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
       {flipped && (
         <div className="grid grid-cols-4 gap-2">
           {[
-            { g: 0, label: "Forgot", color: "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[#6e3630] hover:bg-[var(--danger-bg)]" },
-            { g: 2, label: "Hard",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] hover:bg-[var(--warning-bg)]" },
-            { g: 3, label: "Good",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] hover:bg-[var(--warning-bg)]" },
-            { g: 5, label: "Easy",   color: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829] hover:bg-[var(--success-bg)]" },
+            { g: 0, label: "Forgot", color: "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[var(--danger-ink)] hover:bg-[var(--danger-bg)]" },
+            { g: 2, label: "Hard",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[var(--warning-ink)] hover:bg-[var(--warning-bg)]" },
+            { g: 3, label: "Good",   color: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[var(--warning-ink)] hover:bg-[var(--warning-bg)]" },
+            { g: 5, label: "Easy",   color: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[var(--success-ink)] hover:bg-[var(--success-bg)]" },
           ].map(({ g, label, color }) => (
             <button
               key={g}
@@ -154,7 +154,7 @@ function ReadinessBadge({ score, label }: { score: number; label: string }) {
   const color =
     score >= 80 ? "text-[var(--success-ink)] border-[var(--success-ink)] bg-[var(--success-bg)]" :
     score >= 60 ? "text-[var(--blue)] border-[var(--rule)] bg-[var(--blue-wash)]" :
-    score >= 40 ? "text-[#533b1b] border-[var(--warning-ink)] bg-[var(--warning-bg)]" :
+    score >= 40 ? "text-[var(--warning-ink)] border-[var(--warning-ink)] bg-[var(--warning-bg)]" :
     "text-[var(--danger-ink)] border-[var(--danger-ink)] bg-[var(--danger-bg)]";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${color}`}>
@@ -337,7 +337,7 @@ export default function ReviewPage() {
                 </div>
                 <button
                   onClick={() => setReviewCards(dueCards)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] py-2.5 text-sm font-medium text-[#412454] transition hover:bg-[var(--paper-sunken)]"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] py-2.5 text-sm font-medium text-[var(--ink-muted)] transition hover:bg-[var(--paper-sunken)]"
                 >
                   <Brain className="h-4 w-4" /> Start flashcard review
                 </button>
@@ -416,7 +416,7 @@ export default function ReviewPage() {
                       <button
                         onClick={() => launchReview(exam.title, exam.course_id, 10)}
                         disabled={generating}
-                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] px-3 py-2 text-xs font-medium text-[#412454] transition hover:bg-[var(--paper-sunken)] disabled:opacity-50"
+                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-[var(--rule)] bg-[var(--paper-sunken)] px-3 py-2 text-xs font-medium text-[var(--ink-muted)] transition hover:bg-[var(--paper-sunken)] disabled:opacity-50"
                       >
                         {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                         Practice

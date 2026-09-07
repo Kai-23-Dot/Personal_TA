@@ -106,7 +106,7 @@ export function MobileNav({ plan = "free", isAdmin = false }: MobileNavProps) {
               className={cn(
                 "mb-3 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors",
                 isPaid
-                  ? "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[#1c3829]"
+                  ? "border-[var(--success-ink)] bg-[var(--success-bg)]/[0.07] text-[var(--success-ink)]"
                   : "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--ink)]",
                 isActive("/pricing") && "ring-1 ring-[var(--blue-edge)]"
               )}

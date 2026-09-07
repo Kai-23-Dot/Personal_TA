@@ -42,9 +42,9 @@ export function OptionsList({
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors duration-150",
                 isCorrect
-                  ? "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829]"
+                  ? "border-[var(--success-ink)] bg-[var(--success-bg)] text-[var(--success-ink)]"
                   : isWrong
-                    ? "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[#6e3630]"
+                    ? "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[var(--danger-ink)]"
                     : isSelected
                       ? "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]"
                       : "border-[var(--rule)] bg-[var(--paper)] text-foreground hover:border-[var(--rule)] hover:bg-[var(--wash-hover)]"

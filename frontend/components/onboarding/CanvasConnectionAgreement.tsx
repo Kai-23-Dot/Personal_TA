@@ -122,7 +122,7 @@ export function CanvasConnectionAgreement({
         </Button>
       </div>
 
-      {error ? <div role="alert" className="mt-4 rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[#6e3630]">{error}</div> : null}
+      {error ? <div role="alert" className="mt-4 rounded-xl border border-[var(--danger-ink)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-ink)]">{error}</div> : null}
       <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">
         You can revoke the token in Canvas or disconnect Smartlearn from Settings at any time.
       </p>

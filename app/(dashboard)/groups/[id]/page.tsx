@@ -267,7 +267,7 @@ export default function GroupDetailPage() {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <HealthBadge health={health} showScore />
               {myRole === "owner" && (
-                <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs font-medium text-[#533b1b]">
+                <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs font-medium text-[var(--warning-ink)]">
                   <Crown className="h-3 w-3" /> Owner
                 </span>
               )}
@@ -345,7 +345,7 @@ export default function GroupDetailPage() {
             {goalStatus === "completed" ? (
               <div className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--success-ink)] bg-[var(--success-bg)] px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success-ink)]" />
-                <p className="text-sm text-[#1c3829]">
+                <p className="text-sm text-[var(--success-ink)]">
                   Goal completed
                   {group.goal_completed_at &&
                     ` on ${format(new Date(group.goal_completed_at), "MMMM d, yyyy")}`}
@@ -492,7 +492,7 @@ export default function GroupDetailPage() {
                   </div>
                   {(memberStreaks[m.user_id] ?? 0) > 0 && (
                     <span
-                      className="flex shrink-0 items-center gap-0.5 rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)] px-1.5 py-0.5 text-[11px] font-semibold text-[#533b1b]"
+                      className="flex shrink-0 items-center gap-0.5 rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-ink)]"
                       title={`${memberStreaks[m.user_id]}-day check-in streak`}
                     >
                       <Flame className="h-3 w-3" /> {memberStreaks[m.user_id]}

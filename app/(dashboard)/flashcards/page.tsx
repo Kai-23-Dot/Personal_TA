@@ -251,7 +251,7 @@ export default function FlashcardsPage() {
                 }}
               >
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[#412454] sm:text-sm">
+                  <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[var(--ink-muted)] sm:text-sm">
                     <span className="size-2 rounded-full bg-[var(--paper-sunken)]" />
                     Question
                   </span>
@@ -400,7 +400,7 @@ export default function FlashcardsPage() {
       {(loadingSets || savedSets.length > 0) && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
-            <Layers3 className="h-4 w-4 text-[#412454]" />
+            <Layers3 className="h-4 w-4 text-[var(--ink-muted)]" />
             <h3 className="text-sm font-semibold text-[var(--ink)]">My Flashcard Sets</h3>
             {!loadingSets && <span className="text-xs text-[var(--ink-muted)]">({savedSets.length})</span>}
           </div>
@@ -472,8 +472,8 @@ export default function FlashcardsPage() {
               {(["mixed", "easy", "medium", "hard"] as const).map((d) => {
                 const colors: Record<string, string> = {
                   mixed: "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)]",
-                  easy: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829] shadow-[0_0_12px_rgba(52,211,153,0.1)]",
-                  medium: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[#533b1b] shadow-[0_0_12px_rgba(251,191,36,0.1)]",
+                  easy: "border-[var(--success-ink)] bg-[var(--success-bg)] text-[var(--success-ink)] shadow-[0_0_12px_rgba(52,211,153,0.1)]",
+                  medium: "border-[var(--warning-ink)] bg-[var(--warning-bg)] text-[var(--warning-ink)] shadow-[0_0_12px_rgba(251,191,36,0.1)]",
                   hard: "border-[var(--danger-ink)] bg-[var(--danger-bg)] text-[var(--danger-ink)] shadow-[0_0_12px_rgba(248,113,113,0.1)]",
                 };
                 const inactive = "border-[var(--rule)] bg-[var(--paper)] text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]";

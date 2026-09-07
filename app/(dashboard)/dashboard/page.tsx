@@ -560,7 +560,7 @@ export default function DashboardPage() {
               {upcomingAssignments.length === 0 ? (
                 <div className="grid min-h-[210px] place-items-center text-center">
                   <div>
-                    <CheckCircle2 className="mx-auto h-7 w-7 text-[#1c3829]/70" aria-hidden="true" />
+                    <CheckCircle2 className="mx-auto h-7 w-7 text-[var(--success-ink)]/70" aria-hidden="true" />
                     <p className="mt-3 text-sm font-medium text-[var(--ink)]">No deadlines this week</p>
                     <p className="mt-1 text-xs text-[var(--ink-muted)]">Your active courses are clear for seven days.</p>
                   </div>
@@ -577,7 +577,7 @@ export default function DashboardPage() {
                         >
                           <span className={`badge-icon flex-col ${urgent ? "badge-icon--warning" : ""}`}>
                             <span>
-                              <span className={`block text-[10px] font-medium ${urgent ? "text-[#6e3630]" : "text-[var(--ink-muted)]"}`}>{format(assignment.due, "MMM")}</span>
+                              <span className={`block text-[10px] font-medium ${urgent ? "text-[var(--danger-ink)]" : "text-[var(--ink-muted)]"}`}>{format(assignment.due, "MMM")}</span>
                               <span className="block text-xs font-semibold leading-none text-[var(--ink)]">{format(assignment.due, "d")}</span>
                             </span>
                           </span>
@@ -695,7 +695,7 @@ export default function DashboardPage() {
                 <dl className="mt-3 space-y-2.5 text-[11px]">
                   <div className="flex items-center justify-between gap-4">
                     <dt className="flex items-center gap-2 text-[var(--ink-muted)]"><Link2 className="h-3.5 w-3.5" /> Canvas</dt>
-                    <dd className={canvasConnection ? "text-[#1c3829]" : "text-[#533b1b]"}>{canvasConnection ? "Connected" : "Not connected"}</dd>
+                    <dd className={canvasConnection ? "text-[var(--success-ink)]" : "text-[var(--warning-ink)]"}>{canvasConnection ? "Connected" : "Not connected"}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="flex items-center gap-2 text-[var(--ink-muted)]"><GraduationCap className="h-3.5 w-3.5" /> Active courses</dt>

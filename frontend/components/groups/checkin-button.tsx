@@ -57,7 +57,7 @@ export function CheckinButton({
         "inline-flex items-center justify-center gap-1.5 rounded-xl border font-medium transition-all duration-200 ease-smooth-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none",
         size === "sm" ? "px-2.5 py-1 text-xs" : "w-full px-4 py-2.5 text-sm",
         isDone
-          ? "border-[var(--success-ink)] bg-[var(--success-bg)] text-[#1c3829]"
+          ? "border-[var(--success-ink)] bg-[var(--success-bg)] text-[var(--success-ink)]"
           : "border-[var(--rule)] bg-[var(--blue-wash)] text-[var(--blue)] hover:bg-[var(--blue-wash)] active:scale-[0.98]"
       )}
     >

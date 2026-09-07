@@ -33,8 +33,8 @@ function TypeBadge({ type }: { type: string }) {
     quiz: "bg-[var(--blue-wash)] text-[var(--blue)] border-[var(--rule)]",
     test: "bg-[var(--blue-wash)] text-[var(--blue)] border-[var(--rule)]",
     exam: "bg-[var(--paper-sunken)] text-[var(--ink-muted)] border-[var(--rule)]",
-    project: "bg-[var(--paper-sunken)] text-[#412454] border-[var(--rule)]",
-    lab: "bg-[var(--success-bg)] text-[#1c3829] border-[var(--success-ink)]",
+    project: "bg-[var(--paper-sunken)] text-[var(--ink-muted)] border-[var(--rule)]",
+    lab: "bg-[var(--success-bg)] text-[var(--success-ink)] border-[var(--success-ink)]",
   };
   const label = t ? t.charAt(0).toUpperCase() + t.slice(1) : "Assignment";
   const cls = map[t] ?? "bg-[var(--paper)] text-[var(--ink-muted)] border-[var(--rule)]";
@@ -50,7 +50,7 @@ function UrgencyLabel({ due }: { due: Date }) {
   const hours = ms / 3600000;
   if (hours < 0) return <span className="text-[11px] text-[var(--ink-muted)] font-medium">Past due</span>;
   if (hours < 24) return <span className="text-[11px] font-semibold text-[var(--danger-ink)]">Due today</span>;
-  if (hours < 48) return <span className="text-[11px] font-semibold text-[#533b1b]">Due tomorrow</span>;
+  if (hours < 48) return <span className="text-[11px] font-semibold text-[var(--warning-ink)]">Due tomorrow</span>;
   return null;
 }
 

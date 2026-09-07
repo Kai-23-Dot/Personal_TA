@@ -290,7 +290,7 @@ export function GpaPredictor({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-xl font-semibold tracking-[-0.025em] text-[var(--ink)]">GPA &amp; grade predictor</h2>
-                <span className="rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] px-2.5 py-1 text-[10px] font-semibold text-[#533b1b]">
+                <span className="rounded-full border border-[var(--warning-ink)] bg-[var(--warning-bg)]/[0.07] px-2.5 py-1 text-[10px] font-semibold text-[var(--warning-ink)]">
                   Estimate, not official
                 </span>
               </div>
@@ -628,7 +628,7 @@ export function GpaPredictor({
                       <p className="text-[10px] font-semibold text-[var(--ink-muted)]">Projected course grade</p>
                       <div className="mt-2 flex flex-wrap items-baseline gap-2">
                         <span className="text-3xl font-semibold tracking-[-0.04em] text-[var(--ink)]">{formatValue(projection.projectedPercent)}%</span>
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${projection.change > 0 ? "text-[#1c3829]" : projection.change < 0 ? "text-[#6e3630]" : "text-[var(--ink-muted)]"}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${projection.change > 0 ? "text-[var(--success-ink)]" : projection.change < 0 ? "text-[var(--danger-ink)]" : "text-[var(--ink-muted)]"}`}>
                           {projection.change > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : projection.change < 0 ? <ArrowDownRight className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
                           {projection.change > 0 ? "+" : ""}{formatValue(projection.change)} pts
                         </span>

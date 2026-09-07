@@ -152,14 +152,20 @@ describe("website product-surface contract", () => {
     // the design tokens directly. The contract is unchanged in spirit: one
     // accent, and every text colour readable on the surfaces it actually sits on.
     const css = source("app/notion-workspace.css").toLowerCase();
+    // The palette moved from Notion's warm greys to a cool slate scale. The
+    // contract is unchanged: one accent, and every text colour readable on the
+    // surfaces it actually sits on. The values below are the ones that clear
+    // that bar — slate-500 (#64748b) and slate-400 (#94a3b8), the shades most
+    // reached for as secondary and tertiary text, do not.
     const palette = {
-      canvas: "#ffffff",
-      rail: "#f7f7f5",
-      controlBorder: "#968e82",
-      ink: "#37352f",
-      inkMuted: "#645d52",
-      inkFaint: "#777166",
-      accent: "#1b73c9",
+      canvas: "#f8fafc",
+      card: "#ffffff",
+      rail: "#f1f5f9",
+      controlBorder: "#7e8fa9",
+      ink: "#1e293b",
+      inkMuted: "#475569",
+      inkFaint: "#627188",
+      accent: "#2563eb",
     } as const;
 
     for (const color of Object.values(palette)) expect(css).toContain(color);
@@ -167,7 +173,7 @@ describe("website product-surface contract", () => {
     // Text is checked against BOTH surfaces it can land on. The rail is the
     // darker of the two and so the binding constraint.
     for (const color of [palette.ink, palette.inkMuted, palette.inkFaint, palette.accent]) {
-      for (const surface of [palette.canvas, palette.rail]) {
+      for (const surface of [palette.card, palette.canvas, palette.rail]) {
         expect(
           contrastRatio(color, surface),
           `${color} must pass normal-text contrast on ${surface}`
@@ -179,7 +185,7 @@ describe("website product-surface contract", () => {
     expect(contrastRatio("#ffffff", palette.accent)).toBeGreaterThanOrEqual(4.5);
 
     // Control boundaries are non-text UI: WCAG 1.4.11 sets the bar at 3:1.
-    for (const surface of [palette.canvas, palette.rail]) {
+    for (const surface of [palette.card, palette.canvas, palette.rail]) {
       expect(contrastRatio(palette.controlBorder, surface)).toBeGreaterThanOrEqual(3);
     }
 

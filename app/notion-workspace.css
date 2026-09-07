@@ -38,27 +38,27 @@
      scopes below re-declare the same values so the scoping stays explicit and a
      future dark surface has one obvious place to override. */
   --paper: #ffffff;
-  --paper-rail: #f7f7f5;
-  --paper-sunken: #f1f1ef;
-  --ink: #37352f;
-  --ink-muted: #645d52;
-  --ink-faint: #777166;
-  --rule: #edece9;
-  --rule-strong: #dfddd9;
-  --control-border: #968e82;
-  --blue: #1b73c9;
-  --blue-hover: #145a9e;
-  --blue-wash: #e7f3f8;
-  --blue-edge: rgba(27, 115, 201, 0.4);
-  --success-bg: #dbeddb;
-  --success-ink: #1c3829;
-  --warning-bg: #fdecc8;
-  --warning-ink: #533b1b;
-  --danger-bg: #ffe2dd;
-  --danger-ink: #6e3630;
-  --wash-hover: rgba(55, 53, 47, 0.06);
-  --wash-active: rgba(55, 53, 47, 0.09);
-  --wash-selected: rgba(35, 131, 226, 0.09);
+  --paper-rail: #f1f5f9;
+  --paper-sunken: #f1f5f9;
+  --ink: #1e293b;
+  --ink-muted: #475569;
+  --ink-faint: #627188;
+  --rule: #e2e8f0;
+  --rule-strong: #cbd5e1;
+  --control-border: #7e8fa9;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-wash: #eff6ff;
+  --blue-edge: rgba(37, 99, 235, 0.4);
+  --success-bg: #ecfdf5;
+  --success-ink: #065f46;
+  --warning-bg: #fffbeb;
+  --warning-ink: #92400e;
+  --danger-bg: #fff1f2;
+  --danger-ink: #9f1239;
+  --wash-hover: rgba(15, 23, 42, 0.05);
+  --wash-active: rgba(15, 23, 42, 0.08);
+  --wash-selected: rgba(37, 99, 235, 0.09);
   --tone: transparent;
   --tone-ink: inherit;
 
@@ -70,30 +70,30 @@
      set these replace — that set is what painted the band of #0b1020 below any
      page shorter than the viewport, since body reads hsl(var(--background)). */
   --background: 0 0% 100%;
-  --foreground: 45 8% 20%;
+  --foreground: 217 33% 17%;
   --card: 0 0% 100%;
-  --card-foreground: 45 8% 20%;
+  --card-foreground: 217 33% 17%;
   --popover: 0 0% 100%;
-  --popover-foreground: 45 8% 20%;
-  --primary: 210 76% 45%;
+  --popover-foreground: 217 33% 17%;
+  --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 60 11% 96%;
-  --secondary-foreground: 45 8% 20%;
-  --muted: 60 11% 96%;
-  --muted-foreground: 37 10% 36%;
-  --accent: 60 11% 96%;
-  --accent-foreground: 45 8% 20%;
-  --destructive: 4 68% 52%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 217 33% 17%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 19% 35%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 217 33% 17%;
+  --destructive: 340 79% 35%;
   --destructive-foreground: 0 0% 100%;
-  --border: 45 10% 92%;
-  --input: 45 10% 88%;
-  --ring: 210 76% 45%;
+  --border: 214 32% 91%;
+  --input: 213 27% 84%;
+  --ring: 221 83% 53%;
   --surface-0: 0 0% 100%;
   --surface-1: 0 0% 100%;
-  --surface-2: 60 11% 96%;
-  --success: 152 42% 32%;
-  --warning: 38 74% 34%;
-  --danger: 4 68% 52%;
+  --surface-2: 210 40% 96%;
+  --success: 161 88% 20%;
+  --warning: 26 84% 31%;
+  --danger: 340 79% 35%;
   --radius: 6px;
 }
 
@@ -114,92 +114,92 @@ body {
      neutral one; it is the single most recognisable thing about Notion's text
      and the reason the canvas reads as paper instead of screen. */
   --paper: #ffffff;
-  --paper-rail: #f7f7f5;
-  --paper-sunken: #f1f1ef;
-  --ink: #37352f;
+  --paper-rail: #f1f5f9;
+  --paper-sunken: #f1f5f9;
+  --ink: #1e293b;
   /* Notion's own secondary greys sit around 3:1 on white, which is fine for a
      page you skim and not for one you work in for three hours. These are the
      nearest values in the same hue that clear 4.5:1 on BOTH the white canvas
      and the #f7f7f5 rail — the rail is the stricter of the two and is exactly
      where the nav labels live. */
-  --ink-muted: #645d52;
-  --ink-faint: #777166;
+  --ink-muted: #475569;
+  --ink-faint: #627188;
   /* Decorative hairlines. These separate content and carry no contrast
      requirement of their own. */
-  --rule: #edece9;
-  --rule-strong: #dfddd9;
+  --rule: #e2e8f0;
+  --rule-strong: #cbd5e1;
   /* The boundary of an actual control (input, select, textarea) is non-text UI
      and has to clear 3:1 — WCAG 1.4.11 — so it is a separate, darker token
      rather than the decorative rule. */
-  --control-border: #968e82;
+  --control-border: #7e8fa9;
   /* 4.84:1 on white and 4.51:1 on the rail, and white text on it clears 4.5,
      so one blue serves links, focus rings and filled buttons. */
-  --blue: #1b73c9;
-  --blue-hover: #145a9e;
-  --blue-wash: #e7f3f8;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-wash: #eff6ff;
 
   /* Status pairs. Every success/warning/danger surface in the workspace comes
      from these six values — before this, the same three meanings were expressed
      with emerald/green, amber/orange/yellow and rose/red at a dozen different
      shades and alphas, which is what made the colour read as inconsistent.
      Each ink clears 4.5:1 on its own tint and on paper. */
-  --success-bg: #dbeddb;
-  --success-ink: #1c3829;
-  --warning-bg: #fdecc8;
-  --warning-ink: #533b1b;
-  --danger-bg: #ffe2dd;
-  --danger-ink: #6e3630;
+  --success-bg: #ecfdf5;
+  --success-ink: #065f46;
+  --warning-bg: #fffbeb;
+  --warning-ink: #92400e;
+  --danger-bg: #fff1f2;
+  --danger-ink: #9f1239;
 
   /* A visible edge in the accent colour, for selected controls and focus rings
      where a hairline would disappear. */
-  --blue-edge: rgba(27, 115, 201, 0.4);
+  --blue-edge: rgba(37, 99, 235, 0.4);
 
   /* Interaction washes. Notion tints with its own ink at low alpha rather than
      using a separate grey, which keeps hover states warm on any background. */
-  --wash-hover: rgba(55, 53, 47, 0.06);
-  --wash-active: rgba(55, 53, 47, 0.09);
-  --wash-selected: rgba(35, 131, 226, 0.09);
+  --wash-hover: rgba(15, 23, 42, 0.05);
+  --wash-active: rgba(15, 23, 42, 0.08);
+  --wash-selected: rgba(37, 99, 235, 0.09);
 
   /* --- shadcn/Tailwind token overrides ------------------------------------
      Same names as :root in globals.css, light values. This is what makes
      bg-card, text-muted-foreground, border-border &c. correct in the
      workspace without touching a single component's classes. */
   --background: 0 0% 100%;
-  --foreground: 45 8% 20%;
+  --foreground: 217 33% 17%;
   --card: 0 0% 100%;
-  --card-foreground: 45 8% 20%;
+  --card-foreground: 217 33% 17%;
   --popover: 0 0% 100%;
-  --popover-foreground: 45 8% 20%;
-  --primary: 210 76% 45%;
+  --popover-foreground: 217 33% 17%;
+  --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 60 11% 96%;
-  --secondary-foreground: 45 8% 20%;
-  --muted: 60 11% 96%;
-  --muted-foreground: 37 10% 36%;
-  --accent: 60 11% 96%;
-  --accent-foreground: 45 8% 20%;
-  --destructive: 4 68% 52%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 217 33% 17%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 19% 35%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 217 33% 17%;
+  --destructive: 340 79% 35%;
   --destructive-foreground: 0 0% 100%;
-  --border: 45 10% 92%;
-  --input: 45 10% 88%;
-  --ring: 210 76% 45%;
+  --border: 214 32% 91%;
+  --input: 213 27% 84%;
+  --ring: 221 83% 53%;
 
   --surface-0: 0 0% 100%;
   --surface-1: 0 0% 100%;
-  --surface-2: 60 11% 96%;
+  --surface-2: 210 40% 96%;
 
-  --success: 152 42% 32%;
-  --warning: 38 74% 34%;
-  --danger: 4 68% 52%;
+  --success: 161 88% 20%;
+  --warning: 26 84% 31%;
+  --danger: 340 79% 35%;
 
-  --sidebar-background: 60 11% 96%;
-  --sidebar-foreground: 45 8% 20%;
-  --sidebar-primary: 210 76% 45%;
+  --sidebar-background: 210 40% 96%;
+  --sidebar-foreground: 217 33% 17%;
+  --sidebar-primary: 221 83% 53%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 60 6% 92%;
-  --sidebar-accent-foreground: 45 8% 20%;
-  --sidebar-border: 45 10% 92%;
-  --sidebar-ring: 210 76% 45%;
+  --sidebar-accent: 214 32% 91%;
+  --sidebar-accent-foreground: 217 33% 17%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 221 83% 53%;
 
   /* Notion's corners are 3px on controls and 6px at most on containers. The
      app default was 12px, which is what made every region read as a SaaS card;
@@ -230,9 +230,9 @@ body {
    ========================================================================== */
 
 [data-dashboard-shell] {
-  --paper-rail: #f1f1ef;
-  --paper-sunken: #eeedeb;
-  --canvas: #f7f7f5;
+  --paper-rail: #f1f5f9;
+  --paper-sunken: #eef2f7;
+  --canvas: #f8fafc;
 
   /* Cards are 12px; controls stay small. A 12px input next to a 12px card
      reads as bloated — the radius should say how large a thing is. */
@@ -240,8 +240,8 @@ body {
 
   /* Shallow and warm-tinted, so the lift reads on paper rather than as a grey
      smudge. Depth is a hint here, not a device. */
-  --shadow-card: 0 1px 2px rgba(55, 53, 47, 0.04), 0 4px 6px -1px rgba(55, 53, 47, 0.05);
-  --shadow-card-hover: 0 1px 2px rgba(55, 53, 47, 0.05), 0 8px 16px -4px rgba(55, 53, 47, 0.08);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 6px -1px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 16px -4px rgba(15, 23, 42, 0.08);
 
   background: var(--canvas);
 }
@@ -738,19 +738,19 @@ body {
    ========================================================================== */
 
 [data-dashboard-shell] [data-course-tone="1"],
-[data-public-shell] [data-course-tone="1"] { --tone: #d3e5ef; --tone-ink: #28456c; }
+[data-public-shell] [data-course-tone="1"] { --tone: #dbeafe; --tone-ink: #1e40af; }
 [data-dashboard-shell] [data-course-tone="2"],
-[data-public-shell] [data-course-tone="2"] { --tone: #dbeddb; --tone-ink: #1c3829; }
+[data-public-shell] [data-course-tone="2"] { --tone: #dcfce7; --tone-ink: #166534; }
 [data-dashboard-shell] [data-course-tone="3"],
-[data-public-shell] [data-course-tone="3"] { --tone: #fadec9; --tone-ink: #5c3b23; }
+[data-public-shell] [data-course-tone="3"] { --tone: #ffedd5; --tone-ink: #9a3412; }
 [data-dashboard-shell] [data-course-tone="4"],
-[data-public-shell] [data-course-tone="4"] { --tone: #e8deee; --tone-ink: #412454; }
+[data-public-shell] [data-course-tone="4"] { --tone: #ede9fe; --tone-ink: #5b21b6; }
 [data-dashboard-shell] [data-course-tone="5"],
-[data-public-shell] [data-course-tone="5"] { --tone: #ffe2dd; --tone-ink: #6e3630; }
+[data-public-shell] [data-course-tone="5"] { --tone: #fce7f3; --tone-ink: #9d174d; }
 [data-dashboard-shell] [data-course-tone="6"],
-[data-public-shell] [data-course-tone="6"] { --tone: #fdecc8; --tone-ink: #533b1b; }
+[data-public-shell] [data-course-tone="6"] { --tone: #fef3c7; --tone-ink: #92400e; }
 [data-dashboard-shell] [data-course-tone="7"],
-[data-public-shell] [data-course-tone="7"] { --tone: #e3e2e0; --tone-ink: #3c3c3a; }
+[data-public-shell] [data-course-tone="7"] { --tone: #e2e8f0; --tone-ink: #334155; }
 
 [data-dashboard-shell] .course-dot,
 [data-public-shell] .course-dot {
@@ -793,9 +793,9 @@ body {
   line-height: 1.5;
 }
 
-[data-dashboard-shell] .status-overdue { background: #ffe2dd; color: #6e3630; }
-[data-dashboard-shell] .status-due     { background: #fdecc8; color: #533b1b; }
-[data-dashboard-shell] .status-done    { background: #dbeddb; color: #1c3829; }
+[data-dashboard-shell] .status-overdue { background: var(--danger-bg); color: var(--danger-ink); }
+[data-dashboard-shell] .status-due     { background: var(--warning-bg); color: var(--warning-ink); }
+[data-dashboard-shell] .status-done    { background: var(--success-bg); color: var(--success-ink); }
 [data-dashboard-shell] .status-neutral { background: var(--paper-sunken); color: var(--ink-muted); }
 
 /* ============================================================================
@@ -822,13 +822,13 @@ body {
 
 [data-dashboard-shell] ::-webkit-scrollbar { width: 10px; height: 10px; }
 [data-dashboard-shell] ::-webkit-scrollbar-thumb {
-  background: rgba(55, 53, 47, 0.16);
+  background: rgba(15, 23, 42, 0.16);
   border: 3px solid transparent;
   background-clip: content-box;
   border-radius: 6px;
 }
 [data-dashboard-shell] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(55, 53, 47, 0.28);
+  background: rgba(15, 23, 42, 0.28);
   background-clip: content-box;
 }
 [data-dashboard-shell] ::-webkit-scrollbar-track { background: transparent; }
@@ -884,8 +884,8 @@ body {
 }
 
 [data-dashboard-shell] .plan-badge--paid {
-  background: #dbeddb;
-  color: #1c3829;
+  background: var(--success-bg);
+  color: var(--success-ink);
 }
 
 /* ============================================================================

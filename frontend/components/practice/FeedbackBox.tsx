@@ -22,7 +22,7 @@ export function FeedbackBox({ selected, correctAnswer, explanation }: FeedbackBo
         isCorrect ? "border-[var(--success-ink)] bg-[var(--success-bg)]" : "border-[var(--danger-ink)] bg-[var(--danger-bg)]"
       )}
     >
-      <div className={cn("text-sm font-semibold", isCorrect ? "text-[#1c3829]" : "text-[#6e3630]")}>
+      <div className={cn("text-sm font-semibold", isCorrect ? "text-[var(--success-ink)]" : "text-[var(--danger-ink)]")}>
         {isCorrect ? "Correct!" : "Not quite."}
       </div>
       <div className="text-xs font-medium text-muted-foreground">Solution</div>

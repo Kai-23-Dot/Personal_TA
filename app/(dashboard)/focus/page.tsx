@@ -11,9 +11,9 @@ import { usePersistentState } from "@/frontend/hooks/usePersistentState";
 // pastels, which were near-invisible on paper. Each clears 3:1 on white, the
 // WCAG 1.4.11 bar for a meaningful non-text graphic.
 const MODES = [
-  { label: "Focus",       seconds: 25 * 60, color: "#1b73c9" }, // workspace blue
-  { label: "Short break", seconds:  5 * 60, color: "#2f7d55" }, // green
-  { label: "Long break",  seconds: 15 * 60, color: "#9a6b14" }, // amber
+  { label: "Focus",       seconds: 25 * 60, color: "var(--blue)" }, // workspace blue
+  { label: "Short break", seconds:  5 * 60, color: "#047857" }, // green
+  { label: "Long break",  seconds: 15 * 60, color: "#b45309" }, // amber
 ] as const;
 
 type Mode = (typeof MODES)[number];

@@ -350,7 +350,7 @@ export default function GroupsPage() {
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <HealthBadge health={group.health} />
                   {group.my_role === "owner" && (
-                    <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs text-[#533b1b]">
+                    <span className="flex items-center gap-1 rounded-full bg-[var(--warning-bg)] border border-[var(--warning-ink)] px-2 py-0.5 text-xs text-[var(--warning-ink)]">
                       <Crown className="h-2.5 w-2.5" /> Owner
                     </span>
                   )}
