@@ -79,7 +79,7 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
         </p>
         <button
           onClick={onDone}
-          className="mt-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
+          className="card mt-2 px-4 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
         >
           Back to review
         </button>
@@ -100,7 +100,7 @@ function FlashcardReview({ cards, onDone }: { cards: Flashcard[]; onDone: () => 
 
       {/* Card */}
       <div
-        className="cursor-pointer rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-8 text-center shadow-none transition hover:border-[var(--blue-edge)] min-h-[160px] flex flex-col items-center justify-center gap-4"
+        className="card cursor-pointer p-8 text-center shadow-none transition hover:border-[var(--blue-edge)] min-h-[160px] flex flex-col items-center justify-center gap-4"
         onClick={() => setFlipped(!flipped)}
       >
         {!flipped ? (
@@ -327,7 +327,7 @@ export default function ReviewPage() {
                 </p>
                 <div className="space-y-1.5">
                   {dueCards.slice(0, 3).map((c) => (
-                    <div key={c.id} className="rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs text-[var(--ink-muted)] truncate">
+                    <div key={c.id} className="card px-3 py-2 text-xs text-[var(--ink-muted)] truncate">
                       {c.front}
                     </div>
                   ))}
@@ -389,7 +389,7 @@ export default function ReviewPage() {
                   return (
                     <div
                       key={exam.id}
-                      className="flex items-center gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4"
+                      className="card flex items-center gap-4 p-4"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="truncate text-sm font-medium text-[var(--ink)]">{exam.title}</p>
@@ -436,7 +436,7 @@ export default function ReviewPage() {
                 <select
                   value={courseId}
                   onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)]"
+                  className="card w-full px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)]"
                 >
                   <option value="">Select course</option>
                   {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

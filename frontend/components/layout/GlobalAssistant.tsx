@@ -75,7 +75,7 @@ export function GlobalAssistant() {
           transform: open ? "translateY(0) scale(1)" : "translateY(12px) scale(0.97)",
           pointerEvents: open ? "auto" : "none",
         }}
-        className="fixed bottom-[160px] right-4 z-40 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-[var(--rule)] bg-[var(--paper)] shadow-none backdrop-blur md:bottom-28 md:w-[380px]"
+        className="card fixed bottom-[160px] right-4 z-40 flex w-[340px] flex-col overflow-hidden shadow-none backdrop-blur md:bottom-28 md:w-[380px]"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--rule)] px-4 py-3">
@@ -143,7 +143,7 @@ export function GlobalAssistant() {
             value={input}
             onChange={handleInputChange}
             placeholder="Ask anything..."
-            className="flex-1 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
+            className="card flex-1 px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
           />
           <button
             type="submit"

@@ -276,7 +276,7 @@ export default function AssignmentsPage() {
         action={
           <>
             {/* Status filter */}
-            <div className="flex rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-0.5">
+            <div className="card flex p-0.5">
               {(["all", "pending", "completed"] as const).map((s) => (
                 <button
                   key={s}
@@ -294,7 +294,7 @@ export default function AssignmentsPage() {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-              className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-2.5 py-1.5 text-xs text-[var(--ink-muted)] outline-none cursor-pointer"
+              className="card px-2.5 py-1.5 text-xs text-[var(--ink-muted)] outline-none cursor-pointer"
             >
               <option value="due_asc">Due: earliest</option>
               <option value="due_desc">Due: latest</option>
@@ -336,7 +336,7 @@ export default function AssignmentsPage() {
 
       {/* ── Due this week ── */}
       {!loadingAssignments && !assignmentsError && dueThisWeek.length > 0 ? (
-        <section className="mb-8 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none backdrop-blur">
+        <section className="card mb-8 p-5 shadow-none backdrop-blur">
           <div className="mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-[var(--blue)]" />
             <h3 className="text-xs font-semibold text-[var(--blue)]">Due this week</h3>
@@ -383,7 +383,7 @@ export default function AssignmentsPage() {
           {assignmentsError}
         </div>
       ) : visibleAssignments.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[var(--rule)] bg-[var(--paper)] p-10 text-center">
+        <div className="card border border-dashed p-10 text-center">
           <p className="text-[var(--ink-muted)]">
             {selectedCourseId
               ? `No assignments found for ${filterLabel}. Try selecting a different course.`
@@ -462,7 +462,7 @@ export default function AssignmentsPage() {
                   <div className="overflow-hidden">
                     <div className="border-t border-[var(--rule)] px-5 pb-5 pt-4">
                       {assignment.description ? (
-                        <section className="mb-4 overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--paper)]">
+                        <section className="card mb-4 overflow-hidden">
                           <div className="flex items-center gap-2 border-b border-[var(--rule)] px-4 py-3">
                             <FileText className="h-4 w-4 text-[var(--blue)]" aria-hidden="true" />
                             <h3 className="text-xs font-semibold text-[var(--ink-muted)]">Assignment instructions</h3>
@@ -519,7 +519,7 @@ export default function AssignmentsPage() {
       {helperOpen ? (
         <aside
           aria-label="Assignment helper"
-          className="fixed bottom-5 right-5 z-[1200] flex w-[min(420px,calc(100vw-2rem))] flex-col rounded-2xl border border-[var(--rule)] bg-[var(--paper)] shadow-none backdrop-blur"
+          className="card fixed bottom-5 right-5 z-[1200] flex w-[min(420px,calc(100vw-2rem))] flex-col shadow-none backdrop-blur"
         >
           <div className="flex items-center justify-between border-b border-[var(--rule)] px-4 py-3">
             <div>
@@ -571,7 +571,7 @@ export default function AssignmentsPage() {
               value={input}
               onChange={handleInputChange}
               placeholder={helperPrompt || "Ask for guidance..."}
-              className="flex-1 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
+              className="card flex-1 px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             />
             <button
               type="submit"

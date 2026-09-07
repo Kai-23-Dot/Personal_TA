@@ -415,7 +415,7 @@ export default function FlashcardsPage() {
                   key={set.id}
                   type="button"
                   onClick={() => startSet(set)}
-                  className="group flex items-center gap-3 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 text-left transition-all hover:border-[var(--rule)] hover:bg-[var(--paper-sunken)] active:scale-[0.99]"
+                  className="card group flex items-center gap-3 px-4 py-3 text-left transition-all hover: hover:bg-[var(--paper-sunken)] active:scale-[0.99]"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--ink-faint)]">
                     <Layers3 className="h-4 w-4" />
@@ -433,7 +433,7 @@ export default function FlashcardsPage() {
       )}
 
       {/* Generate form */}
-      <div className="mb-10 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-6 shadow-sm backdrop-blur">
+      <div className="card mb-10 p-6 shadow-sm backdrop-blur">
         <h2 className="mb-1 text-base font-semibold text-[var(--ink)]">Generate flashcards</h2>
         <p className="mb-5 text-sm text-[var(--ink-muted)]">Generate AI flashcards from your course notes.</p>
         <form onSubmit={handleGenerate} className="space-y-4">
@@ -444,7 +444,7 @@ export default function FlashcardsPage() {
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
               required
-              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
+              className="card w-full px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             >
               <option value="">Select a course</option>
               {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -459,7 +459,7 @@ export default function FlashcardsPage() {
               placeholder="e.g. Photosynthesis"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
+              className="card w-full px-3 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             />
             <p className="text-xs text-[var(--ink-muted)]">
               Leave blank to create a course-wide review deck.
@@ -502,7 +502,7 @@ export default function FlashcardsPage() {
               max={30}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
+              className="card w-full px-3 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--blue-edge)] focus:bg-[var(--blue-wash)] transition-colors"
             />
           </div>
 

@@ -85,7 +85,7 @@ export function CanvasConnectionAgreement({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {commitments.map(({ icon: Icon, title, body }) => (
-          <article key={title} className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-4">
+          <article key={title} className="card p-4">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--ink-faint)]">
               <Icon className="h-4 w-4" />
             </span>

@@ -319,7 +319,7 @@ export default function PracticePage() {
             {resumable.map((entry) => (
               <div
                 key={entry.sessionId}
-                className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-5 py-3.5"
+                className="card flex items-center justify-between gap-4 px-5 py-3.5"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">{entry.topic}</p>
@@ -394,7 +394,7 @@ export default function PracticePage() {
                 <>
                   {modules.length > 0 ? (
                     <div
-                      className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-2"
+                      className="card max-h-[280px] space-y-1 overflow-y-auto p-2"
                       role="group"
                       aria-labelledby="module-selection-label"
                     >
@@ -520,7 +520,7 @@ export default function PracticePage() {
                 <p className="text-sm text-muted-foreground">No notes found for this course yet. Upload or import notes first.</p>
               ) : null}
               {notes.length > 0 ? (
-                <div className="max-h-[240px] overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3.5 py-2.5">
+                <div className="card max-h-[240px] overflow-y-auto px-3.5 py-2.5">
                   {notes.map((note) => (
                     <label key={note.id} className="flex items-center gap-2.5 py-1.5 text-sm text-foreground">
                       <input

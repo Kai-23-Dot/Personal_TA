@@ -237,8 +237,8 @@ export function CanvasConnectionWizard({
             </p>
           </div>
           <ol className="space-y-3 text-sm text-muted-foreground">
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Sign in to Canvas if asked.</li>
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">2.</strong> In the Canvas sidebar, choose <strong className="text-foreground">Account</strong>, then <strong className="text-foreground">Settings</strong>.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">1.</strong> Sign in to Canvas if asked.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">2.</strong> In the Canvas sidebar, choose <strong className="text-foreground">Account</strong>, then <strong className="text-foreground">Settings</strong>.</li>
           </ol>
           <Button asChild className="h-11 w-full sm:w-auto">
             <a href={settingsUrl ?? "#"} target="_blank" rel="noreferrer">Open Canvas settings <ExternalLink /></a>
@@ -254,10 +254,10 @@ export function CanvasConnectionWizard({
             <h2 className="mt-3 text-xl font-semibold text-foreground sm:text-2xl">Create a token for Smartlearn</h2>
           </div>
           <ol className="space-y-3 text-sm leading-6 text-muted-foreground">
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">1.</strong> Scroll to <strong className="text-foreground">Approved Integrations</strong>.</li>
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">2.</strong> Select <strong className="text-foreground">+ New Access Token</strong>. If it is missing, your school has disabled personal tokens; ask your Canvas administrator or use Canvas OAuth from Settings.</li>
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">3.</strong> Enter <strong className="text-foreground">Smartlearn</strong> for Purpose. An expiration date is optional but recommended.</li>
-            <li className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 sm:p-4"><strong className="text-foreground">4.</strong> Select <strong className="text-foreground">Generate Token</strong>, then copy it now—Canvas normally shows the full token only once.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">1.</strong> Scroll to <strong className="text-foreground">Approved Integrations</strong>.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">2.</strong> Select <strong className="text-foreground">+ New Access Token</strong>. If it is missing, your school has disabled personal tokens; ask your Canvas administrator or use Canvas OAuth from Settings.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">3.</strong> Enter <strong className="text-foreground">Smartlearn</strong> for Purpose. An expiration date is optional but recommended.</li>
+            <li className="card p-3 sm:p-4"><strong className="text-foreground">4.</strong> Select <strong className="text-foreground">Generate Token</strong>, then copy it now—Canvas normally shows the full token only once.</li>
           </ol>
           <div className="rounded-xl border border-[var(--warning-ink)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[#533b1b]">
             Treat this token like a password. Personal tokens are intended for authorized testing; Canvas recommends OAuth for multi-user apps. If your school does not allow tokens, use Canvas OAuth from <Link href="/settings" className="font-semibold underline underline-offset-2">Settings</Link> or contact your Canvas administrator.

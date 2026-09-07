@@ -153,7 +153,7 @@ export default async function GradesPage() {
             if (!total || total.count === 0 || total.possible <= 0) return null;
             const score = percent(total.earned, total.possible);
             return (
-              <div key={course.id} className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none">
+              <div key={course.id} className="card p-5 shadow-none">
                 <div className="flex items-center justify-between gap-4">
                   <span className="rounded-full border border-[var(--rule)] bg-[var(--paper)] px-3 py-1 text-xs text-[var(--ink-muted)]">
                     {course.platform === "canvas" ? "Canvas" : course.platform}
@@ -164,7 +164,7 @@ export default async function GradesPage() {
                 <p className="mt-3 text-3xl font-semibold text-[var(--blue)]">{score}%</p>
                 <p className="mt-1 text-sm text-[var(--ink-muted)]">{total.count} graded item{total.count === 1 ? "" : "s"} synced</p>
                 {total.latest ? (
-                  <p className="mt-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 text-xs text-[var(--ink-muted)]">
+                  <p className="card mt-4 p-3 text-xs text-[var(--ink-muted)]">
                     Latest: {total.latest.notes ?? "Grade received"} · {new Date(total.latest.occurred_at).toLocaleDateString()}
                   </p>
                 ) : null}

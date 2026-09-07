@@ -177,7 +177,7 @@ export default function FocusPage() {
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-2xl flex-col items-center justify-center px-4 pb-16 pt-8">
 
       {/* Mode tabs */}
-      <div className="mb-10 flex items-center gap-1 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-1 backdrop-blur">
+      <div className="card mb-10 flex items-center gap-1 p-1 backdrop-blur">
         {MODES.map((m, i) => (
           <button
             key={m.label}
@@ -241,7 +241,7 @@ export default function FocusPage() {
         value={task}
         onChange={(e) => setTask(e.target.value)}
         maxLength={60}
-        className="mt-8 w-full max-w-xs rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-2.5 text-center text-sm text-[var(--ink)] placeholder-slate-500 outline-none transition focus:border-[var(--rule)] focus:bg-[var(--wash-hover)]"
+        className="card mt-8 w-full max-w-xs px-4 py-2.5 text-center text-sm text-[var(--ink)] placeholder-slate-500 outline-none transition focus: focus:bg-[var(--wash-hover)]"
       />
 
       {/* Controls */}

@@ -219,6 +219,210 @@ body {
 }
 
 /* ============================================================================
+   Workspace surface depth
+   ----------------------------------------------------------------------------
+   Three levels, so a card reads as sitting on the page rather than being drawn
+   onto it: the rail is deepest, the canvas sits above it, and cards are white
+   with a hairline and a shallow shadow.
+
+   The rail is deepened here rather than in the shared block because the public
+   site uses --paper-rail for its footer, where the lighter tone is right.
+   ========================================================================== */
+
+[data-dashboard-shell] {
+  --paper-rail: #f1f1ef;
+  --paper-sunken: #eeedeb;
+  --canvas: #f7f7f5;
+
+  /* Cards are 12px; controls stay small. A 12px input next to a 12px card
+     reads as bloated — the radius should say how large a thing is. */
+  --radius-card: 12px;
+
+  /* Shallow and warm-tinted, so the lift reads on paper rather than as a grey
+     smudge. Depth is a hint here, not a device. */
+  --shadow-card: 0 1px 2px rgba(55, 53, 47, 0.04), 0 4px 6px -1px rgba(55, 53, 47, 0.05);
+  --shadow-card-hover: 0 1px 2px rgba(55, 53, 47, 0.05), 0 8px 16px -4px rgba(55, 53, 47, 0.08);
+
+  background: var(--canvas);
+}
+
+/* The page canvas the cards float on. */
+[data-dashboard-shell] .workspace-main {
+  background: var(--canvas);
+}
+
+/* ============================================================================
+   Card
+   ----------------------------------------------------------------------------
+   One treatment for every panel, list container and KPI block. Applied through
+   a class rather than repeated utilities so the radius, border, fill and lift
+   can only ever change in one place.
+   ========================================================================== */
+
+[data-dashboard-shell] .card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+/* Only cards that go somewhere respond to the cursor. A hover state on a
+   static panel is motion that answers nothing. */
+[data-dashboard-shell] a.card:hover,
+[data-dashboard-shell] button.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--rule-strong);
+}
+
+[data-dashboard-shell] .card-body { padding: 20px; }
+[data-dashboard-shell] .card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+[data-dashboard-shell] .card-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0;
+}
+
+[data-dashboard-shell] .card-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  max-width: 52ch;
+}
+
+/* ============================================================================
+   KPI
+   ----------------------------------------------------------------------------
+   A figure someone reads in one glance: the number carries the weight and the
+   label sits quietly underneath. This is the loud element on the dashboard, so
+   nothing around it competes.
+   ========================================================================== */
+
+[data-dashboard-shell] .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+[data-dashboard-shell] .kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+}
+
+[data-dashboard-shell] .kpi-value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-dashboard-shell] .kpi-label {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+[data-dashboard-shell] .kpi-note {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+/* ============================================================================
+   Icon badge
+   ----------------------------------------------------------------------------
+   A squircle holding one icon, tinted from the palette the rest of the product
+   already uses — the tint says which kind of thing this is, so the colour is
+   carrying information rather than decorating the icon.
+   ========================================================================== */
+
+[data-dashboard-shell] .badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 34px;
+  width: 34px;
+  border-radius: 10px;
+  background: var(--paper-sunken);
+  color: var(--ink-muted);
+}
+
+[data-dashboard-shell] .badge-icon svg { height: 17px; width: 17px; stroke-width: 1.9; }
+
+[data-dashboard-shell] .badge-icon--accent  { background: var(--blue-wash);    color: var(--blue); }
+[data-dashboard-shell] .badge-icon--success { background: var(--success-bg);   color: var(--success-ink); }
+[data-dashboard-shell] .badge-icon--warning { background: var(--warning-bg);   color: var(--warning-ink); }
+[data-dashboard-shell] .badge-icon--danger  { background: var(--danger-bg);    color: var(--danger-ink); }
+
+/* ============================================================================
+   Progress
+   ----------------------------------------------------------------------------
+   Mastery as a bar rather than a number in a chip: the length is readable
+   before the digits are. The figure stays beside it, because "how far along"
+   and "exactly how far" are two different questions.
+   ========================================================================== */
+
+[data-dashboard-shell] .meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-dashboard-shell] .meter-track {
+  display: block;
+  flex: 1;
+  min-width: 64px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--paper-sunken);
+  overflow: hidden;
+}
+
+[data-dashboard-shell] .meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue);
+  transition: width 240ms ease;
+}
+
+[data-dashboard-shell] .meter-fill--low  { background: var(--danger-ink); }
+[data-dashboard-shell] .meter-fill--mid  { background: var(--warning-ink); }
+[data-dashboard-shell] .meter-fill--high { background: var(--success-ink); }
+
+[data-dashboard-shell] .meter-value {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dashboard-shell] .meter-fill { transition: none; }
+}
+
+/* ============================================================================
    Type
    ----------------------------------------------------------------------------
    One family for chrome. Hierarchy comes from size, weight and tracking, not
@@ -295,9 +499,8 @@ body {
    Layout
    ========================================================================== */
 
-[data-dashboard-shell] .workspace-main {
-  background: var(--paper);
-}
+/* The canvas is set above, in the surface-depth block: the page is off-white so
+   white cards read as floating on it. */
 
 /* Content column. Left-aligned inside a centred container — Notion never
    centres body text, and a measure keeps line length readable on wide screens. */

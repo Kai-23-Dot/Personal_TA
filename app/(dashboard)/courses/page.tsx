@@ -121,7 +121,7 @@ export default async function CoursesPage() {
               <Link
                 key={course.id}
                 href={`/courses/${course.id}`}
-                className="group rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none transition hover:-translate-y-0.5 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
+                className="card group p-5 shadow-none transition hover:-translate-y-0.5 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div
@@ -139,11 +139,11 @@ export default async function CoursesPage() {
                   {[course.section, course.teacher_name].filter(Boolean).join(" · ") || "Synced course"}
                 </p>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3">
+                  <div className="card p-3">
                     <p className="text-lg font-semibold text-[var(--ink)]">{counts.total}</p>
                     <p className="text-xs text-[var(--ink-muted)]">assignments</p>
                   </div>
-                  <div className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3">
+                  <div className="card p-3">
                     <p className="text-lg font-semibold text-[var(--ink)]">{counts.upcoming}</p>
                     <p className="text-xs text-[var(--ink-muted)]">upcoming</p>
                   </div>

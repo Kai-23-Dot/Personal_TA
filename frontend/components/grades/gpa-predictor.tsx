@@ -277,7 +277,7 @@ export function GpaPredictor({
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-[var(--rule)] bg-[var(--paper)] shadow-none"
+      className="card overflow-hidden shadow-none"
       data-testid="gpa-predictor"
       data-notion-surface
     >
@@ -302,7 +302,7 @@ export function GpaPredictor({
           <button
             type="button"
             onClick={resetScenario}
-            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
+            className="card inline-flex min-h-10 w-fit items-center gap-2 px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-[var(--wash-hover)] hover:text-[var(--ink)]"
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             Reset scenario
@@ -368,7 +368,7 @@ export function GpaPredictor({
             <button
               type="button"
               onClick={addManualCourse}
-              className="mt-5 flex min-h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[var(--rule)] bg-[var(--paper)] px-5 text-center transition-colors hover:border-[var(--blue-edge)] hover:bg-[var(--blue)]/[0.03]"
+              className="card mt-5 flex min-h-32 w-full flex-col items-center justify-center border border-dashed px-5 text-center transition-colors hover:border-[var(--blue-edge)] hover:bg-[var(--blue)]/[0.03]"
             >
               <Plus className="h-5 w-5 text-[var(--blue)]" aria-hidden="true" />
               <span className="mt-2 text-sm font-semibold text-[var(--ink)]">Add your first course</span>

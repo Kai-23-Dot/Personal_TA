@@ -301,7 +301,7 @@ export default function NotesPage() {
             {savedGuides.map((guide) => (
               <div
                 key={guide.id}
-                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 transition-colors duration-150 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
+                className="card group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors duration-150 hover:border-[var(--blue-edge)] hover:bg-[var(--blue-wash)]"
                 onClick={() => setViewingGuide(guide)}
               >
                 <div className="min-w-0 flex-1">
@@ -406,7 +406,7 @@ export default function NotesPage() {
                   />
 
                   {/* Grouped unit list */}
-                  <div className="max-h-[340px] overflow-y-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2.5">
+                  <div className="card max-h-[340px] overflow-y-auto px-3 py-2.5">
                     {Object.entries(groupedByUnit).map(([groupName, items]) => {
                       const allChecked = items.every((i) => selectedModuleItems[i.itemKey]);
                       const someChecked = items.some((i) => selectedModuleItems[i.itemKey]);

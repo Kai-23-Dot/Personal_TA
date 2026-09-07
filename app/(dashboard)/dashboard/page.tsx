@@ -82,13 +82,13 @@ function Panel({
 }) {
   return (
     <section
-      className={`rounded-xl border border-[var(--rule)] bg-[var(--paper)] ${className}`}
+      className={`card ${className}`}
       data-notion-surface
     >
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--rule)] px-4 py-3.5 sm:px-5">
+      <div className="card-head">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-[-0.015em] text-[var(--ink)]">{title}</h2>
-          {subtitle ? <p className="mt-1 max-w-xl text-[11px] leading-4 text-[var(--ink-muted)]">{subtitle}</p> : null}
+          <h2 className="card-title">{title}</h2>
+          {subtitle ? <p className="card-subtitle">{subtitle}</p> : null}
         </div>
         {action}
       </div>
@@ -368,34 +368,42 @@ export default function DashboardPage() {
       label: "Due in 7 days",
       value: String(upcomingAssignments.length),
       note: urgentAssignments.length > 0 ? `${urgentAssignments.length} urgent` : "No urgent deadlines",
-      tone: urgentAssignments.length > 0
-        ? "bg-[var(--warning-bg)]/[0.08] text-[#533b1b]"
-        : "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
-      line: urgentAssignments.length > 0 ? "via-[var(--paper-sunken)]" : "via-[var(--paper-sunken)]",
+      // Urgency is the one thing on this row worth colouring.
+      tone: urgentAssignments.length > 0 ? "badge-icon--warning" : "badge-icon--accent",
     },
     {
       icon: <Flame className="h-4 w-4" />,
       label: "Study streak",
       value: `${studyStreak} ${studyStreak === 1 ? "day" : "days"}`,
       note: studyStreak > 0 ? "Momentum active" : "Start with one session",
-      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
-      line: "via-[var(--paper-sunken)]",
+      tone: "badge-icon--accent",
     },
     {
       icon: <Clock3 className="h-4 w-4" />,
       label: "Focus this week",
       value: `${hoursThisWeek} hrs`,
       note: "Completed sessions only",
-      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
-      line: "via-[var(--paper-sunken)]",
+      tone: "badge-icon--accent",
     },
     {
       icon: <FileStack className="h-4 w-4" />,
-      label: "Indexed material",
-      value: String(notesCount),
-      note: `${courses.length} active course${courses.length === 1 ? "" : "s"}`,
-      tone: "bg-[var(--blue)]/[0.08] text-[var(--blue)]",
-      line: "via-[var(--paper-sunken)]",
+      label: "Active courses",
+      value: String(courses.length),
+      note: `${notesCount} note${notesCount === 1 ? "" : "s"} indexed`,
+      tone: "badge-icon--accent",
+      // The colour each course carries everywhere else, shown once as a key.
+      extra: courses.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Active course colours">
+          {courses.slice(0, 6).map((course) => (
+            <span
+              key={course.id}
+              data-course-tone={courseTone(course.name)}
+              className="course-swatch"
+              title={course.name}
+            />
+          ))}
+        </div>
+      ) : null,
     },
   ];
 
@@ -450,7 +458,7 @@ export default function DashboardPage() {
       </header>
 
       {syncMessage ? (
-        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-[var(--rule)] bg-[var(--paper)] px-4 py-3 text-xs text-[var(--ink-muted)]" role="status" data-notion-surface>
+        <div className="card mb-5 flex items-start gap-2.5 px-4 py-3 text-xs text-[var(--ink-muted)]" role="status" data-notion-surface>
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--blue)]" aria-hidden="true" />
           {syncMessage}
         </div>
@@ -486,7 +494,7 @@ export default function DashboardPage() {
         <div className="space-y-4">
           <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]">
             <section
-              className="relative overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--paper)]"
+              className="card relative overflow-hidden"
               data-dashboard-primary-action
               data-notion-surface
             >
@@ -499,7 +507,7 @@ export default function DashboardPage() {
                 
               </div>
 
-              <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_12rem]">
+              <div className="grid gap-6 p-6 sm:p-7">
                 <div className="min-w-0">
                   <span className={primaryTone.chip}>{primaryAction.badge}</span>
                   <h2 className="mt-4 max-w-2xl text-[clamp(1.6rem,3.5vw,2.25rem)] font-semibold leading-[1.15] tracking-[-0.045em] text-[var(--ink)]">
@@ -536,32 +544,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <aside className="border-t border-[var(--rule)] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-label="Current semester status">
-                  <p className="section-title">At a glance</p>
-                  <dl className="mt-3 divide-y divide-[var(--rule)]">
-                    {[
-                      ["Due this week", upcomingAssignments.length],
-                      ["Urgent", urgentAssignments.length],
-                      ["Focus hours", hoursThisWeek],
-                      ["Active courses", courses.length],
-                    ].map(([label, value]) => (
-                      <div key={label} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
-                        <dt className="text-[11px] text-[var(--ink-muted)]">{label}</dt>
-                        <dd className="text-sm font-semibold tabular-nums text-[var(--ink)]">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Active course colors">
-                    {courses.slice(0, 6).map((course) => (
-                      <span
-                        key={course.id}
-                        data-course-tone={courseTone(course.name)}
-                        className="course-swatch"
-                        title={course.name}
-                      />
-                    ))}
-                  </div>
-                </aside>
               </div>
             </section>
 
@@ -593,7 +575,7 @@ export default function DashboardPage() {
                           href={assignmentHref(assignment.id)}
                           className="group grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-3 py-3 first:pt-0 last:pb-0"
                         >
-                          <span className={`grid h-9 w-9 place-items-center rounded-md text-center ${urgent ? "bg-[var(--warning-bg)]/[0.09]" : "bg-[var(--paper)]"}`}>
+                          <span className={`badge-icon flex-col ${urgent ? "badge-icon--warning" : ""}`}>
                             <span>
                               <span className={`block text-[10px] font-medium ${urgent ? "text-[#6e3630]" : "text-[var(--ink-muted)]"}`}>{format(assignment.due, "MMM")}</span>
                               <span className="block text-xs font-semibold leading-none text-[var(--ink)]">{format(assignment.due, "d")}</span>
@@ -602,7 +584,7 @@ export default function DashboardPage() {
                           <span className="min-w-0">
                             <span className="line-clamp-1 text-[13px] font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--ink)]">{assignment.title}</span>
                             <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-[var(--ink-muted)]">
-                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: assignment.course?.color ?? "#7dd3fc" }} />
+                              <span className="course-dot" data-course-tone={courseTone(assignment.course?.name)} />
                               <span className="truncate">{assignment.course?.name ?? "Course"}</span>
                             </span>
                           </span>
@@ -618,17 +600,13 @@ export default function DashboardPage() {
 
           <section aria-label="Weekly snapshot" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" data-dashboard-metrics-grid>
             {weeklyMetrics.map((metric) => (
-              <div key={metric.label} className="group relative overflow-hidden rounded-lg border border-[var(--rule)] bg-[var(--paper)] p-3.5 transition-colors hover:bg-[var(--wash-hover)]" data-notion-surface>
-                <span className={`pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent ${metric.line} to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100`} />
-                <div className="flex items-center gap-3">
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${metric.tone}`}>{metric.icon}</span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-medium text-[var(--ink-muted)]">{metric.label}</p>
-                    <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                      <strong className="text-base font-semibold tabular-nums text-[var(--ink)]">{metric.value}</strong>
-                      <span className="text-[10px] text-[var(--ink-muted)]">{metric.note}</span>
-                    </div>
-                  </div>
+              <div key={metric.label} className="kpi" data-notion-surface>
+                <span className={`badge-icon ${metric.tone}`}>{metric.icon}</span>
+                <div className="min-w-0">
+                  <p className="kpi-value">{metric.value}</p>
+                  <p className="kpi-label">{metric.label}</p>
+                  <p className="kpi-note">{metric.note}</p>
+                  {"extra" in metric ? metric.extra : null}
                 </div>
               </div>
             ))}
@@ -652,33 +630,43 @@ export default function DashboardPage() {
               ) : (
                 <ol className="divide-y divide-[var(--rule)]">
                   {recommendations.slice(0, 3).map((recommendation, index) => {
-                    const accuracyLabel = recommendation.accuracy_pct === null
-                      ? "Baseline needed"
-                      : `${recommendation.accuracy_pct}% mastery`;
-                    const accuracyTone = recommendation.accuracy_pct === null
-                      ? "bg-[var(--paper)] text-[var(--ink-muted)]"
-                      : recommendation.accuracy_pct < 60
-                        ? "bg-[var(--warning-bg)]/[0.08] text-[#533b1b]"
-                        : "bg-[var(--success-bg)]/[0.08] text-[#1c3829]";
+                    const pct = recommendation.accuracy_pct;
+                    // How far along reads from the bar's length; the exact
+                    // figure sits beside it for anyone who wants the number.
+                    const meterTone =
+                      pct === null ? "" : pct < 60 ? "meter-fill--low" : pct < 80 ? "meter-fill--mid" : "meter-fill--high";
 
                     return (
                       <li key={`${recommendation.topic}-${index}`}>
                         <Link
                           href={`/practice${recommendation.course_id ? `?courseId=${recommendation.course_id}` : ""}`}
-                          className="group grid gap-3 py-3.5 first:pt-0 last:pb-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+                          className="group grid gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
                         >
-                          <span className={`grid h-8 w-8 place-items-center rounded-md text-[10px] font-semibold ${index === 0 ? "bg-[var(--blue)]/[0.10] text-[var(--blue)]" : "bg-[var(--paper)] text-[var(--ink-muted)]"}`}>
+                          <span className={`badge-icon text-[13px] font-semibold ${index === 0 ? "badge-icon--accent" : ""}`}>
                             {index + 1}
                           </span>
                           <span className="min-w-0">
                             {recommendation.course_name ? (
-                              <span className="line-clamp-1 text-[9px] font-medium text-[var(--ink-muted)]">{recommendation.course_name}</span>
+                              <span className="line-clamp-1 text-xs font-medium text-[var(--ink-muted)]">{recommendation.course_name}</span>
                             ) : null}
-                            <strong className="mt-0.5 line-clamp-1 text-sm font-medium text-[var(--ink)]">{recommendation.topic}</strong>
-                            <span className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">{recommendation.reason}</span>
+                            <strong className="mt-1 line-clamp-1 text-[15px] font-semibold text-[var(--ink)]">{recommendation.topic}</strong>
+                            <span className="mt-1.5 line-clamp-2 text-[13px] leading-6 text-[var(--ink-muted)]">{recommendation.reason}</span>
                           </span>
                           <span className="flex items-center gap-2 pl-11 sm:flex-col sm:items-end sm:pl-0">
-                            <span className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-medium ${accuracyTone}`}>{accuracyLabel}</span>
+                            {pct === null ? (
+                              <span className="status status-neutral">Baseline needed</span>
+                            ) : (
+                              <span
+                                className="meter w-full sm:w-32"
+                                role="img"
+                                aria-label={`Mastery: ${pct} percent`}
+                              >
+                                <span className="meter-track">
+                                  <span className={`meter-fill ${meterTone}`} style={{ width: `${pct}%` }} />
+                                </span>
+                                <span className="meter-value">{pct}%</span>
+                              </span>
+                            )}
                             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--blue)]">
                               Practice <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                             </span>
@@ -751,7 +739,7 @@ export default function DashboardPage() {
                         className="group grid gap-2 px-3 py-3 transition-colors hover:bg-[var(--wash-hover)] sm:grid-cols-[minmax(0,1.6fr)_7rem_9rem_1.25rem] sm:items-center sm:gap-4"
                       >
                         <span className="flex min-w-0 items-center gap-2.5">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: course.color ?? "#7dd3fc" }} />
+                          <span className="course-dot" data-course-tone={courseTone(course.name)} />
                           <span className="truncate text-[13px] font-medium text-[var(--ink)] group-hover:text-[var(--ink)]">{course.name}</span>
                         </span>
                         <span className="pl-[1.125rem] text-[11px] text-[var(--ink-muted)] sm:pl-0">{courseDeadlines.length} item{courseDeadlines.length === 1 ? "" : "s"}</span>

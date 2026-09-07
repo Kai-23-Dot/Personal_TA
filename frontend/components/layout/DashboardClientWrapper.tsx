@@ -104,7 +104,7 @@ export function DashboardClientWrapper({
       <GlobalAssistant />
       <Dialog open={showAgreementGate} onOpenChange={() => undefined}>
         <DialogContent
-          className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-4xl overflow-y-auto rounded-2xl border-[var(--rule)] bg-[var(--paper)] p-5 shadow-none sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] sm:p-7 [&>button]:hidden"
+          className="card max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-4xl overflow-y-auto p-5 shadow-none sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] sm:p-7 [&>button]:hidden"
           onEscapeKeyDown={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
         >

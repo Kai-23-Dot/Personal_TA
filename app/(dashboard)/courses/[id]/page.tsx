@@ -74,7 +74,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
             { label: "Completed", value: completed.length, icon: GraduationCap },
             { label: "Total", value: (assignments ?? []).length, icon: FileText },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-3 text-center">
+            <div key={label} className="card p-3 text-center">
               <Icon className="mx-auto mb-1 h-4 w-4 text-[var(--ink-muted)]" />
               <p className="text-xl font-bold text-[var(--ink)]">{value}</p>
               <p className="text-xs text-[var(--ink-muted)]">{label}</p>
@@ -139,7 +139,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
           </h2>
           <div className="space-y-2">
             {noDueDate.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
+              <div key={a.id} className="card flex items-center gap-4 px-4 py-3">
                 <BookOpen className="h-4 w-4 shrink-0 text-[var(--ink-muted)]" />
                 <p className="text-sm text-[var(--ink-muted)] truncate">{a.title}</p>
               </div>
@@ -150,7 +150,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
 
       {/* Empty state */}
       {(assignments ?? []).length === 0 && (
-        <div className="rounded-2xl border border-dashed border-[var(--rule)] bg-[var(--paper)] p-10 text-center">
+        <div className="card border border-dashed p-10 text-center">
           <BookOpen className="mx-auto mb-3 h-8 w-8 text-[var(--ink-muted)]" />
           <p className="text-sm text-[var(--ink-muted)]">No assignments synced for this course yet.</p>
           <Link href="/dashboard" className="btn btn-secondary mt-4">Sync from dashboard</Link>

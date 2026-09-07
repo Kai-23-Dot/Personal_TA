@@ -91,7 +91,7 @@ function LoadingState() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Loading owner analytics">
       {Array.from({ length: 8 }, (_, index) => (
-        <div key={index} className="h-36 animate-pulse rounded-2xl border border-[var(--rule)] bg-[var(--paper)]" />
+        <div key={index} className="card h-36 animate-pulse" />
       ))}
     </div>
   );
@@ -262,7 +262,7 @@ export function AdminDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-6 flex h-48 items-center justify-center rounded-2xl border border-dashed border-[var(--rule)] bg-[var(--paper)] text-sm text-muted-foreground">
+                <div className="card mt-6 flex h-48 items-center justify-center border border-dashed text-sm text-muted-foreground">
                   No token activity in this period.
                 </div>
               )}
@@ -315,7 +315,7 @@ export function AdminDashboard() {
               <h2 className="mt-2 text-xl font-semibold text-foreground">Tokens by model</h2>
               <div className="mt-5 space-y-2">
                 {overview.openai.models.length > 0 ? overview.openai.models.slice(0, 10).map((model) => (
-                  <div key={model.model} className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
+                  <div key={model.model} className="card flex items-center justify-between gap-4 px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{model.model}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{compact(model.requests)} requests · {compact(model.cachedTokens)} cached</p>
@@ -333,7 +333,7 @@ export function AdminDashboard() {
               <h2 className="mt-2 text-xl font-semibold text-foreground">Recent balance transactions</h2>
               <div className="mt-5 space-y-2">
                 {overview.stripe.recentTransactions.length > 0 ? overview.stripe.recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between gap-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
+                  <div key={transaction.id} className="card flex items-center justify-between gap-4 px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium capitalize text-foreground">{transaction.description}</p>
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" /> {new Date(transaction.createdAt).toLocaleString()}</p>
@@ -387,8 +387,8 @@ function ProviderRow({
   detail: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-3.5">
-      <span className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-2 text-[var(--blue)]"><Icon className="h-4 w-4" /></span>
+    <div className="card flex items-start gap-3 p-3.5">
+      <span className="card p-2 text-[var(--blue)]"><Icon className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-foreground">{label}</p>

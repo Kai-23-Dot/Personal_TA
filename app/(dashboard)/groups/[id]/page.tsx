@@ -288,7 +288,7 @@ export default function GroupDetailPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Invite code */}
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2">
+            <div className="card flex items-center gap-2 px-3 py-2">
               <span className="text-xs text-[var(--ink-muted)]">Invite code</span>
               <span className="font-mono text-sm font-semibold tracking-widest text-[var(--ink)]">
                 {group.invite_code}
@@ -323,7 +323,7 @@ export default function GroupDetailPage() {
       {group.goal && (
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Goal & Health */}
-          <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
+          <div className="card p-5">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-[var(--ink-muted)]" />
@@ -371,7 +371,7 @@ export default function GroupDetailPage() {
                         ["Progress", health.components?.progress ?? 0, 30],
                       ] as const
                     ).map(([label, value, max]) => (
-                      <div key={label} className="rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2">
+                      <div key={label} className="card px-3 py-2">
                         <p className="text-[10px] font-medium text-[var(--ink-muted)]">{label}</p>
                         <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
                           {value}<span className="text-xs font-normal text-[var(--ink-muted)]">/{max}</span>
@@ -415,7 +415,7 @@ export default function GroupDetailPage() {
           </div>
 
           {/* Schedule & Check-in */}
-          <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
+          <div className="card p-5">
             <div className="mb-4 flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-[var(--ink-muted)]" />
               <h2 className="text-sm font-semibold text-[var(--ink)]">Schedule & check-in</h2>
@@ -424,7 +424,7 @@ export default function GroupDetailPage() {
             {meetings.length > 0 ? (
               <ul className="space-y-2">
                 {meetings.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3.5 py-2.5 text-sm">
+                  <li key={m.id} className="card flex items-center justify-between px-3.5 py-2.5 text-sm">
                     <span className="text-[var(--ink)]">
                       {DAY_LABELS[m.day_of_week]} · {formatSlotTime(m.start_time)}
                     </span>
@@ -469,7 +469,7 @@ export default function GroupDetailPage() {
       <div className="grid gap-5 lg:grid-cols-3">
 
         {/* Members */}
-        <div className="rounded-2xl border border-[var(--rule)] bg-[var(--paper)] p-5">
+        <div className="card p-5">
           <div className="mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-[var(--ink-muted)]" />
             <h2 className="text-sm font-semibold text-[var(--ink)]">Members</h2>
@@ -508,7 +508,7 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Chat */}
-        <div className="flex flex-col rounded-2xl border border-[var(--rule)] bg-[var(--paper)] lg:col-span-2 overflow-hidden" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
+        <div className="card flex flex-col lg:col-span-2 overflow-hidden" style={{ minHeight: "24rem", maxHeight: "36rem" }}>
           <div className="border-b border-[var(--rule)] px-5 py-3.5">
             <h2 className="text-sm font-semibold text-[var(--ink)]">Group chat</h2>
           </div>
@@ -558,7 +558,7 @@ export default function GroupDetailPage() {
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
               placeholder="Send a message…"
-              className="flex-1 rounded-xl border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-sm text-[var(--ink)] placeholder-slate-600 outline-none focus:border-[var(--blue-edge)]"
+              className="card flex-1 px-3 py-2 text-sm text-[var(--ink)] placeholder-slate-600 outline-none focus:border-[var(--blue-edge)]"
               maxLength={500}
             />
             <button

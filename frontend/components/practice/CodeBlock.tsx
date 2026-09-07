@@ -33,7 +33,7 @@ export function CodeBlock({ code, language = "java" }: { code: string; language?
 
   return (
     <pre
-      className="mt-3 overflow-x-auto rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4 font-mono text-sm leading-relaxed"
+      className="card mt-3 overflow-x-auto p-4 font-mono text-sm leading-relaxed"
       aria-label={`${language} code block`}
     >
       <code dangerouslySetInnerHTML={{ __html: highlighted }} />

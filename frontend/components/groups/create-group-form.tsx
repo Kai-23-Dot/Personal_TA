@@ -91,7 +91,7 @@ export function CreateGroupForm({
     <form
       aria-label="Create study group"
       onSubmit={handleSubmit}
-      className="mt-4 mb-6 space-y-4 rounded-xl border border-[var(--rule)] bg-[var(--paper)] p-4"
+      className="card mt-4 mb-6 space-y-4 p-4"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Create a goal-bound group</p>
