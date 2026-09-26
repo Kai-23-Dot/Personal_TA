@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNowStrict, parseISO } from "date-fns";
 import { courseTone } from "@/frontend/lib/course-tone";
+import { MASTERY_THRESHOLD_PCT } from "@/backend/study/mastery";
 import { iconForHref } from "@/frontend/lib/nav-items";
+import { useWorkspaceRefresh } from "@/frontend/lib/workspace-events";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -203,10 +205,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadDashboardData();
-    const handleSyncComplete = () => void loadDashboardData(false);
-    window.addEventListener("smartlearn:sync-complete", handleSyncComplete);
-    return () => window.removeEventListener("smartlearn:sync-complete", handleSyncComplete);
   }, []);
+
+  // Everything on this page is derived from work done elsewhere: study
+  // priorities from practice accuracy, the streak and focus hours from logged
+  // sessions, the counts from Canvas. Refetch quietly (no skeleton) whenever
+  // any of it completes, so the page is never recommending a topic the student
+  // just finished practising.
+  useWorkspaceRefresh(
+    ["practice", "flashcards", "focus", "notes", "assignments", "sync"],
+    () => void loadDashboardData(false)
+  );
 
   const canvasConnection = connections.find((connection) => connection.platform === "canvas" && connection.is_active);
 
@@ -251,6 +260,8 @@ export default function DashboardPage() {
   const urgentAssignments = upcomingAssignments.filter(
     (assignment) => assignment.due.getTime() - nowMs < 48 * HOUR_MS
   );
+  // Distinguishes "mastered everything" from "never started".
+  const hasPractised = practiceActivity.length > 0;
   const topRecommendation = recommendations[0] ?? null;
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || null;
   const hour = new Date().getHours();
@@ -619,14 +630,32 @@ export default function DashboardPage() {
               action={<Link href="/practice" className="text-[11px] font-medium text-[var(--blue)] hover:text-[var(--blue)]">Open practice</Link>}
             >
               {recommendations.length === 0 ? (
-                <div className="flex min-h-44 flex-col items-center justify-center text-center">
-                  <Target className="h-7 w-7 text-[var(--ink-muted)]" aria-hidden="true" />
-                  <p className="mt-3 text-sm font-medium text-[var(--ink-muted)]">No study priorities yet</p>
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--ink-muted)]">Complete a practice session so Smartlearn can rank your strongest next move.</p>
-                  <button type="button" className="mt-4 rounded-md border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs font-medium text-[var(--ink)]" onClick={handleSync} disabled={syncing || !canvasConnection}>
-                    {canvasConnection ? "Refresh course data" : "Connect Canvas first"}
-                  </button>
-                </div>
+                /* Two different empty states. Mastered topics now drop out of
+                   this list, so an empty panel can mean "nothing left to work
+                   on" as easily as "nothing recorded yet" — and telling someone
+                   who has just mastered everything to go practise would be
+                   wrong. Practice history is what tells the two apart. */
+                hasPractised ? (
+                  <div className="flex min-h-44 flex-col items-center justify-center text-center">
+                    <CheckCircle2 className="h-7 w-7 text-[var(--success-ink)]" aria-hidden="true" />
+                    <p className="mt-3 text-sm font-medium text-[var(--ink)]">Nothing needs practice right now</p>
+                    <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--ink-muted)]">
+                      Every topic you have practised is at {MASTERY_THRESHOLD_PCT}% or better. New priorities appear when a deadline nears or a score slips.
+                    </p>
+                    <Link href="/practice" className="mt-4 rounded-md border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs font-medium text-[var(--ink)]">
+                      Practice something anyway
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex min-h-44 flex-col items-center justify-center text-center">
+                    <Target className="h-7 w-7 text-[var(--ink-muted)]" aria-hidden="true" />
+                    <p className="mt-3 text-sm font-medium text-[var(--ink-muted)]">No study priorities yet</p>
+                    <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--ink-muted)]">Complete a practice session so Smartlearn can rank your strongest next move.</p>
+                    <button type="button" className="mt-4 rounded-md border border-[var(--rule)] bg-[var(--paper)] px-3 py-2 text-xs font-medium text-[var(--ink)]" onClick={handleSync} disabled={syncing || !canvasConnection}>
+                      {canvasConnection ? "Refresh course data" : "Connect Canvas first"}
+                    </button>
+                  </div>
+                )
               ) : (
                 <ol className="divide-y divide-[var(--rule)]">
                   {recommendations.slice(0, 3).map((recommendation, index) => {

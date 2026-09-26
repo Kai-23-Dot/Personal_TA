@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Layers3, RotateCcw } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { useSetPageContent } from "@/frontend/contexts/page-context";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
+import { notifyWorkspaceChanged } from "@/frontend/lib/workspace-events";
 import {
   groupFlashcardsIntoDecks,
   type FlashcardDeck,
@@ -135,6 +136,9 @@ export default function FlashcardsPage() {
     }
     const nextIndex = currentIndex + 1;
     if (nextIndex >= cards.length) {
+      // Notify once the deck is finished rather than per card: a 20-card
+      // session would otherwise trigger 20 refetches of every derived panel.
+      notifyWorkspaceChanged("flashcards");
       setCurrentIndex(0);
       setIsFlipped(false);
     } else {

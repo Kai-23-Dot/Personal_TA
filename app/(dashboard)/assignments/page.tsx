@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { Bot, CalendarClock, ChevronDown, FileText, Zap, X } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
 import { AssignmentDocument } from "@/frontend/components/assignments/AssignmentDocument";
+import { useWorkspaceRefresh } from "@/frontend/lib/workspace-events";
 
 type Assignment = {
   id: string;
@@ -112,11 +113,9 @@ export default function AssignmentsPage() {
     body: { sessionId, context: helperContext },
   });
 
-  useEffect(() => {
-    const refreshAfterSync = () => setSyncRevision((revision) => revision + 1);
-    window.addEventListener("smartlearn:sync-complete", refreshAfterSync);
-    return () => window.removeEventListener("smartlearn:sync-complete", refreshAfterSync);
-  }, []);
+  useWorkspaceRefresh(["assignments", "sync"], () =>
+    setSyncRevision((revision) => revision + 1)
+  );
 
   useEffect(() => {
     let mounted = true;

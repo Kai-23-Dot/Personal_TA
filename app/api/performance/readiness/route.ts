@@ -7,6 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { WEAK_THRESHOLD_PCT } from "@/backend/study/mastery";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -50,7 +51,7 @@ export async function GET(req: Request) {
     .select("topic, accuracy_pct")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
-    .lt("accuracy_pct", 70)
+    .lt("accuracy_pct", WEAK_THRESHOLD_PCT)
     .order("accuracy_pct", { ascending: true })
     .limit(5);
 

@@ -7,6 +7,7 @@ import { assertWithinLimit } from "@/backend/billing/limits";
 import { runWithUsageContext } from "@/backend/billing/usageContext";
 import { parseChatBody } from "@/backend/security/chatInput";
 import { buildCurrentScreenContextBlock } from "@/backend/ai/currentScreenContext";
+import { WEAK_THRESHOLD_PCT } from "@/backend/study/mastery";
 
 export const maxDuration = 60;
 
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
         .select("*, course:courses!inner(name,is_active)")
         .eq("user_id", user.id)
         .eq("course.is_active", true)
-        .lt("accuracy_pct", 70)
+        .lt("accuracy_pct", WEAK_THRESHOLD_PCT)
         .order("accuracy_pct", { ascending: true })
         .limit(5),
 

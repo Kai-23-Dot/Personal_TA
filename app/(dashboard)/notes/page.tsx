@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
+import { notifyWorkspaceChanged } from "@/frontend/lib/workspace-events";
 import {
   Select,
   SelectContent,
@@ -204,6 +205,8 @@ export default function NotesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
+      // The dashboard counts indexed material; a new guide changes it.
+      notifyWorkspaceChanged("notes");
       const data = await res.json();
       if (!res.ok || data?.success === false) {
         setStudyGuideError(data?.error || "Study guide failed.");

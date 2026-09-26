@@ -7,6 +7,8 @@ import {
   Sparkles, Target, X,
 } from "lucide-react";
 import { PageHero } from "@/frontend/components/ui/page-hero";
+import { useWorkspaceRefresh } from "@/frontend/lib/workspace-events";
+import { WEAK_THRESHOLD_PCT } from "@/backend/study/mastery";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -259,6 +261,10 @@ export default function ReviewPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Every panel here reads from practice attempts and card reviews, so all of
+  // it is stale as soon as a session finishes.
+  useWorkspaceRefresh(["practice", "flashcards", "sync"], () => void load());
+
   async function launchReview(topic: string, selectedCourseId: string, questionCount: number) {
     setActionMessage(null);
     setGenerating(true);
@@ -351,7 +357,11 @@ export default function ReviewPage() {
             subtitle="Topics where your practice accuracy is below 70%"
           >
             {weakTopics.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">No weak topics yet. Complete a practice session to see trends.</p>
+              <p className="text-sm text-[var(--ink-muted)]">
+                {trends.length > 0
+                  ? `Nothing is below ${WEAK_THRESHOLD_PCT}% right now. Topics reappear here if a score slips.`
+                  : "No weak topics yet. Complete a practice session to see trends."}
+              </p>
             ) : (
               <div className="space-y-2.5">
                 {weakTopics.slice(0, 6).map((t) => (

@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Label } from "@/frontend/components/ui/label";
 import { Textarea } from "@/frontend/components/ui/textarea";
+import { notifyWorkspaceChanged } from "@/frontend/lib/workspace-events";
 
 type QuizQuestion = {
   question: string;
@@ -203,6 +204,9 @@ export default function PracticeSessionPage() {
       }
 
       setSubmitted(true);
+      // Study priorities, weak topics and exam readiness are all ranked from
+      // these attempts, so they are stale the moment this lands.
+      notifyWorkspaceChanged("practice");
       // Clear saved progress — test is done
       if (sessionId) {
         try { localStorage.removeItem(resumeKey(sessionId)); } catch {}

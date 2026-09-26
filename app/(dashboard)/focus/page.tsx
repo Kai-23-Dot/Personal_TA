@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Pause, Play, RotateCcw, CheckCircle2 } from "lucide-react";
 import { usePersistentState } from "@/frontend/hooks/usePersistentState";
+import { notifyWorkspaceChanged } from "@/frontend/lib/workspace-events";
 
 // ── Mode presets ─────────────────────────────────────────────────────────────
 
@@ -165,7 +166,11 @@ export default function FocusPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, status: "completed" }),
-    }).catch(() => {});
+    })
+      // Focus hours and the study streak are both counted from completed
+      // sessions, so they change the moment this is recorded.
+      .then(() => notifyWorkspaceChanged("focus"))
+      .catch(() => {});
   }, [completed, sessionId]);
 
   // Ambient glow colors per mode

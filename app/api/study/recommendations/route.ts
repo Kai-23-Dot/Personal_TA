@@ -9,6 +9,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { MASTERY_THRESHOLD_PCT } from "@/backend/study/mastery";
 
 export type Recommendation = {
   topic: string;
@@ -40,6 +41,10 @@ export async function GET() {
       .select("topic, course_id, accuracy_pct")
       .eq("user_id", user.id)
       .in("course_id", activeCourseIds)
+      // A topic brought up to mastery is finished, so it stops being offered
+      // as the next thing to practise. Assignments already do this via
+      // is_completed; this is the same idea for practice.
+      .lt("accuracy_pct", MASTERY_THRESHOLD_PCT)
       .order("accuracy_pct", { ascending: true })
       .limit(20),
     supabase

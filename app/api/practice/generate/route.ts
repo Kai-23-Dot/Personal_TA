@@ -16,6 +16,7 @@ import {
   hasEnoughInstructionalCoverage,
 } from "@/backend/practice/sourceGrounding";
 import { z } from "zod";
+import { ADAPTIVE_TARGET_THRESHOLD_PCT } from "@/backend/study/mastery";
 
 export const maxDuration = 60;
 const lowTokenMode = process.env.LOW_TOKEN_TEST_MODE === "true";
@@ -441,7 +442,7 @@ export async function POST(req: Request) {
       .from("performance_metrics")
       .select("topic, subtopic")
       .eq("user_id", user.id)
-      .lt("accuracy_pct", 60)
+      .lt("accuracy_pct", ADAPTIVE_TARGET_THRESHOLD_PCT)
       .order("accuracy_pct", { ascending: true })
       .limit(5);
 
