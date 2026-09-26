@@ -55,7 +55,7 @@ export async function extractFileText(
   try {
     switch (type) {
       case "pdf":
-        return await extractPdf(buffer);
+        return normalizeExtractedText(await extractPdfText(buffer));
       case "docx":
         return await extractDocx(buffer);
       case "pptx":
@@ -84,10 +84,20 @@ function normalizeExtractedText(text: string): string | null {
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
 
-async function extractPdf(buffer: Buffer): Promise<string | null> {
-  const pdfParse = (await import("pdf-parse")).default as (buf: Buffer) => Promise<{ text: string }>;
-  const data = await pdfParse(buffer);
-  return normalizeExtractedText(data.text);
+// pdf-parse's own types declare a Buffer parameter. Buffer is a Uint8Array
+// subclass, so a parser accepting the narrower type cannot be re-declared as
+// accepting the wider one — widen through unknown rather than claiming an
+// overlap the compiler can see is false.
+interface PdfTextParser {
+  (data: Uint8Array): Promise<{ text: string }>;
+}
+
+/** Extract raw PDF text; callers apply their own size and output limits. */
+export async function extractPdfText(buffer: Buffer): Promise<string> {
+  const pdfParse = (await import("pdf-parse")).default as unknown as PdfTextParser;
+  // PDF.js expects Uint8Array.slice() to copy bytes; Buffer.slice() shares them.
+  const data = await pdfParse(new Uint8Array(buffer));
+  return data.text;
 }
 
 // ── DOCX ─────────────────────────────────────────────────────────────────────

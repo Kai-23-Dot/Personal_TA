@@ -46,7 +46,7 @@ import {
 } from "@/backend/lms/infinite-campus";
 import { extractFileText, mimeToFileType } from "@/backend/utils/extractFileText";
 import { crawlCanvasCourseContent } from "@/backend/canvas-intelligence/canvasCrawler";
-import { extractFromGoogleLink, extractFromHtml } from "@/backend/canvas-intelligence/contentExtractor";
+import { resolveLinkedContent } from "@/backend/canvas-intelligence/resolveLinkedContent";
 import { classifyContent } from "@/backend/canvas-intelligence/contentClassifier";
 import { deactivateMissingCanvasCourses } from "@/backend/lms/deactivateMissingCanvasCourses";
 import { getCanvasCourseLifecycle } from "@/backend/lms/courseLifecycle";
@@ -715,21 +715,17 @@ async function syncConnection(
           canvasCourseId: cc.id,
           localCourseId: course.id,
         });
+        const resolved = await resolveLinkedContent(crawled, {
+          canvasDomain: canvas_domain,
+          googleApiKey,
+          oauthAccessToken: googleConn?.access_token ?? null,
+        });
+        errors.push(...resolved.errors);
 
         for (const item of crawled) {
           if (!item.title) continue;
           const sourceFileId = `canvas_intel_${cc.id}_${item.type}_${item.id}`;
-          const raw = item.bodyHtml ?? item.textContent ?? "";
-          const googleUrl = [item.externalUrl, item.sourceUrl, item.url].find((url) => url && /docs\.google\.com|drive\.google\.com/.test(url));
-          let extracted = item.bodyHtml ? await extractFromHtml(item.bodyHtml) : raw.trim();
-          if (googleUrl && (!extracted || extracted === googleUrl || item.extractionStatus === "pending" || item.extractionStatus === "metadata_only")) {
-            const googleText = await extractFromGoogleLink({
-              url: googleUrl,
-              googleApiKey,
-              oauthAccessToken: googleConn?.access_token ?? null,
-            });
-            if (googleText) extracted = googleText;
-          }
+          const extracted = resolved.texts.get(item.id);
           if (!extracted) continue;
 
           const classified = classifyContent(item, extracted);
@@ -744,7 +740,7 @@ async function syncConnection(
               content: `${extracted}${metaText}${tagText}`.slice(0, 30000),
               source_type: "canvas",
               source_file_id: sourceFileId,
-              source_url: item.sourceUrl ?? item.externalUrl ?? null,
+              source_url: item.externalUrl ?? item.sourceUrl ?? null,
               file_type: "other",
               topic_tags: classified.tags,
               is_processed: false,

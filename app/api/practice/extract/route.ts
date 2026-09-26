@@ -1,4 +1,5 @@
 import { createClient } from "@/backend/supabase/server";
+import { extractPdfText } from "@/backend/utils/extractFileText";
 import { NextResponse } from "next/server";
 
 export const maxDuration = 30;
@@ -17,9 +18,7 @@ export async function POST(req: Request) {
     let text = "";
 
     if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-      const pdfParse = (await import("pdf-parse")).default;
-      const result = await pdfParse(buffer);
-      text = result.text;
+      text = await extractPdfText(buffer);
     } else if (
       file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       file.name.toLowerCase().endsWith(".docx")

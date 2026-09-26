@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/backend/supabase/server";
+import { extractPdfText } from "@/backend/utils/extractFileText";
 
 export const maxDuration = 30;
 
@@ -20,9 +21,7 @@ async function extractText(file: File): Promise<string> {
   }
 
   if (name.endsWith(".pdf")) {
-    const pdfParse = (await import("pdf-parse")).default;
-    const result = await pdfParse(buffer);
-    return result.text;
+    return extractPdfText(buffer);
   }
 
   if (name.endsWith(".docx") || name.endsWith(".doc")) {

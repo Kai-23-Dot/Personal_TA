@@ -113,6 +113,8 @@ export async function POST(req: Request) {
     const unitName = formData.get("unitName") as string | null;
     const examName = formData.get("examName") as string | null;
     const topicTagsRaw = (formData.get("topicTags") as string | null) ?? "";
+    // Optional: uploading into a notebook rather than straight onto a course.
+    const notebookId = formData.get("notebookId") as string | null;
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
@@ -150,6 +152,28 @@ export async function POST(req: Request) {
         },
         { status: 402 }
       );
+    }
+
+    // A notebook must belong to the caller. When it does, and the upload did
+    // not name a course itself, the notebook's course is inherited so anything
+    // generated from this file is attributed the same way as its siblings.
+    let verifiedNotebookId: string | null = null;
+    let notebookCourseId: string | null = null;
+    if (notebookId) {
+      const { data: notebook } = await supabase
+        .from("notebooks")
+        .select("id, course_id")
+        .eq("id", notebookId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!notebook) {
+        return NextResponse.json(
+          { success: false, error: "That notebook was not found." },
+          { status: 400 }
+        );
+      }
+      verifiedNotebookId = notebook.id;
+      notebookCourseId = notebook.course_id;
     }
 
     let verifiedCourseId: string | null = null;
@@ -234,7 +258,8 @@ export async function POST(req: Request) {
       .insert({
         id: noteId,
         user_id: user.id,
-        course_id: verifiedCourseId,
+        course_id: verifiedCourseId ?? notebookCourseId,
+        notebook_id: verifiedNotebookId,
         title,
         content,
         source_type: "upload" as const,

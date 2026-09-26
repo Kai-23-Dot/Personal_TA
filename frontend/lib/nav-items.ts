@@ -5,6 +5,7 @@ import {
   Settings,
   Layers,
   GraduationCap,
+  Library,
   ClipboardList,
   Users,
   History,
@@ -29,6 +30,7 @@ export const workspaceNavItems: NavItem[] = [
   { href: "/courses",     label: "Courses",     icon: GraduationCap },  // a class you are enrolled in
   { href: "/assignments", label: "Assignments", icon: ClipboardList },  // work with a due date
   { href: "/notes",       label: "Notes",       icon: FileText },       // pages you write
+  { href: "/notebooks",   label: "Notebooks",   icon: Library },        // sources you import
   { href: "/practice",    label: "Practice",    icon: Target },         // practice aimed at a weak topic
   { href: "/flashcards",  label: "Flashcards",  icon: Layers },         // a stack of cards
   { href: "/review",      label: "Review",      icon: History },        // revisiting on a schedule

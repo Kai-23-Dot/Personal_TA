@@ -6,10 +6,26 @@
     }
   ],
   "functions": {
-    "app/api/chat/route.ts": { "maxDuration": 60 },
-    "app/api/notes/summarize/route.ts": { "maxDuration": 60 },
-    "app/api/planner/generate/route.ts": { "maxDuration": 30 },
-    "app/api/practice/generate/route.ts": { "maxDuration": 60 },
-    "app/api/sync/route.ts": { "maxDuration": 60 }
+    "app/api/chat/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/notes/summarize/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/planner/generate/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/practice/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/sync/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/notebooks/[id]/import/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/notes/upload/route.ts": {
+      "maxDuration": 60
+    }
   }
 }
