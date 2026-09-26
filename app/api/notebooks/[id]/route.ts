@@ -92,6 +92,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Sources carry the notebook's course, because that is how the generators
+  // find them: practice selects notes with .eq("course_id", courseId), so a
+  // source imported before the course was attached would be silently invisible
+  // to it — the notebook would look full and generate nothing.
+  if (parsed.data.courseId !== undefined) {
+    const { error: syncError } = await supabase
+      .from("notes")
+      .update({ course_id: parsed.data.courseId })
+      .eq("notebook_id", id)
+      .eq("user_id", user.id);
+    if (syncError) {
+      console.error("[notebooks] Could not re-file sources:", syncError);
+      return NextResponse.json(
+        { error: "The notebook moved but its sources did not. Try again." },
+        { status: 500 }
+      );
+    }
+  }
+
   return NextResponse.json({
     id: data.id,
     title: data.title,

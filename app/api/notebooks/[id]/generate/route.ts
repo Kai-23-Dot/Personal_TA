@@ -67,23 +67,51 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const noteIds = sources.map((s) => s.id);
 
   if (parsed.data.type === "practice" || parsed.data.type === "flashcards") {
-    // Hand straight to the existing generators, forwarding the caller's cookies
-    // so they run as this user under the same RLS.
+    // Both generators are course-scoped: practice requires courseId outright,
+    // and flashcards reject selected notes without one. A notebook that is not
+    // attached to a course therefore cannot use them — say so plainly instead
+    // of forwarding a request that will be rejected for reasons the student
+    // cannot act on.
+    if (!notebook.course_id) {
+      return NextResponse.json(
+        {
+          error: "Attach this notebook to a course first.",
+          hint: "Practice tests and flashcards are filed under a course so they show up with the rest of your work. A study guide works without one.",
+          reason: "course-required",
+        },
+        { status: 400 }
+      );
+    }
+
     const target =
       parsed.data.type === "practice" ? "/api/practice/generate" : "/api/flashcards/generate";
 
+    // Each schema is .strict(), so the payloads differ and neither tolerates
+    // stray fields.
+    const body =
+      parsed.data.type === "practice"
+        ? {
+            topic: notebook.title,
+            courseId: notebook.course_id,
+            noteIds: noteIds.slice(0, 30),
+            questionCount: parsed.data.count ?? 10,
+          }
+        : {
+            topic: notebook.title,
+            courseId: notebook.course_id,
+            noteIds: noteIds.slice(0, 100),
+            count: parsed.data.count ?? 10,
+          };
+
+    // Forward the caller's cookies so the generator runs as this user under
+    // the same row-level security.
     const upstream = await fetch(new URL(target, req.url), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         cookie: req.headers.get("cookie") ?? "",
       },
-      body: JSON.stringify({
-        noteIds: noteIds.slice(0, 30),
-        topic: notebook.title,
-        courseId: notebook.course_id ?? undefined,
-        count: parsed.data.count ?? 10,
-      }),
+      body: JSON.stringify(body),
     });
 
     const payload = await upstream.json().catch(() => null);
@@ -95,11 +123,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // ── Study guide ───────────────────────────────────────────────────────────
   // Sources are labelled so the model can attribute each section, and the
   // combined text is capped rather than truncated mid-source where possible.
+  // Fill the budget rather than stopping at the first source that exceeds it:
+  // one long source (a full article runs well past this) would otherwise be
+  // skipped whole and leave nothing to summarise.
   let combined = "";
   for (const source of sources) {
-    const block = `### ${source.title}\n${source.content ?? ""}\n\n`;
-    if (combined.length + block.length > MAX_COMBINED_CHARS) break;
-    combined += block;
+    const remaining = MAX_COMBINED_CHARS - combined.length;
+    if (remaining <= 0) break;
+    const header = `### ${source.title}\n`;
+    const body = (source.content ?? "").slice(0, Math.max(0, remaining - header.length));
+    if (!body.trim()) continue;
+    combined += `${header}${body}\n\n`;
   }
 
   if (!combined.trim()) {

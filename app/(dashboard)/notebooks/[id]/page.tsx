@@ -31,6 +31,8 @@ type Source = {
   createdAt: string;
 };
 
+type Course = { id: string; name: string };
+
 type Notebook = {
   id: string;
   title: string;
@@ -68,6 +70,7 @@ export default function NotebookDetailPage() {
   const notebookId = params.id;
 
   const [notebook, setNotebook] = useState<Notebook | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [linkValue, setLinkValue] = useState("");
   const [busy, setBusy] = useState<null | "link" | "file" | "study_guide" | "practice" | "flashcards">(null);
@@ -75,6 +78,13 @@ export default function NotebookDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
+    // Courses are needed for the attach control, which is what unlocks
+    // practice and flashcards.
+    void fetch("/api/courses")
+      .then((r) => r.json())
+      .then((data) => setCourses(Array.isArray(data) ? data : (data?.courses ?? [])))
+      .catch(() => {});
+
     const res = await fetch(`/api/notebooks/${notebookId}`);
     if (res.status === 404) {
       router.replace("/notebooks");
@@ -150,6 +160,21 @@ export default function NotebookDetailPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
     setBusy(null);
     await load();
+  }
+
+  async function attachCourse(courseId: string) {
+    const res = await fetch(`/api/notebooks/${notebookId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId: courseId || null }),
+    });
+    if (res.ok) {
+      setMessage(null);
+      await load();
+    } else {
+      const data = await res.json().catch(() => null);
+      setMessage({ tone: "bad", text: data?.error ?? "Could not move that notebook." });
+    }
   }
 
   async function removeSource(sourceId: string) {
@@ -384,6 +409,33 @@ export default function NotebookDetailPage() {
               Add a source first — there is nothing to build from yet.
             </p>
           ) : null}
+
+          {/* Practice and flashcards are filed under a course, so this is the
+              control that unlocks them. It sits here, beside the buttons it
+              affects, rather than behind a settings screen. */}
+          <div className="mt-5 border-t border-[var(--rule)] pt-4">
+            <label htmlFor="notebook-course" className="text-[13px] font-medium text-[var(--ink)]">
+              Course
+            </label>
+            <select
+              id="notebook-course"
+              value={notebook.courseId ?? ""}
+              onChange={(event) => void attachCourse(event.target.value)}
+              className="mt-1.5 h-9 w-full rounded-[4px] border border-[var(--control-border)] bg-[var(--paper)] px-2.5 text-sm text-[var(--ink)] outline-none"
+            >
+              <option value="">Not tied to a course</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-[12px] leading-5 text-[var(--ink-muted)]">
+              {notebook.courseId
+                ? "Practice and flashcards made here are filed under this course."
+                : "A study guide works without a course. Practice tests and flashcards need one, so they can sit with the rest of that course's work."}
+            </p>
+          </div>
         </section>
       </div>
     </div>
