@@ -8,6 +8,7 @@ import { SmartlearnBackdrop } from "@/frontend/components/layout/SmartlearnBackd
 import { SmartlearnHeader } from "@/frontend/components/layout/SmartlearnHeader";
 import { TurnstileWidget, TURNSTILE_SITE_KEY } from "@/frontend/components/auth/turnstile-widget";
 import { AuthFieldLabel } from "@/frontend/components/auth/field-help";
+import { GoogleIcon } from "@/frontend/components/auth/GoogleIcon";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -205,37 +206,25 @@ export default function LoginPage() {
 
             {oauthProviders.length > 0 ? (
               <>
-                <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
+                <div className="oauth-provider-list">
                   {oauthProviders.map((provider) => (
                     <button
                       key={provider}
                       type="button"
-                      className="contact-submit-btn"
+                      className="oauth-provider-btn"
                       onClick={() => handleOAuth(provider)}
                       disabled={loading}
                       aria-busy={oauthLoading === provider}
                     >
-                      {oauthLoading === provider
+                      {provider === "google" ? <GoogleIcon /> : null}
+                      <span>{oauthLoading === provider
                         ? `Connecting to ${oauthLabels[provider]}…`
-                        : `Continue with ${oauthLabels[provider]}`}
+                        : `Continue with ${oauthLabels[provider]}`}</span>
                     </button>
                   ))}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    margin: "0 0 1rem",
-                    color: "var(--gray)",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  <span style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.12)" }} />
-                  or
-                  <span style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.12)" }} />
-                </div>
+                <div className="auth-divider">or</div>
               </>
             ) : null}
 
