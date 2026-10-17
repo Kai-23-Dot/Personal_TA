@@ -11,22 +11,25 @@ import { AuthFieldLabel } from "@/frontend/components/auth/field-help";
 
 export default function SignupPage() {
   const router = useRouter();
-  // Optional OAuth providers (comma-separated) for Supabase auth, e.g. "google,azure".
-  const oauthProviders = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
-    .split(",")
-    .map((provider) => provider.trim())
-    .filter(Boolean);
+  // Google is always available; the environment can enable additional providers.
+  const oauthProviders = Array.from(new Set([
+    "google",
+    ...(process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
+      .split(",")
+      .map((provider) => provider.trim())
+      .filter((provider) => ["google", "github", "azure"].includes(provider)),
+  ]));
   const oauthLabels: Record<string, string> = {
+    google: "Google",
     azure: "Microsoft",
     github: "GitHub",
   };
-  // Keep Google auth hidden for now; other configured providers remain available.
-  const otherProviders = oauthProviders.filter((provider) => provider !== "google");
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOAuthLoading] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   function showAuthFailure(error: unknown) {
@@ -93,6 +96,7 @@ export default function SignupPage() {
 
   async function handleOAuth(provider: string) {
     setLoading(true);
+    setOAuthLoading(provider);
     try {
       const response = await fetch("/api/auth/oauth", {
         method: "POST",
@@ -110,8 +114,8 @@ export default function SignupPage() {
       throw new Error("Could not start OAuth sign in. Please try again.");
     } catch (error) {
       showAuthFailure(error);
-    } finally {
       setLoading(false);
+      setOAuthLoading(null);
     }
   }
 
@@ -126,18 +130,21 @@ export default function SignupPage() {
           <div className="contact-form-column">
             <h2 className="contact-form-title">Sign Up</h2>
 
-            {otherProviders.length > 0 ? (
+            {oauthProviders.length > 0 ? (
               <>
                 <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
-                  {otherProviders.map((provider) => (
+                  {oauthProviders.map((provider) => (
                     <button
                       key={provider}
                       type="button"
                       className="contact-submit-btn"
                       onClick={() => handleOAuth(provider)}
                       disabled={loading}
+                      aria-busy={oauthLoading === provider}
                     >
-                      Continue with {oauthLabels[provider] ?? provider}
+                      {oauthLoading === provider
+                        ? `Connecting to ${oauthLabels[provider]}…`
+                        : `Continue with ${oauthLabels[provider]}`}
                     </button>
                   ))}
                 </div>

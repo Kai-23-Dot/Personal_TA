@@ -11,21 +11,24 @@ import { AuthFieldLabel } from "@/frontend/components/auth/field-help";
 
 export default function LoginPage() {
   const router = useRouter();
-  // Optional OAuth providers (comma-separated) for Supabase auth, e.g. "google,azure".
-  const oauthProviders = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
-    .split(",")
-    .map((provider) => provider.trim())
-    .filter(Boolean);
+  // Google is always available; the environment can enable additional providers.
+  const oauthProviders = Array.from(new Set([
+    "google",
+    ...(process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
+      .split(",")
+      .map((provider) => provider.trim())
+      .filter((provider) => ["google", "github", "azure"].includes(provider)),
+  ]));
   const oauthLabels: Record<string, string> = {
+    google: "Google",
     azure: "Microsoft",
     github: "GitHub",
   };
-  // Keep Google auth hidden for now; other configured providers remain available.
-  const otherProviders = oauthProviders.filter((provider) => provider !== "google");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOAuthLoading] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [accountCreated, setAccountCreated] = useState(false);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
@@ -33,6 +36,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "auth_callback_failed") {
+      toast.error("Sign in could not be completed. Please try again.");
+    }
     const created = params.get("created") === "1";
     setAccountCreated(created);
     setEmailNotVerified(params.get("error") === "email_not_verified");
@@ -140,11 +146,17 @@ export default function LoginPage() {
 
   async function handleOAuth(provider: string) {
     setLoading(true);
+    setOAuthLoading(provider);
     try {
       const response = await fetch("/api/auth/oauth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, redirectTo: `${window.location.origin}/callback` }),
+        body: JSON.stringify({
+          provider,
+          redirectTo: `${window.location.origin}/callback?next=${encodeURIComponent(
+            new URLSearchParams(window.location.search).get("next") ?? "/dashboard"
+          )}`,
+        }),
       });
       const payload = await readAuthResponse(response);
       if (typeof payload?.url === "string") {
@@ -154,8 +166,8 @@ export default function LoginPage() {
       throw new Error("Could not start OAuth sign in. Please try again.");
     } catch (error) {
       showAuthFailure(error);
-    } finally {
       setLoading(false);
+      setOAuthLoading(null);
     }
   }
 
@@ -191,18 +203,21 @@ export default function LoginPage() {
               </div>
             ) : null}
 
-            {otherProviders.length > 0 ? (
+            {oauthProviders.length > 0 ? (
               <>
                 <div className="contact-form" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
-                  {otherProviders.map((provider) => (
+                  {oauthProviders.map((provider) => (
                     <button
                       key={provider}
                       type="button"
                       className="contact-submit-btn"
                       onClick={() => handleOAuth(provider)}
                       disabled={loading}
+                      aria-busy={oauthLoading === provider}
                     >
-                      Continue with {oauthLabels[provider] ?? provider}
+                      {oauthLoading === provider
+                        ? `Connecting to ${oauthLabels[provider]}…`
+                        : `Continue with ${oauthLabels[provider]}`}
                     </button>
                   ))}
                 </div>
