@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -25,6 +25,11 @@ const STEP_LABELS = ["Canvas address", "Open settings", "Create token", "Connect
 type CanvasConnectionWizardProps = {
   onAgreementRequiredChange?: (required: boolean) => void;
   onConnected?: () => void;
+  onboarding?: boolean;
+  onStepChange?: (step: number) => void;
+  onFinish?: () => void;
+  finishing?: boolean;
+  pendingConnection?: { id: string; domain: string | null };
 };
 
 async function markCanvasStepComplete() {
@@ -48,15 +53,22 @@ async function markCanvasStepComplete() {
 export function CanvasConnectionWizard({
   onAgreementRequiredChange,
   onConnected,
+  onboarding = false,
+  onStepChange,
+  onFinish,
+  finishing = false,
+  pendingConnection,
 }: CanvasConnectionWizardProps) {
-  const [step, setStep] = useState(0);
-  const [domain, setDomain] = useState("");
+  const [step, setStep] = useState(pendingConnection ? 4 : 0);
+  const [domain, setDomain] = useState(pendingConnection?.domain ?? "");
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncWarning, setSyncWarning] = useState<string | null>(null);
-  const [pendingConnectionId, setPendingConnectionId] = useState<string | null>(null);
+  const [pendingConnectionId, setPendingConnectionId] = useState<string | null>(pendingConnection?.id ?? null);
+
+  useEffect(() => { onStepChange?.(Math.min(step, 4)); }, [step, onStepChange]);
 
   const normalizedDomain = useMemo(() => {
     try {
@@ -183,8 +195,8 @@ export function CanvasConnectionWizard({
           <p role="status" className="mt-4 text-sm text-[var(--success-ink)]">Your first Canvas sync finished successfully.</p>
         )}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-          <Button asChild className="h-11 w-full sm:w-auto"><Link href="/dashboard">Go to dashboard</Link></Button>
-          <Button variant="secondary" asChild className="h-11 w-full sm:w-auto"><Link href="/settings">View connection</Link></Button>
+          {onboarding ? <Button className="h-12 w-full rounded-full" disabled={finishing} onClick={onFinish}>{finishing ? "Saving…" : "Go to dashboard"}</Button> : <Button asChild className="h-11 w-full sm:w-auto"><Link href="/dashboard">Go to dashboard</Link></Button>}
+          {!onboarding && <Button variant="secondary" asChild className="h-11 w-full sm:w-auto"><Link href="/settings">View connection</Link></Button>}
         </div>
       </div>
     );
@@ -192,13 +204,13 @@ export function CanvasConnectionWizard({
 
   return (
     <div className="min-w-0 space-y-4 sm:space-y-5" data-testid="canvas-connection-wizard">
-      <div>
+      {!onboarding && <div>
         <div className="mb-2 flex items-center justify-between gap-4 text-xs text-muted-foreground">
           <span>Step {step + 1} of {STEP_LABELS.length}</span>
           <span>{STEP_LABELS[step]}</span>
         </div>
         <Progress value={((step + 1) / STEP_LABELS.length) * 100} />
-      </div>
+      </div>}
 
       {step === 0 ? (
         <div className="space-y-4 sm:space-y-5">

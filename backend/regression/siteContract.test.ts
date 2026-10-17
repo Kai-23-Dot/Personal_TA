@@ -250,7 +250,7 @@ describe("website product-surface contract", () => {
   });
 
   test("onboarding does not require a removed planner step", () => {
-    const onboarding = source("app/(dashboard)/onboarding/page.tsx");
+    const onboarding = source("frontend/components/onboarding/OnboardingFlow.tsx");
     expect(onboarding).not.toMatch(/generatePlan|href:\s*["']\/study["']/);
   });
 
