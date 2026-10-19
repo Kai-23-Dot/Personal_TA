@@ -78,6 +78,8 @@ export default function SettingsPage() {
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -191,6 +193,28 @@ export default function SettingsPage() {
     const res = await fetch(`/api/lms/connections?id=${id}`, { method: "DELETE" });
     if (res.ok) {
       setConnections((prev) => prev.filter((c) => c.id !== id));
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmation !== "DELETE") return;
+    setDeletingAccount(true);
+    setMessage(null);
+    setMessageType(null);
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setMessage(data?.error || "Account deletion failed. Please try again.");
+        setMessageType("error");
+        return;
+      }
+      window.location.assign("/login?deleted=1");
+    } catch (error) {
+      setMessage((error as Error).message || "Account deletion failed. Please try again.");
+      setMessageType("error");
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -454,6 +478,36 @@ export default function SettingsPage() {
               <a href="/api/lms/microsoft">Connect Microsoft Teams</a>
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-destructive">Delete account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            Permanently delete your Smartlearn account, profile, study data, connected accounts, uploaded files, and billing record. This cannot be undone.
+          </p>
+          <div className="max-w-sm space-y-1.5">
+            <Label htmlFor="deleteAccountConfirmation">Type DELETE to confirm</Label>
+            <Input
+              id="deleteAccountConfirmation"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={deletingAccount}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={deleteConfirmation !== "DELETE" || deletingAccount}
+            onClick={() => void handleDeleteAccount()}
+          >
+            {deletingAccount ? "Deleting account…" : "Delete my account permanently"}
+          </Button>
         </CardContent>
       </Card>
     </div>
